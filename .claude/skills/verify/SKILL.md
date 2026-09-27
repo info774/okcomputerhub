@@ -94,7 +94,14 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   proveedor, recibido, entrada dada), proveedor y sus materiales (preferido),
   envíos (seguimiento, estado); nada escribe en el espejo del inventario.
 
-`npm run verify` pasa los once.
+- `verify-personas.mjs`: jornada (RPC simulado; corrección con motivo en hora
+  de Canarias, CSV), ausencias (pedir, aprobar), gastos (subir → gastos-ocr
+  simulada → confirmar), cierre, firmas (vista previa segura, enviar) y las
+  páginas `firmar.html` (firma dibujada en el lienzo) y `gestoria.html`.
+  OJO al simular funciones: un cuerpo puede traer su propio `nombre`
+  (`{ ...b, nombre }`, no al revés).
+
+`npm run verify` pasa los doce.
 
 ## Pantalla nueva
 

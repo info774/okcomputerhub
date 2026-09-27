@@ -79,9 +79,11 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('input[aria-label="Cantidad"]').length === 2);
   ok(base.db.pedido_compra_lineas.some(l => l.catalogo_id === CAT2 && l.cantidad === 3 && l.precio === 40), 'pedido: añadir un material del catálogo');
   const primera = base.db.pedido_compra_lineas.find(l => l.catalogo_id === CAT1);
-  await page.fill(`input[data-on-change="alLinea:${primera.id},cantidad,$value"]`, '30');
-  await page.press(`input[data-on-change="alLinea:${primera.id},cantidad,$value"]`, 'Tab');
-  await page.waitForFunction(() => document.getElementById('al-texto')?.value.includes('30 x Cable'));
+  // La ficha puede estar repintándose tras añadir la línea: se reintenta sobre la que haya.
+  for (let i = 0; i < 4; i++) {
+    await page.locator(`input[data-on-change="alLinea:${primera.id},cantidad,$value"]`).evaluate(el => { el.value = '30'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+    if (await page.waitForFunction(() => document.getElementById('al-texto')?.value.includes('30 x Cable'), null, { timeout: 3000 }).then(() => true, () => false)) break;
+  }
   ok(base.db.pedido_compra_lineas.find(l => l.id === primera.id).cantidad === 30, 'pedido: cambiar la cantidad');
   await page.click('[data-action="alEstadoPedido"][data-p0="Enviado"]');
   await toastCon(page, 'Pedido: Enviado');

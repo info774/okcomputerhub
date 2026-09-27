@@ -9,12 +9,14 @@ import { moduloConector } from './conector';
 import { moduloProyectos } from './proyectos';
 import { moduloWiki } from './wiki';
 import { moduloComandas } from './comandas';
+import { moduloPersonas } from './personas';
 import { moduloBuscar } from './buscar';
 import { moduloMonitorizacion } from './monitorizacion';
 import { moduloClientes } from './clientes';
 import { moduloOportunidades } from './oportunidades';
 import { moduloTickets } from './tickets';
 import { moduloPortal } from './portal';
+import { moduloFirmas } from './firmas';
 import { moduloCobros } from './cobros';
 import { moduloMapa } from './mapa';
 import { moduloAlmacen } from './almacen';
@@ -26,12 +28,14 @@ export const MODULOS: Modulo[] = [
   moduloInformes,
   moduloProyectos,
   moduloComandas,
+  moduloPersonas,
   moduloWiki,
   moduloBuscar,
   moduloClientes,
   moduloOportunidades,
   moduloTickets,
   moduloPortal,
+  moduloFirmas,
   moduloCobros,
   moduloMapa,
   moduloMonitorizacion,

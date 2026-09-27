@@ -106,6 +106,7 @@ export function baseMemoria(inicial = {}, rpc = {}) {
         ...(tabla === 'tickets' ? { numero: ++numero + 5000, valoracion_token: randomUUID(), primera_respuesta_at: null, cerrado_at: null, valoracion: null } : {}),
         ...(tabla === 'ticket_comentarios' ? { enviado_at: null, envio_error: null, canal: null } : {}),
         ...(tabla === 'pedidos_compra' ? { numero: ++numero, total: 0, esperado_para: null, entrada_app_at: null, notas: null, proveedor_id: null } : {}),
+        ...(tabla === 'firmas' ? { token: randomUUID(), estado: 'pendiente', contenido_hash: 'b'.repeat(64), caduca_at: new Date(Date.now() + 30 * 86400000).toISOString(), firmado_at: null, enviado_at: null, creado_por: 'u-ana' } : {}),
         ...(tabla === 'paginas' ? { version: 1, archivada: false, orden: 0, icono: null, proyecto_id: null, creado_por: 'u-ana', actualizado_por: null } : {}),
         ...(tabla === 'claude_peticiones' ? { estado: 'pendiente', resultado: null, error: null } : {}),
         ...c,

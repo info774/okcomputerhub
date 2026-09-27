@@ -543,6 +543,49 @@ try {
   ok(psql(`select entregado_at is not null from hub.envios where id = '${envio}'`) === 't' && !avisosDe('tito@ok.test').includes('envio_atascado'), 'envíos: entregado apunta la hora y quita el aviso');
   ok(!psql(como('authenticated', 'tito@ok.test', `select * from hub.avisos_almacen(null, false);`), { esperaError: true }).ok, 'avisos: los ganchos por fase no se llaman sueltos');
 
+  // ── Personas (fase 10) ─────────────────────────────────────────────────
+  // Lunes 5/10/2026: dos fichajes solapados (9-11 y 10-12 → 3 h) y otro 16-18 → 5 h; entrada 9, salida 18.
+  psql(`insert into hub.sesiones (tecnico_id, tecnico_nombre, traslado, inicio, fin) values
+          ('${titoId}', 'Tito', null, '2026-10-05 09:00 Atlantic/Canary', '2026-10-05 11:00 Atlantic/Canary'),
+          ('${titoId}', 'Tito', '2026-10-05 10:00 Atlantic/Canary', '2026-10-05 10:15 Atlantic/Canary', '2026-10-05 12:00 Atlantic/Canary'),
+          (null, 'tito', null, '2026-10-05 16:00 Atlantic/Canary', '2026-10-05 18:00 Atlantic/Canary');`);
+  const jor = una('tito@ok.test', `select to_char(entrada at time zone 'Atlantic/Canary', 'HH24:MI') || '-' || to_char(salida at time zone 'Atlantic/Canary', 'HH24:MI') || '|' || trabajado_min || '|' || pausas_min || '|' || sesiones from hub.jornada('2026-10-01', '2026-10-31')`);
+  ok(jor === '09:00-18:00|300|240|3', `jornada: entrada, salida y tiempo sin contar dos veces lo solapado (${jor})`);
+  ok(una('tito@ok.test', `select count(*) from hub.jornada('2026-10-01', '2026-10-31', '${anaId}')`) === '0', 'jornada: cada uno ve solo la suya');
+  ok(una('ana@ok.test', `select count(*) from hub.jornada('2026-10-01', '2026-10-31')`) === '1', 'jornada: un admin ve la de todos');
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.jornada_ajustes (usuario_id, fecha, entrada, salida, motivo) values ('${titoId}', '2026-10-05', now(), now() + interval '1 hour', 'me olvidé');`), { esperaError: true }).ok,
+    'jornada: un técnico no corrige su jornada');
+  psql(como('authenticated', 'ana@ok.test', `insert into hub.jornada_ajustes (usuario_id, fecha, entrada, salida, pausa_min, motivo) values ('${titoId}', '2026-10-05', '2026-10-05 08:30 Atlantic/Canary', '2026-10-05 18:00 Atlantic/Canary', 60, 'Olvidó fichar la primera visita');`));
+  ok(una('tito@ok.test', `select trabajado_min || '|' || ajustado || '|' || motivo_ajuste from hub.jornada('2026-10-05', '2026-10-05')`) === '510|true|Olvidó fichar la primera visita',
+    'jornada: la corrección manda, con su motivo');
+  ok(psql(`select creado_por = '${anaId}' from hub.jornada_ajustes`) === 't', 'jornada: la corrección queda a nombre de quien la hizo');
+  const aus = idDe('tito@ok.test', `insert into hub.ausencias (usuario_id, tipo, desde, hasta) values ('${titoId}', 'vacaciones', '2026-10-09', '2026-10-13') returning id;`);
+  ok(psql(`select dias || estado from hub.ausencias where id = '${aus}'`) === '2solicitada', 'ausencias: se piden y cuentan solo los laborables (sin fin de semana ni festivo)');
+  ok(!psql(como('authenticated', 'tito@ok.test', `update hub.ausencias set estado = 'aprobada' where id = '${aus}';`), { esperaError: true }).ok
+    && psql(`select estado from hub.ausencias where id = '${aus}'`) === 'solicitada', 'ausencias: uno no se aprueba las suyas');
+  ok(avisosDe('ana@ok.test').includes('ausencia_por_decidir') && !avisosDe('tito@ok.test').includes('ausencia_por_decidir'), 'avisos: ausencia por aprobar (a los admins)');
+  psql(como('authenticated', 'ana@ok.test', `update hub.ausencias set estado = 'aprobada' where id = '${aus}';`));
+  ok(psql(`select decidida_por = '${anaId}' from hub.ausencias where id = '${aus}'`) === 't', 'ausencias: aprobada por un admin (queda quién)');
+  ok(una('tito@ok.test', `select ausencia from hub.jornada('2026-10-09', '2026-10-09')`) === 'vacaciones', 'jornada: los días de ausencia salen en el registro');
+  const tg = idDe('tito@ok.test', `insert into hub.tickets_gasto (total, estado) values (12.5, 'revisar') returning id;`);
+  ok(una('ana@ok.test', `select count(*) from hub.tickets_gasto`) === '1' && una('extrano@ok.test', `select count(*) from hub.tickets_gasto`) === '0', 'gastos: los ve quien los sube y los admins');
+  psql(como('authenticated', 'ana@ok.test', `update hub.tickets_gasto set estado = 'ok' where id = '${tg}';`));
+  psql(como('authenticated', 'tito@ok.test', `update hub.tickets_gasto set total = 99 where id = '${tg}';`), { esperaError: true });
+  ok(psql(`select total || '|' || (revisado_por = '${anaId}') from hub.tickets_gasto where id = '${tg}'`) === '12.5|true', 'gastos: revisado no se toca (salvo un admin)');
+  const fi = idDe('tito@ok.test', `insert into hub.firmas (titulo, contenido, firmante_nombre) values ('Acta de entrega', 'Se entrega un portátil', 'Marta') returning id;`);
+  const tok1 = psql(`select token from hub.firmas where id = '${fi}'`);
+  psql(como('authenticated', 'tito@ok.test', `update hub.firmas set contenido = 'Se entregan dos portátiles' where id = '${fi}';`));
+  const [tok2, hash] = psql(`select token || ' ' || contenido_hash from hub.firmas where id = '${fi}'`).split(' ');
+  ok(tok2 !== tok1 && hash.length === 64, 'firma: cambiar el texto cambia la huella y anula el enlace viejo');
+  ok(!psql(como('authenticated', 'tito@ok.test', `update hub.firmas set estado = 'firmado', firmado_at = now() where id = '${fi}';`), { esperaError: true }).ok, 'firma: nadie del equipo la da por firmada');
+  ok(!psql(como('service_role', null, `select hub.firma_firmar('${tok2}', 'otra', 'Marta Díaz', null, 'data:image/png;base64,AAAA', '1.2.3.4', 'x');`), { esperaError: true }).ok, 'firma: si la huella no cuadra, no se firma');
+  psql(como('service_role', null, `select hub.firma_firmar('${tok2}', '${hash}', 'Marta Díaz', '12345678Z', 'data:image/png;base64,AAAA', '1.2.3.4', 'Chrome');`));
+  ok(psql(`select estado || '|' || firmado_nombre || '|' || firmado_ip from hub.firmas where id = '${fi}'`) === 'firmado|Marta Díaz|1.2.3.4', 'firma: firmada con nombre, IP y hora');
+  ok(!psql(como('authenticated', 'ana@ok.test', `update hub.firmas set contenido = 'x' where id = '${fi}';`), { esperaError: true }).ok, 'firma: lo firmado no se cambia (ni un admin)');
+  ok(!psql(`insert into hub.portal_accesos (email, tipo) values ('cli@x.es', 'cliente')`, { esperaError: true }).ok
+    && psql(`insert into hub.portal_accesos (email, tipo, nombre) values ('gestoria@asesor.es', 'gestoria', 'Asesoría') returning tipo`).split('\n')[0] === 'gestoria',
+    'gestoría: acceso del portal sin cliente (un cliente sigue necesitándolo)');
+
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
   ok(!sinRls, `todas las tablas de hub con RLS${sinRls ? ' (faltan: ' + sinRls + ')' : ''}`);

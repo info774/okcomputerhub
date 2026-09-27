@@ -13,7 +13,8 @@ import { buscarClientes, nombresClientes, eur } from '../ventas/datos';
 const URL_PORTAL = `${location.origin}/portal.html`;
 const ACCION: Record<string, string> = { entrada: '🔓 Entró', salir: 'Salió', enlace_enviado: '✉️ Enlace enviado', enlace_error: '⚠️ No se pudo enviar el enlace',
   enlace_generado: '🔗 Enlace generado por el equipo', enlace_desconocido: '❔ Pidió enlace un correo sin acceso', enlace_limite: '⛔ Demasiados enlaces pedidos',
-  ver_ticket: 'Vio un ticket', abrir_ticket: '🎫 Abrió un ticket', mensaje_ticket: '💬 Escribió en un ticket', aceptar_presupuesto: '✅ Aceptó un presupuesto',
+  ver_ticket: 'Vio un ticket', g_jornada: '📒 Gestoría: vio la jornada', g_ausencias: '📒 Gestoría: vio las ausencias', g_gastos: '📒 Gestoría: vio los gastos',
+  g_gasto_url: '📒 Gestoría: abrió un ticket de gasto', g_facturas: '📒 Gestoría: vio las facturas', g_cierre: '📒 Gestoría: cierre del mes', g_personas: '📒 Gestoría: entró', abrir_ticket: '🎫 Abrió un ticket', mensaje_ticket: '💬 Escribió en un ticket', aceptar_presupuesto: '✅ Aceptó un presupuesto',
   descargar_factura: '⬇️ Descargó una factura', descargar_presupuesto: '⬇️ Descargó un presupuesto', revocado: '🚫 Acceso revocado' };
 let _timer = 0;
 
@@ -38,23 +39,24 @@ async function pintar(el: HTMLElement) {
         · lo aceptó ${esc(a.nombre)}${a.comentario ? ` («${esc(a.comentario)}»)` : ''}
         <button class="btn secundario" data-action="ptRevisada" data-p0="${esc(a.id)}">Ya está pasado a la app</button></span></li>`;
     }).join('')}</ul></section>` : ''}
-    <section class="tarjeta"><h3>Invitar a un cliente</h3>
+    <section class="tarjeta"><h3>Dar acceso</h3>
       <form data-on-submit="ptInvitar" data-prevent="1"><div class="in-campos">
-        <label>Cliente <input id="pt-cliente-q" autocomplete="off" placeholder="Buscar…" data-on-input="ptBuscarCliente:$value"></label>
+        <label>Para <select id="pt-tipo" data-on-change="ptTipo:$value"><option value="cliente">Un cliente (portal)</option><option value="gestoria">La gestoría</option></select></label>
+        <label id="pt-cliente-l">Cliente <input id="pt-cliente-q" autocomplete="off" placeholder="Buscar…" data-on-input="ptBuscarCliente:$value"></label>
         <label>Correo <input id="pt-email" type="email" required></label>
         <label>Nombre <input id="pt-nombre" placeholder="Para saludarle"></label></div>
         <input type="hidden" id="pt-cliente"><ul id="pt-cliente-res" class="resultados"></ul>
         <div class="acciones"><button class="btn" type="submit">Dar acceso</button></div></form></section>
     <section class="tarjeta mo-scroll"><h3>Accesos</h3>${accesos.length ? `<table class="tabla"><thead><tr><th>Correo</th><th>Cliente</th><th>Última entrada</th><th></th></tr></thead><tbody>
       ${accesos.map(a => `<tr class="${a.activo ? '' : 'in-pausado'}"><td>${esc(a.email)}${a.nombre ? `<br><small class="nota">${esc(a.nombre)}</small>` : ''}</td>
-        <td>${a.cliente_id ? `<a href="#/clientes/${esc(a.cliente_id)}">${esc(nombres.get(a.cliente_id) ?? '')}</a>` : ''}</td>
+        <td>${a.tipo === 'gestoria' ? '<span class="chip">📒 Gestoría</span>' : a.cliente_id ? `<a href="#/clientes/${esc(a.cliente_id)}">${esc(nombres.get(a.cliente_id) ?? '')}</a>` : ''}</td>
         <td>${a.activo ? esc(a.ultima_entrada_at ? hace(a.ultima_entrada_at) : 'nunca') : `<span class="chip">revocado ${esc(hace(a.revocado_at))}</span>`}</td>
         <td><div class="acciones">${a.activo ? `<button class="btn secundario" data-action="ptEnlace" data-p0="${esc(a.id)}">Generar enlace</button>
           <button class="btn peligro" data-action="ptActivo" data-p0="${esc(a.id)}" data-p1="0">Revocar</button>`
           : `<button class="btn secundario" data-action="ptActivo" data-p0="${esc(a.id)}" data-p1="1">Reactivar</button>`}</div></td></tr>`).join('')}</tbody></table>` : '<p class="vacio">Nadie tiene acceso todavía.</p>'}
       <div id="pt-enlace"></div></section>
     <section class="tarjeta"><h3>Qué han hecho (lo último)</h3><ul class="di-ultimo">${(tr.data ?? []).map(t => `<li><small class="nota" title="${esc(fechaHora(t.created_at))}">${esc(hace(t.created_at))}</small>
-      <span>${esc(ACCION[t.accion] ?? t.accion)} · ${esc(t.email ?? emailDe.get(t.acceso_id) ?? '')}${t.detalle?.numero ? ` · #${esc(t.detalle.numero)}` : ''}${t.detalle?.error ? ` · <small class="mal">${esc(t.detalle.error)}</small>` : ''}</span></li>`).join('') || '<li class="nota">Nada todavía.</li>'}</ul></section>`;
+      <span>${esc(ACCION[t.accion] ?? t.accion)} · ${esc(t.email ?? emailDe.get(t.acceso_id) ?? '')}${t.detalle?.numero ? ` · #${esc(t.detalle.numero)}` : ''}${t.detalle?.mes ? ` · ${esc(t.detalle.mes)}` : ''}${t.detalle?.error ? ` · <small class="mal">${esc(t.detalle.error)}</small>` : ''}</span></li>`).join('') || '<li class="nota">Nada todavía.</li>'}</ul></section>`;
 }
 
 registrarAcciones({
@@ -77,10 +79,12 @@ registrarAcciones({
       if (data?.[0]?.email) { e.value = data[0].email; (document.getElementById('pt-nombre') as HTMLInputElement).value ||= data[0].nombre ?? ''; }
     }
   },
+  ptTipo(t: string) { const l = document.getElementById('pt-cliente-l'); if (l) l.hidden = t === 'gestoria'; },
   async ptInvitar() {
     const v = (id: string) => (document.getElementById(id) as HTMLInputElement).value.trim();
-    if (!v('pt-cliente')) { toast('Elige el cliente de la lista', 'error'); return; }
-    const r = await API.post('portal_accesos', { cliente_id: v('pt-cliente'), email: v('pt-email').toLowerCase(), nombre: v('pt-nombre') || null });
+    const tipo = v('pt-tipo') || 'cliente';
+    if (tipo === 'cliente' && !v('pt-cliente')) { toast('Elige el cliente de la lista', 'error'); return; }
+    const r = await API.post('portal_accesos', { tipo, cliente_id: tipo === 'cliente' ? v('pt-cliente') : null, email: v('pt-email').toLowerCase(), nombre: v('pt-nombre') || null });
     if (r.error) toast(r.error.message.includes('duplicate') ? 'Ese correo ya tiene acceso' : `No se pudo: ${r.error.message}`, 'error');
     else { toast('Acceso dado: ahora puede pedir su enlace en el portal (o genéraselo tú)'); resolver(); }
   },
@@ -115,7 +119,7 @@ export const moduloPortal: Modulo = {
   grupo: 'Clientes',
   icono: '🌐',
   soloAdmin: true,
-  explicacion: 'Quién de tus clientes puede entrar en su área (sus tickets, presupuestos, facturas, mantenimiento y equipos), qué ha hecho allí y los presupuestos que han aceptado desde el portal y falta pasar a la app.',
+  explicacion: 'Quién de tus clientes (y la gestoría) puede entrar en su área (sus tickets, presupuestos, facturas, mantenimiento y equipos), qué ha hecho allí y los presupuestos que han aceptado desde el portal y falta pasar a la app.',
   pintar,
   contador,
 };

@@ -498,3 +498,17 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 #al-q { min-width: 12rem; flex: 1; }
 .al-cant { width: 6rem; }
 #al-texto { width: 100%; font-family: inherit; }
+
+/* ── Personas y firmas (fase 10) ────────────────────────────────────────── */
+.pe-ausencia td { background: var(--aviso-fondo); }
+.solo-imprimir { display: none; }
+.fi-firma { max-width: 100%; width: 360px; background: #fff; border: 1px solid var(--borde); border-radius: 8px; }
+#fi-enlace { width: 100%; }
+.pe-subir input[type=file] { max-width: 100%; }
+@media print {
+  body * { visibility: hidden; }
+  .pe-imprimible, .pe-imprimible *, .fi-evidencias, .fi-evidencias *, .fi-evidencias ~ .md, .fi-evidencias ~ .md * { visibility: visible; }
+  .pe-imprimible, .fi-evidencias { position: static; }
+  .no-imprimir { display: none !important; }
+  .solo-imprimir { display: block; }
+}

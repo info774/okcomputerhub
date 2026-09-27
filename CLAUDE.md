@@ -44,6 +44,9 @@ función `comandas`, notas de voz al bot). Detalle en `docs/FASE8.md`.
 **Fase 9 HECHA** (2026-09-27): almacén (`20261013_almacen.sql`, `#/almacen`, MRP en
 `hub.mrp()`, proveedores, pedidos de compra y envíos; inventario en espejo).
 Detalle en `docs/FASE9.md`.
+**Fase 10 HECHA** (2026-09-27): personas (`20261014_personas.sql`, `#/personas`,
+`#/firmas`, `firmar.html`, `gestoria.html`, funciones `gastos-ocr` y `firma`).
+Detalle en `docs/FASE10.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -297,6 +300,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
 - Comandas: tareas DEL HUB (`hub.comanda_tareas`), no las de la app (que no se
   cortan). Todo lo que crea comandas pasa por `crearComanda()` de
   `_shared/comandas.ts` (pantalla, bot y MCP), que también avisa por Telegram.
+- Jornada (RD-ley 8/2019): `hub.jornada()` la CALCULA sobre los fichajes de la
+  app; nunca se corrige tocando `sesiones` (espejo) sino con
+  `hub.jornada_ajustes` (motivo + autor). Gestoría = acceso del portal de
+  `tipo = 'gestoria'`: todo lo que ve pasa por las acciones `g_*` de la función
+  `portal` y queda en `portal_traza`.
+- Firmas: lo firmado es inmutable (trigger `hub.firma_antes`); solo
+  `hub.firma_firmar` (service_role, con la huella) lo pasa a firmado.
+- Ficheros privados (Storage, cubo `gastos`): los sube y firma URLs
+  `_shared/archivos.ts` con la service key; el navegador nunca toca Storage.
 - Avisos de fases nuevas: cada fase tiene su gancho (`hub.avisos_portal`,
   `_comandas`, `_almacen`, `_personas`, `_facturacion`; este último solo para
   admins) que junta `hub.avisos_extra()` y llama `panorama_direccion`. Un aviso
