@@ -1,12 +1,16 @@
 # Fase 0 · Cimientos — qué hay y cómo se pone en marcha
 
-Estado a 2026-09-27 (tarde): **hecho** — migraciones 20261001 a e, `hub`
-expuesto en la API (junto a `public` y `graphql_public`, que siguen cerrados
-por permisos), `sync-app` desplegada con sus secretos en el Vault, Auth
+Estado a 2026-09-27: **fase 0 en marcha**. Migraciones 20261001 a e, `hub`
+expuesto (con `public` y `graphql_public` cerrados por permisos), `sync-app`
+desplegada, clave de lectura de la app en el Vault, **carga inicial hecha
+(9.782 filas, cada tabla igual que en la app)** y cron cada 15 min, Auth
 (Site URL, redirects, Google, registro cerrado), 6 usuarios en `hub.usuarios` y
-en Auth, sitio `okhub-tenerife` creado y el front publicado.
-**Pendiente**: la service key de la app para que `sync-app` copie los datos
-(carga inicial y cron). `public` comprobado igual antes y después.
+en Auth, y el front en `https://okhub-tenerife.web.app`. `public` comprobado
+igual antes y después.
+
+**Aviso**: en producción la app no tiene `audit_log` (su migración
+`20260911_audit_log.sql` no se aplicó), así que el sync va en modo «sin log»:
+filas nuevas cada 15 min y cambios/borrados cada noche. Ver CLAUDE.md.
 
 ## Qué hay en el repo
 

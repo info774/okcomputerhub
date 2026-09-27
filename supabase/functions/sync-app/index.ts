@@ -133,8 +133,44 @@ async function guardarEstado(clave: string, cambios: Fila): Promise<void> {
   await hub('PATCH', `sync_estado?clave=eq.${clave}`, cambios, 'return=minimal')
 }
 
+// ¿Tiene la app su registro de auditoría? (20260911_audit_log.sql puede no
+// estar aplicada: el 2026-09-27 no lo estaba). Sin él, el incremental solo
+// trae filas NUEVAS por created_at y los cambios y borrados llegan en la
+// pasada nocturna, que entonces repasa TODAS las tablas.
+let _hayLog: boolean | null = null
+async function hayLog(): Promise<boolean> {
+  if (_hayLog != null) return _hayLog
+  try { await appGet('audit_log?select=id&limit=1'); _hayLog = true }
+  catch (e) {
+    if (String(e).includes('PGRST205') || String(e).includes(' 404 ')) _hayLog = false
+    else throw e
+  }
+  return _hayLog
+}
+
+// ── Sin audit_log: filas nuevas por created_at ─────────────────────────────
+const MARGEN_MS = 60 * 60 * 1000 // se repasa una hora hacia atrás: relojes y transacciones largas
+
+async function soloNuevas(): Promise<Fila> {
+  const e = await estado('audit')
+  if (!e.corte_ts) throw new Error('Sin corte: falta la carga inicial ({ modo: "completo", todas: true }).')
+  const inicio = new Date().toISOString()
+  const desde = new Date(new Date(String(e.corte_ts)).getTime() - MARGEN_MS).toISOString()
+  const tablas = (await tablasDeLaApp()).filter(t => TABLAS_APP[t].columnas.includes('created_at'))
+  const detalle: Record<string, number> = {}
+  let filas = 0
+  for (const tabla of tablas) {
+    const sel = TABLAS_APP[tabla].columnas.join(',')
+    const rs = await appGet(`${tabla}?select=${sel}&created_at=gte.${encodeURIComponent(desde)}&order=created_at.asc&limit=5000`)
+    if (rs.length) { await subir(tabla, rs); detalle[tabla] = rs.length; filas += rs.length }
+  }
+  await guardarEstado('audit', { corte_ts: inicio, ultima_ok: inicio, filas, detalle, ultimo_error: null })
+  return { filas, detalle, sin_log: true }
+}
+
 // ── Incremental por audit_log ──────────────────────────────────────────────
 async function incremental(): Promise<Fila> {
+  if (!(await hayLog())) return await soloNuevas()
   const e = await estado('audit')
   let corte = e.corte_id as number | null
   if (corte == null) {
@@ -187,7 +223,11 @@ async function ultimoIdLog(): Promise<number> {
 async function completo(todas: boolean): Promise<Fila> {
   // ¿Carga inicial? Sin corte, se apunta el log ANTES de copiar.
   const e = await estado('audit')
-  const cortePendiente = todas && e.corte_id == null && e.corte_ts == null ? await ultimoIdLog() : null
+  const log = await hayLog()
+  const inicio = new Date().toISOString()
+  const cargaInicial = todas && e.corte_id == null && e.corte_ts == null
+  const cortePendiente = cargaInicial && log ? await ultimoIdLog() : null
+  if (!log) todas = true // sin log, los cambios y borrados solo llegan aquí
   const tablas = (await tablasDeLaApp()).filter(t => todas || !TABLAS_APP[t].auditada || TABLAS_APP[t].nocturna)
   const detalle: Record<string, number> = {}
   let filas = 0
@@ -214,6 +254,11 @@ async function completo(todas: boolean): Promise<Fila> {
   if (cortePendiente != null) {
     await guardarEstado('audit', { corte_id: cortePendiente, ultimo_error: null })
     return { filas, detalle, carga_inicial: true, corte: cortePendiente }
+  }
+  if (cargaInicial) {
+    // Sin log: el incremental seguirá por created_at desde que empezó la copia.
+    await guardarEstado('audit', { corte_ts: inicio, ultima_ok: inicio, filas: 0, ultimo_error: null })
+    return { filas, detalle, carga_inicial: true, sin_log: true }
   }
   return { filas, detalle }
 }

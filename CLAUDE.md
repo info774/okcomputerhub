@@ -12,12 +12,10 @@ web de Breeze. El plan completo, con las decisiones tomadas y las fases, está
 en `docs/PLAN_SISTEMA_UNIFICADO.md`; la referencia de producto (la demo de
 OKHUB, de otra empresa) en `docs/referencias/OKHUB_INVENTARIO.md`.
 
-**Estado**: fase 0 casi entera en marcha (2026-09-27): migraciones
-20261001 a e aplicadas, `hub` expuesto en la API, `sync-app` desplegada, Auth
-con Google y registro cerrado, los 6 usuarios de la app dados de alta y el
-front publicado en `https://okhub-tenerife.web.app`. Falta la clave de LECTURA
-de la app para que `sync-app` copie los datos (ver «Autonomía»). Siguiente:
-fase 1 (proyectos + MCP).
+**Estado**: fase 0 EN MARCHA (2026-09-27): migraciones 20261001 a e,
+`hub` expuesto, `sync-app` desplegada y sincronizando (carga inicial de 9.782
+filas, cron cada 15 min), Auth con Google y registro cerrado, 6 usuarios y el
+front en `https://okhub-tenerife.web.app`. Siguiente: fase 1 (proyectos + MCP).
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -53,8 +51,11 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   - `GITHUB_TOKEN`: push y PRs. El proxy de las sesiones NO deja escribir
     secrets de Actions ni ajustes del repo: por eso `deploy.yml` sin su secret
     solo comprueba y avisa, y el despliegue lo hace la sesión.
-  - Falta `APP_SERVICE_ROLE_KEY` (service key de `okcomputer`, solo para LEER):
-    se guarda en el Vault del hub como `app_service_role_key` sin imprimirla.
+  - `APP_SERVICE_ROLE_KEY` (service key de `okcomputer`, solo para LEER): ya
+    está en el Vault del hub como `app_service_role_key` (2026-09-27).
+  - Desplegar funciones: `npx supabase functions deploy <nombre> --use-api
+    --project-ref adomalsxsymxzuozksmt` (+ `--no-verify-jwt` si va en
+    `SIN_JWT`). SQL en el hub: Management API `database/query` o el conector.
 - Red: `api.supabase.com` y `*.supabase.co` permitidos; `*.web.app` no (el
   front publicado se comprueba por la API de Firebase Hosting).
 - La redirect URI del cliente OAuth «Ok Computer Web» en Google Cloud ya está
@@ -122,11 +123,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
 - `sync-app`: lectura incremental por el **`audit_log` de la app** (id
   creciente; casi ninguna tabla de la app tiene `updated_at`): desde el último
   id, junta los registros tocados y pide su estado ACTUAL (lo que existe se
-  sube, lo que ya no existe se borra). `documento_lineas` (sin auditoría) y
-  `locales` (columnas que los crons tocan y audit_log ignora) se copian enteras
-  cada noche. **Un sync que falla no mueve el corte** (`hub.sync_estado`). Las
-  columnas que copia están en `_shared/tablas-app.ts`, que tiene que cuadrar
-  con la migración de la tabla.
+  sube, lo que ya no existe se borra). **OJO: en producción `audit_log` NO
+  existe** (la migración `20260911_audit_log.sql` de la app no está aplicada,
+  comprobado el 2026-09-27). Mientras falte, `sync-app` va en modo «sin log»:
+  cada 15 min solo filas NUEVAS por `created_at` (con una hora de margen) y
+  los cambios y borrados llegan en la pasada nocturna, que copia TODAS las
+  tablas. En cuanto exista el log, pasa sola al modo por log desde `corte_ts`.
+  **Un sync que falla no mueve el corte** (`hub.sync_estado`). Las columnas
+  que copia están en `_shared/tablas-app.ts`, que tiene que cuadrar con la
+  migración de la tabla.
 - Lo que escribe el sync (cabecera `x-hub-sync`) y el importador (GUC
   `hub.sin_auditoria`) no entra en `hub.auditoria`: ya lo auditó la app.
 - Las tablas espejo no llevan claves foráneas ni secuencias (el espejo llega
