@@ -17,6 +17,23 @@ OKHUB, de otra empresa) en `docs/referencias/OKHUB_INVENTARIO.md`.
 (a mano, `docs/FASE0.md`): exponer `hub` en la API, la service key de la app
 en el Vault, la carga inicial, Auth y Firebase. Siguiente: fase 1 (proyectos + MCP).
 
+## Autonomía de Claude (acordado el 2026-09-27)
+
+- **Sin preguntar**: fusionar en `main`, desplegar el front
+  (`okhub-tenerife.web.app`, de momento sin dominio propio) y las edge
+  functions, aplicar migraciones sobre `hub` y dar de alta usuarios.
+- **Preguntar antes**: borrar datos, cualquier ESCRITURA en la base de la app
+  actual (`okcomputer`) y cualquier cosa que toque lo de Breeze (`public`,
+  sus roles, su servidor).
+- Credenciales, como variables de entorno del entorno cloud (nunca en el chat
+  ni en el repo): `SUPABASE_ACCESS_TOKEN` (Management API: esquemas expuestos,
+  Auth, secrets, funciones), `FIREBASE_SERVICE_ACCOUNT` (JSON, Firebase
+  Hosting Admin en `okcomputerclaude`), `GOOGLE_OAUTH_CLIENT_SECRET` (cliente
+  OAuth del proyecto GCP 508620194342) y, opcional, `GITHUB_TOKEN` (secrets
+  de Actions de este repo). Red: `api.supabase.com` y `*.supabase.co`
+  permitidos. Lo único que no se automatiza: la redirect URI del cliente
+  OAuth en Google Cloud.
+
 ## Los tres vecinos — LO MÁS IMPORTANTE
 
 1. **`okcomputerclaude` (la app actual) no se toca desde aquí.** Ni PRs, ni
