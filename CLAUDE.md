@@ -12,10 +12,12 @@ web de Breeze. El plan completo, con las decisiones tomadas y las fases, está
 en `docs/PLAN_SISTEMA_UNIFICADO.md`; la referencia de producto (la demo de
 OKHUB, de otra empresa) en `docs/referencias/OKHUB_INVENTARIO.md`.
 
-**Estado**: fase 0 EN MARCHA (2026-09-27): migraciones 20261001 a e,
-`hub` expuesto, `sync-app` desplegada y sincronizando (carga inicial de 9.782
-filas, cron cada 15 min), Auth con Google y registro cerrado, 6 usuarios y el
-front en `https://okhub-tenerife.web.app`. Siguiente: fase 1 (proyectos + MCP).
+**Estado**: fase 0 en marcha (sync cada 15 min por el `audit_log` de la app,
+Auth con Google, 6 usuarios, front en `https://okhub-tenerife.web.app`).
+**Fase 1 en curso**: organizador de proyectos HECHO (migración
+`20261002_proyectos.sql` aplicada, pantalla `#/proyectos` publicada). Falta:
+MCP completo (`mcp`, tokens con alcance) y «lanzar a Claude»
+(`claude_peticiones` + `lanzar-claude`). Plan de la fase en `docs/FASE1.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -193,6 +195,18 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `app-actual/` son los enlaces a la app actual con contador sacado del
   ESPEJO del hub (ni una consulta más a producción).
 - `src/shell/`: shell, login, buscador (Ctrl+K), tema, tour.
+- `src/core/equipo.ts`: personas del equipo (caché 5 min, una carga en
+  vuelo) y `nombreDe(id)`. `src/ui/markdown.ts`: markdown SEGURO (escapa todo
+  antes de dar formato); úsese para todo texto que escriba una persona o Claude.
+- Proyectos (`src/modulos/proyectos/`): `datos.ts` (tipos, fases, consultas,
+  `ENLAZABLES`), `lista.ts` (kanban por fase con arrastre, lista, tareas por
+  persona, bandeja de ideas) y `ficha.ts` (pestañas Idea · Objetivos ·
+  Investigación · Roadmap con Gantt · Tareas · Vinculado · Coste). **Regla**:
+  las tablas espejo (trabajos, tareas, tickets…) tienen dueño `app` y el hub no
+  les escribe; un proyecto tiene sus PROPIAS tareas (`proyecto_tareas`) y ENLAZA
+  lo de la app con `proyecto_vinculos`. Borrar un proyecto entero: solo admin.
+- El dispatcher delega también arrastrar y soltar (`data-on-dragstart`,
+  `data-on-dragover` + `data-prevent="1"`, `data-on-drop`).
 - Al entrar se busca el correo de la sesión en `hub.usuarios` (activo): sin
   fila, se cierra la sesión y se avisa. La RLS usa la misma regla
   (`hub.es_usuario()`, `hub.es_admin()`).

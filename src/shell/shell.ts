@@ -11,7 +11,7 @@ export function pintarShell(raiz: HTMLElement) {
     <header class="cabecera">
       <button class="icono-btn solo-movil" data-action="alternarMenu" aria-label="Menú">☰</button>
       <a class="marca" href="#/inicio">Ok Computer <b>Hub</b></a>
-      <button id="buscador-btn" class="buscador-btn" data-action="abrirBuscador">Buscar pantalla… <kbd>Ctrl K</kbd></button>
+      <button id="buscador-btn" class="buscador-btn" data-action="abrirBuscador" aria-label="Buscar pantalla"><span aria-hidden="true">🔎</span><span class="btn-label"> Buscar pantalla…</span> <kbd>Ctrl K</kbd></button>
       <span class="hueco"></span>
       <button id="tema-btn" class="icono-btn" data-action="alternarTema" aria-label="Tema claro u oscuro">🌓</button>
       <button class="icono-btn" data-action="empezarTour" aria-label="Tour">?</button>

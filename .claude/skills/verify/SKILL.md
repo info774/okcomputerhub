@@ -38,7 +38,20 @@ prueba RLS, áreas, auditoría, que `public` no cambia y el importador con un
 dump falso. `node scripts/comprobar-migraciones.mjs` (dentro de `npm run lint`)
 rechaza cualquier migración que nombre `public.` o un rol de Breeze.
 
+## Arneses
+
+- `verify-shell.mjs`: login, usuario sin alta, shell, baldosas, Datos y
+  sincronización, buscador, tema, tour, móvil.
+- `verify-proyectos.mjs` (usa `comun.mjs`, un PostgREST EN MEMORIA que acepta
+  escrituras): idea → kanban y arrastre entre fases, ficha entera (idea,
+  objetivos, páginas con fuentes y markdown seguro, hitos y Gantt, tareas y
+  arrastre, vínculo a un trabajo, coste), tareas por persona, que no se escribe
+  en tablas espejo, técnico sin «Borrar proyecto», móvil.
+
+`npm run verify` pasa los dos.
+
 ## Pantalla nueva
 
-Un `verify-<modulo>.mjs` propio, copiando `preparar()` de `verify-shell.mjs`, y
-una línea aquí con qué cubre.
+Un `verify-<modulo>.mjs` propio sobre `comun.mjs` (`servidor`, `navegador`,
+`baseMemoria`, `preparar`), añadido a `npm run verify`, y una línea aquí con
+qué cubre.

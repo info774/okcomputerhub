@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src scripts && tsc --noEmit && node scripts/comprobar-migraciones.mjs",
-    "verify": "node .claude/skills/verify/verify-shell.mjs",
+    "verify": "node .claude/skills/verify/verify-shell.mjs && node .claude/skills/verify/verify-proyectos.mjs",
     "probar-migraciones": "node scripts/probar-migraciones.mjs"
   },
   "dependencies": {

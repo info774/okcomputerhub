@@ -195,6 +195,26 @@ try {
   ok(!psql(como('authenticated', 'ana@ok.test', `select hub.secreto('app_service_role_key');`), { esperaError: true }).ok,
     'hub.secreto: un usuario no puede llamarla');
 
+  // ── Proyectos (fase 1) ─────────────────────────────────────────────────
+  const pid = psql(como('authenticated', 'tito@ok.test',
+    `insert into hub.proyectos (titulo, tipo) values ('Web nueva', 'interno') returning id;`)).split('\n').find(l => /^[0-9a-f-]{36}$/.test(l));
+  ok(!!pid, 'un usuario crea un proyecto');
+  ok(!psql(como('authenticated', 'extrano@ok.test', `insert into hub.proyectos (titulo) values ('x');`), { esperaError: true }).ok,
+    'quien no está en el hub no crea proyectos');
+  psql(como('authenticated', 'tito@ok.test', `
+    insert into hub.proyecto_objetivos (proyecto_id, texto) values ('${pid}', 'Vender más');
+    insert into hub.proyecto_tareas (proyecto_id, titulo, estado) values ('${pid}', 'Maqueta', 'hecho');
+    insert into hub.proyecto_vinculos (proyecto_id, tabla, registro_id) values ('${pid}', 'trabajos', gen_random_uuid());
+    update hub.proyectos set estado = 'cerrado' where id = '${pid}';`));
+  ok(psql(`select hecha_at is not null from hub.proyecto_tareas where proyecto_id = '${pid}'`) === 't', 'una tarea hecha apunta hecha_at');
+  ok(psql(`select cerrado_at is not null and numero > 0 from hub.proyectos where id = '${pid}'`) === 't', 'cerrar apunta cerrado_at y el proyecto tiene número');
+  ok(psql(`select count(*) from hub.auditoria where tabla like 'proyecto%' and usuario_email = 'tito@ok.test'`) >= '4', 'lo del proyecto queda auditado');
+  psql(como('authenticated', 'tito@ok.test', `delete from hub.proyectos where id = '${pid}';`));
+  ok(psql(`select count(*) from hub.proyectos where id = '${pid}'`) === '1', 'un técnico no borra un proyecto');
+  psql(como('authenticated', 'ana@ok.test', `delete from hub.proyectos where id = '${pid}';`));
+  ok(psql(`select (select count(*) from hub.proyectos where id = '${pid}') + (select count(*) from hub.proyecto_tareas where proyecto_id = '${pid}')`) === '0',
+    'un admin lo borra y se lleva sus piezas');
+
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
   ok(!sinRls, `todas las tablas de hub con RLS${sinRls ? ' (faltan: ' + sinRls + ')' : ''}`);

@@ -108,7 +108,10 @@ export function instalarDispatcher() {
     f(...args);
   };
 
-  for (const ev of ['input', 'change', 'keyup', 'keydown', 'submit', 'dblclick', 'contextmenu', 'paste']) {
+  // Arrastrar y soltar también burbujea: se delega igual. `dragover` necesita
+  // data-prevent="1" en la zona de soltar (si no, el navegador no deja soltar).
+  for (const ev of ['input', 'change', 'keyup', 'keydown', 'submit', 'dblclick', 'contextmenu', 'paste',
+                    'dragstart', 'dragend', 'dragover', 'dragleave', 'drop']) {
     document.addEventListener(ev, e => despachar(ev, e));
   }
   for (const ev of ['focus', 'blur']) {
