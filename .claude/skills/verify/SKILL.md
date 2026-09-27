@@ -60,7 +60,15 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   programar, vista previa saneada, enviar ahora, pausar, configurar el bot),
   conexión de Zoho en Datos; un técnico no ve dinero; móvil.
 
-`npm run verify` pasa los cinco.
+- `verify-ventas.mjs`: Clientes 360 (lista y clase, «lo siguiente», clase a
+  mano, apuntar, línea de tiempo, sedes, contactos), Oportunidades (arrastre,
+  nueva con cliente, ganar, perder con motivo, actividad, previsión, embudos),
+  Cobros (WhatsApp con el texto, editar, marcar enviado) y Mapa (puntos y
+  capas; mosaicos de OSM interceptados). Nada escribe en el espejo; un técnico
+  no ve dinero ni Cobros. OJO: el PostgREST en memoria no entiende
+  `not.is.null` (lo trata como «todo»).
+
+`npm run verify` pasa los seis.
 
 ## Pantalla nueva
 

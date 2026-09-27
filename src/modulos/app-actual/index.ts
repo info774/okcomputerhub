@@ -33,10 +33,6 @@ export const modulosAppActual: Modulo[] = [
   }),
   enlace('tickets', 'Tickets', '🎫', () => cuenta('tickets', { estado: 'in.(Abierto,"En curso")' }, 'abiertos', 'aviso')),
   enlace('tareas', 'Tareas', '✅', () => cuenta('tareas', { estado: 'in.(pendiente,en_progreso)' }, 'pendientes')),
-  enlace('clientes', 'Clientes y sitios', '🏢', async () => {
-    const n = await API.contar('clientes', { activo: 'eq.true' });
-    return n == null ? null : { valor: n, subtitulo: 'clientes de alta' };
-  }),
   enlace('presupuestos', 'Presupuestos', '📄', () => cuenta('presupuestos', { estado: 'eq.Borrador' }, 'en borrador')),
   enlace('facturacion', 'Facturación y cobros', '💶'),
   enlace('mantenimientos', 'Mantenimientos', '🔁'),

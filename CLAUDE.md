@@ -27,6 +27,9 @@ dé de alta el usuario de servicio en Breeze. Detalle en `docs/FASE2.md`.
 `#/direccion`, `#/informes`, funciones `zoho-lectura`, `informes-enviar`,
 `telegram-bot`); faltan las credenciales de Zoho (Self Client) y el token del
 bot de Telegram, que pone Fran. Detalle en `docs/FASE3.md`.
+**Fase 4 HECHA** (2026-09-27): ventas (`20261008_ventas.sql`, `#/clientes`
+ficha 360, `#/oportunidades`, `#/cobros`, `#/mapa`). Clientes/sedes/contactos
+siguen en la app; las OPORTUNIDADES son ya del hub. Detalle en `docs/FASE4.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -249,6 +252,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
 - Funciones que llama pg_cron: `hub.lanzar_funcion('<nombre>', cuerpo)` (misma
   URL base y token que el sync) y van en `SIN_JWT`.
 - Llamar a una función desde el front: `llamarFuncion()` de `src/core/funciones.ts`.
+- Ventas: el CRM del hub va ENCIMA del espejo sin tocarlo (`hub.clientes_crm`,
+  `hub.actividades`, `hub.clases_clientes()`, `hub.linea_tiempo()`); lo común
+  del front está en `src/modulos/ventas/datos.ts`. Oportunidades: área del hub
+  con `hub.areas.importar_altas`: `sync-app` inserta las que la app sigue
+  creando (web, WhatsApp) con `ignore-duplicates`, nunca pisa. Una etapa nueva
+  se define en `hub.pipelines` (la valida un trigger). Recordatorios de cobro:
+  se PREPARAN (`hub.preparar_recordatorios`) y los manda una persona; nunca
+  salen solos hacia un cliente.
+- Leaflet se importa de forma diferida (`import('leaflet')`) solo en `#/mapa`.
 - Al entrar se busca el correo de la sesión en `hub.usuarios` (activo): sin
   fila, se cierra la sesión y se avisa. La RLS usa la misma regla
   (`hub.es_usuario()`, `hub.es_admin()`).

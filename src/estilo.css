@@ -406,3 +406,30 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 
 @media (max-width: 1023px) { .di-cuerpo { grid-template-columns: 1fr; } }
 @media (max-width: 767px) { .di-aviso { flex-wrap: wrap; } .di-valor { font-size: 1.4rem; } }
+
+/* ── Ventas: clientes (cl-), oportunidades (op-), mapa (ma-), cobros (co-) ── */
+.chip-boton { min-height: 36px; padding: 0 .8rem; border: 1px solid var(--borde); border-radius: 999px; background: var(--superficie); color: var(--texto); font: inherit; cursor: pointer; }
+.chip-boton.activo { background: var(--primario); color: var(--primario-texto); border-color: var(--primario); }
+.cl-clase { font-weight: 700; min-width: 1.6rem; text-align: center; }
+.cl-tipos { flex-wrap: wrap; margin-bottom: .5rem; }
+.cl-tipos label { display: inline-flex; align-items: center; gap: .25rem; padding: .35rem .6rem; cursor: pointer; }
+.cl-linea { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--borde); margin-left: .9rem; }
+.cl-evento { display: grid; grid-template-columns: 2rem 1fr; gap: .5rem; padding: .5rem 0 .75rem; margin-left: -1rem; }
+.cl-icono { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--superficie); border: 1px solid var(--borde); }
+.cl-ev-texto { white-space: pre-wrap; overflow-wrap: anywhere; }
+.cl-contactos { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .75rem; }
+.cl-contactos h3 { margin: 0; }
+.op-etapas { display: flex; gap: .25rem; flex-wrap: wrap; margin: .5rem 0 1rem; }
+.op-etapa { min-height: 40px; padding: 0 .9rem; border: 1px solid var(--borde); border-radius: 8px; background: var(--superficie); color: var(--texto); font: inherit; cursor: pointer; }
+.op-etapa.activo { background: var(--primario); color: var(--primario-texto); border-color: var(--primario); }
+.op-etapa.op-ganada.activo { background: var(--bien); border-color: var(--bien); }
+.op-etapa.op-perdida.activo { background: var(--mal); border-color: var(--mal); }
+.pr-columna.op-ganada header h3 { color: var(--bien); }
+.pr-columna.op-perdida header h3 { color: var(--mal); }
+.op-ficha { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1rem; align-items: start; }
+.op-ficha > div { display: grid; gap: 1rem; }
+.co-rec textarea { width: 100%; }
+.ma-mapa { height: min(70vh, 640px); border-radius: 12px; border: 1px solid var(--borde); z-index: 0; }
+.ma-leyenda { margin-top: .5rem; }
+.ma-leyenda i { display: inline-block; width: .8rem; height: .8rem; border-radius: 50%; margin-right: .35rem; vertical-align: -1px; }
+@media (max-width: 1023px) { .op-ficha { grid-template-columns: 1fr; } }

@@ -89,7 +89,7 @@ const lectura: Herramienta[] = [
       const areas = await db.get('areas?select=area,dueno,tablas,notas&order=area')
       return {
         areas,
-        propias_del_hub: ['proyectos', 'proyecto_objetivos', 'proyecto_hitos', 'proyecto_paginas', 'proyecto_tareas', 'proyecto_vinculos', 'claude_peticiones', 'rmm_sitios', 'rmm_acciones'],
+        propias_del_hub: ['proyectos', 'proyecto_objetivos', 'proyecto_hitos', 'proyecto_paginas', 'proyecto_tareas', 'proyecto_vinculos', 'claude_peticiones', 'rmm_sitios', 'rmm_acciones', 'oportunidades', 'pipelines', 'actividades', 'clientes_crm'],
         notas: [
           'Las tablas de áreas con dueño "app" son una copia de la app actual (se refresca cada 15 min): se leen, no se escriben.',
           'Estados de trabajos: Pendiente, En progreso, Completado, Para facturar, Facturado, Cancelado. Tickets: Abierto, En curso, Cerrado. Tareas (app): pendiente, en_progreso, completada.',
@@ -600,7 +600,91 @@ const mando: Herramienta[] = [
   },
 ]
 
-export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...mando, ...escritura]
+// ── Ventas (fase 4) ─────────────────────────────────────────────────────────
+// Clientes, sedes y contactos son de la app (solo se leen); lo del CRM es del
+// hub: actividades, «lo siguiente» (clientes_crm) y oportunidades.
+const TIPOS_ACT = ['nota', 'llamada', 'visita', 'email', 'whatsapp', 'reunion']
+const ventas: Herramienta[] = [
+  {
+    name: 'cliente_linea_tiempo', alcance: 'lectura',
+    description: 'Todo lo que ha pasado con un cliente, lo último primero: actividades apuntadas, trabajos, tickets, presupuestos, oportunidades y (si el dueño del token es admin) facturas y cobros. Incluye su clase A/B/C y «lo siguiente».',
+    inputSchema: obj({ cliente_id: S('UUID del cliente (sale de buscar)'), limite: N('Máximo de eventos (por defecto 50)') }, ['cliente_id']),
+    async ejecutar(a, { db }) {
+      if (!esUuid(a.cliente_id)) throw new Error('cliente_id no válido')
+      const [eventos, crm, clases] = await Promise.all([
+        db.rpc('linea_tiempo', { p_cliente: a.cliente_id, p_limite: lim(a.limite, 50, 200) }),
+        db.get(`clientes_crm?select=clase_manual,siguiente_fecha,siguiente_texto,responsable_id&cliente_id=eq.${a.cliente_id}`),
+        db.rpc('clases_clientes', {}) as Promise<Fila[]>,
+      ])
+      return { clase: clases.find(c => c.cliente_id === a.cliente_id) ?? null, crm: crm[0] ?? null, eventos }
+    },
+  },
+  {
+    name: 'oportunidades_listar', alcance: 'lectura',
+    description: 'Oportunidades de venta (embudo). Por defecto las abiertas. Etapas del embudo «Ventas»: Detectado, Contactado, Propuesta, Negociando, Ganado, Perdido.',
+    inputSchema: obj({ cliente_id: S('UUID del cliente'), estado: S('Etapa'), cerradas: B('Incluir ganadas y perdidas') }),
+    async ejecutar(a, { db }) {
+      const f = [esUuid(a.cliente_id) ? `cliente_id=eq.${a.cliente_id}` : '', a.estado ? `estado=eq.${encodeURIComponent(limpio(a.estado))}` : '',
+        a.cerradas ? '' : 'cerrada_at=is.null'].filter(Boolean).join('&')
+      return db.get(`oportunidades?select=id,titulo,cliente_id,estado,valor_estimado,tecnico_id,fecha_seguimiento,origen,created_at${f ? '&' + f : ''}&order=created_at.desc&limit=100`)
+    },
+  },
+  {
+    name: 'actividad_apuntar', alcance: 'escritura', tabla: 'actividades',
+    description: `Apunta en la línea de tiempo de un cliente (y opcionalmente de una oportunidad) lo que se ha hecho: ${TIPOS_ACT.join(', ')}.`,
+    inputSchema: obj({ cliente_id: S('UUID del cliente'), oportunidad_id: S('UUID de la oportunidad'), tipo: S('Tipo', { enum: TIPOS_ACT }), texto: S('Qué pasó') }, ['texto']),
+    async ejecutar(a, { db, usuarioId }) {
+      if (!esUuid(a.cliente_id) && !esUuid(a.oportunidad_id)) throw new Error('Hace falta cliente_id u oportunidad_id')
+      const texto = txt(a.texto, 4000)
+      if (!texto) throw new Error('Falta el texto')
+      let cliente = esUuid(a.cliente_id) ? a.cliente_id : undefined
+      if (!cliente && esUuid(a.oportunidad_id)) cliente = uno(await db.get(`oportunidades?select=cliente_id&id=eq.${a.oportunidad_id}`), 'esa oportunidad').cliente_id ?? undefined
+      const [r] = await db.post('actividades', soloDefinidos({ tipo: TIPOS_ACT.includes(String(a.tipo)) ? a.tipo : 'nota', texto, cliente_id: cliente,
+        oportunidad_id: esUuid(a.oportunidad_id) ? a.oportunidad_id : undefined, usuario_id: usuarioId }))
+      return { id: r.id }
+    },
+  },
+  {
+    name: 'cliente_siguiente', alcance: 'escritura', tabla: 'clientes_crm',
+    description: 'Pone (o borra, con fecha vacía) «lo siguiente» que toca con un cliente: fecha, qué y quién. Sale como aviso cuando vence.',
+    inputSchema: obj({ cliente_id: S('UUID del cliente'), fecha: S('AAAA-MM-DD, o vacío para borrarlo'), texto: S('Qué hay que hacer'),
+      responsable_email: S('Email de la persona') }, ['cliente_id']),
+    async ejecutar(a, { db }) {
+      if (!esUuid(a.cliente_id)) throw new Error('cliente_id no válido')
+      const f = fecha(a.fecha, 'fecha') ?? null
+      await db.upsert('clientes_crm', 'cliente_id', [soloDefinidos({ cliente_id: a.cliente_id, siguiente_fecha: f, siguiente_texto: f ? txt(a.texto, 300) ?? null : null,
+        responsable_id: await usuarioPorEmail(db, a.responsable_email) })])
+      return { ok: true }
+    },
+  },
+  {
+    name: 'oportunidad_crear', alcance: 'escritura', tabla: 'oportunidades',
+    description: 'Crea una oportunidad de venta en el embudo «Ventas» (etapa Detectado).',
+    inputSchema: obj({ titulo: S('Qué se quiere vender'), cliente_id: S('UUID del cliente'), valor_estimado: N('€'), fecha_seguimiento: S('AAAA-MM-DD'),
+      tecnico: S('Nombre de quien la lleva'), origen: S('web, whatsapp, teléfono, recomendación…'), descripcion: S('Detalle') }, ['titulo']),
+    async ejecutar(a, { db }) {
+      const [o] = await db.post('oportunidades', soloDefinidos({ titulo: txt(a.titulo, 200), cliente_id: esUuid(a.cliente_id) ? a.cliente_id : undefined,
+        valor_estimado: a.valor_estimado == null ? undefined : Number(a.valor_estimado), fecha_seguimiento: fecha(a.fecha_seguimiento, 'fecha_seguimiento'),
+        tecnico_id: txt(a.tecnico, 80), origen: txt(a.origen, 40), descripcion: txt(a.descripcion, 5000) }))
+      return { id: o.id }
+    },
+  },
+  {
+    name: 'oportunidad_actualizar', alcance: 'escritura', tabla: 'oportunidades',
+    description: 'Cambia una oportunidad: etapa (estado), valor, seguimiento, quién la lleva, descripción; al perderla, el motivo.',
+    inputSchema: obj({ id: S('UUID'), estado: S('Etapa del embudo'), valor_estimado: N('€'), fecha_seguimiento: S('AAAA-MM-DD'), tecnico: S('Nombre'),
+      descripcion: S('Detalle'), motivo_perdida: S('Por qué se perdió') }, ['id']),
+    async ejecutar(a, { db }) {
+      if (!esUuid(a.id)) throw new Error('id no válido')
+      const filas = await db.patch(`oportunidades?id=eq.${a.id}`, soloDefinidos({ estado: txt(a.estado, 40), valor_estimado: a.valor_estimado == null ? undefined : Number(a.valor_estimado),
+        fecha_seguimiento: fecha(a.fecha_seguimiento, 'fecha_seguimiento'), tecnico_id: txt(a.tecnico, 80), descripcion: txt(a.descripcion, 5000), motivo_perdida: txt(a.motivo_perdida, 500) }))
+      if (!filas.length) throw new Error('No existe esa oportunidad')
+      return { ok: true, estado: filas[0].estado }
+    },
+  },
+]
+
+export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...mando, ...ventas, ...escritura]
 
 // Tablas cuyo dueño es la app (no se escribe en ellas desde el hub).
 export async function tablasDeLaApp(db: Db): Promise<Set<string>> {

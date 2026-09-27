@@ -25,8 +25,8 @@ por HTTP sin estado. Nada de SQL libre: solo las herramientas de
 
 | Alcance | Puede |
 |---|---|
-| `lectura` | Todas las consultas: buscar, esquema, clientes, trabajos, tickets, tareas de la app, agenda, presupuestos, proyectos, equipo, estado del sync monitorización (`rmm_resumen`, `rmm_equipos`, `rmm_equipo_detalle`, `rmm_scripts`) y puesto de mando (`avisos`, `informe`; lo de dinero solo si el dueño del token es admin). |
-| `escritura` | Además crear y editar proyectos y sus piezas (objetivos, hitos, tareas, páginas con fuentes, vínculos) y pedirle cosas a Breeze: `rmm_acusar_alerta`, `rmm_comando`, `rmm_script` (quedan en `hub.rmm_acciones`). |
+| `lectura` | Todas las consultas: buscar, esquema, clientes, trabajos, tickets, tareas de la app, agenda, presupuestos, proyectos, equipo, estado del sync monitorización (`rmm_resumen`, `rmm_equipos`, `rmm_equipo_detalle`, `rmm_scripts`) puesto de mando (`avisos`, `informe`; lo de dinero solo si el dueño del token es admin) y ventas (`cliente_linea_tiempo`, `oportunidades_listar`). |
+| `escritura` | Además crear y editar proyectos y sus piezas (objetivos, hitos, tareas, páginas con fuentes, vínculos) pedirle cosas a Breeze: `rmm_acusar_alerta`, `rmm_comando`, `rmm_script` (quedan en `hub.rmm_acciones`), y ventas: `actividad_apuntar`, `cliente_siguiente`, `oportunidad_crear`, `oportunidad_actualizar`. |
 | `admin` | Todo lo anterior; reservado para lo que se añada de administración. |
 
 Una escritura sobre un área cuyo dueño sea la app (`hub.areas`) **ni se ofrece
