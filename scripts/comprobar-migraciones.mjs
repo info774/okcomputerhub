@@ -8,7 +8,10 @@ import { join } from 'node:path';
 
 const DIR = 'supabase/migrations';
 const PROHIBIDO = [
-  [/\bpublic\s*\./i, 'nombra el esquema public (es de Breeze)'],
+  // Leer Breeze sí (regla 3: vistas hub.rmm_*): `from public.x` / `join public.x`.
+  // Cualquier otra mención (crear, alterar, conceder, escribir) no.
+  [/\bpublic\s*\./i, 'nombra el esquema public fuera de un FROM/JOIN de lectura (es de Breeze)', l => l.replace(/\b(from|join)\s+public\.\w+/gi, '')],
+  [/\bdelete\s+from\s+public\s*\./i, 'borra en una tabla de Breeze'],
   [/\bschema\s+public\b/i, 'toca el esquema public'],
   [/\b(alter|drop|create)\s+role\b/i, 'crea o cambia roles (los de Breeze no se tocan)'],
   [/\bbreeze(_app|_search)?\b/i, 'menciona un rol de Breeze'],
@@ -25,10 +28,10 @@ for (const f of readdirSync(DIR).filter(f => f.endsWith('.sql')).sort()) {
   if (!NOMBRE.test(f)) { console.error(`✗ ${f}: el nombre tiene que ser AAAAMMDD[letra]_descripcion.sql`); fallos++; }
   const sql = sinComentarios(readFileSync(join(DIR, f), 'utf8'));
   sql.split('\n').forEach((l, i) => {
-    for (const [re, motivo] of PROHIBIDO) {
-      if (re.test(l)) { console.error(`✗ ${f}:${i + 1} ${motivo}\n    ${l.trim()}`); fallos++; }
+    for (const [re, motivo, prep] of PROHIBIDO) {
+      if (re.test(prep ? prep(l) : l)) { console.error(`✗ ${f}:${i + 1} ${motivo}\n    ${l.trim()}`); fallos++; }
     }
   });
 }
 if (fallos) { console.error(`\n${fallos} problema(s). Todo lo del hub va en el esquema hub.`); process.exit(1); }
-console.log('✓ Migraciones: ninguna toca public ni los roles de Breeze.');
+console.log('✓ Migraciones: ninguna toca public (solo lo leen) ni los roles de Breeze.');

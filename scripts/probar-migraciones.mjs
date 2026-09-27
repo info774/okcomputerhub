@@ -83,9 +83,25 @@ try {
     create extension if not exists pgcrypto with schema extensions;
     create schema vault;
     create table vault.decrypted_secrets (name text, decrypted_secret text);
-    -- «Breeze»: una tabla en public que nada del hub puede tocar.
-    create table public.devices (id int primary key, nombre text);
-    insert into public.devices values (1, 'PC recepción');
+  `);
+  // «Breeze»: sus tablas en public (las que leen las vistas hub.rmm_*), que
+  // nada del hub puede tocar.
+  psql(readFileSync('scripts/breeze-falso.sql', 'utf8'));
+  psql(`
+    insert into public.organizations (id, name) values ('00000000-0000-0000-0000-00000000000a', 'JJ PUMARAN SL');
+    insert into public.sites (id, org_id, name) values
+      ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-00000000000a', 'El Rebajón'),
+      ('00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-00000000000a', 'Sin pareja');
+    insert into public.devices (id, org_id, site_id, hostname, status, os_type, last_seen_at) values
+      ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000b1', 'CAJA1', 'online', 'windows', now() at time zone 'UTC'),
+      ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000b1', 'CAJA2', 'offline', 'windows', (now() at time zone 'UTC') - interval '2 days');
+    insert into public.software_inventory (id, device_id, name, version) values
+      (gen_random_uuid(), '00000000-0000-0000-0000-0000000000d1', 'ÁgoraTPV Cliente', '8.4.1');
+    insert into public.alerts (id, device_id, org_id, status, severity, title, triggered_at) values
+      (gen_random_uuid(), '00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-00000000000a', 'active', 'high', 'Disco lleno', now() at time zone 'UTC');
+    insert into public.device_metrics (device_id, timestamp, cpu_percent) values
+      ('00000000-0000-0000-0000-0000000000d1', now() at time zone 'UTC', 12),
+      ('00000000-0000-0000-0000-0000000000d1', (now() at time zone 'UTC') - interval '5 days', 99);
   `);
   if (!cronReal) psql(`
     create schema cron;
@@ -120,7 +136,7 @@ try {
     }
   }
   ok(huellaPublic() === antes, 'public (Breeze) queda igual');
-  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '2', 'dos tareas de pg_cron, sin duplicar');
+  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '3', 'tres tareas de pg_cron, sin duplicar');
 
   // ── Permisos y RLS ─────────────────────────────────────────────────────
   ok(!psql(como('anon', null, 'select count(*) from hub.clientes;'), { esperaError: true }).ok, 'anon no entra en hub');
@@ -257,6 +273,41 @@ try {
   ok(psql(`select estado from hub.claude_peticiones where id = '${pet}'`) === 'pendiente', 'Claude: desde el navegador no se marca como hecha');
   psql(como('authenticated', 'tito@ok.test', `update hub.claude_peticiones set estado = 'cancelada' where id = '${pet}';`));
   ok(psql(`select estado from hub.claude_peticiones where id = '${pet}'`) === 'cancelada', 'Claude: quien la pidió la cancela');
+
+  // ── Monitorización (fase 2): vistas sobre Breeze ───────────────────────
+  const huellaBreeze = () => psql(`select (select count(*) from public.devices) || '/' || (select count(*) from public.alerts) || '/' || (select count(*) from public.device_metrics)`);
+  const breezeAntes = huellaBreeze();
+  psql(`insert into hub.locales (id, nombre, programa_tpv) values
+          ('00000000-0000-0000-0000-0000000000c1', 'EL REBAJON', 'Agora TPV'),
+          ('00000000-0000-0000-0000-0000000000c2', 'Otra sede', null)`);
+  ok(psql(`select hub.rmm_emparejar()`) === '2', 'RMM: el emparejado da de alta los dos Sites');
+  ok(psql(`select local_id from hub.rmm_sitios where site_id = '00000000-0000-0000-0000-0000000000b1'`) === '00000000-0000-0000-0000-0000000000c1',
+    'RMM: empareja por nombre sin tildes ni mayúsculas');
+  ok(psql(`select hub.rmm_emparejar()`) === '0', 'RMM: una pasada que no cambia nada no escribe nada');
+  psql(como('authenticated', 'tito@ok.test', `update hub.rmm_sitios set local_id = '00000000-0000-0000-0000-0000000000c2', manual = true
+    where site_id = '00000000-0000-0000-0000-0000000000b2';`));
+  psql(`update hub.locales set nombre = 'Sin pareja' where id = '00000000-0000-0000-0000-0000000000c1'`);
+  psql(`select hub.rmm_emparejar()`);
+  ok(psql(`select local_id from hub.rmm_sitios where site_id = '00000000-0000-0000-0000-0000000000b2'`) === '00000000-0000-0000-0000-0000000000c2',
+    'RMM: lo emparejado a mano no se pisa');
+  psql(`update hub.locales set nombre = 'EL REBAJON' where id = '00000000-0000-0000-0000-0000000000c1'`);
+  psql(`select hub.rmm_emparejar()`);
+  const rmm = (email, sql) => psql(como('authenticated', email, sql)).split('\n').pop();
+  ok(rmm('tito@ok.test', `select count(*) || ':' || count(*) filter (where conectado) from hub.rmm_equipos;`) === '2:1', 'RMM: un usuario ve los equipos y quién está conectado');
+  ok(rmm('extrano@ok.test', `select count(*) from hub.rmm_equipos;`) === '0', 'RMM: quien no está en el hub no ve equipos');
+  ok(!psql(como('anon', null, 'select count(*) from hub.rmm_equipos;'), { esperaError: true }).ok, 'RMM: anon no ve nada');
+  ok(rmm('tito@ok.test', `select tpv_version || '|' || alertas_abiertas from hub.rmm_equipos where hostname = 'CAJA1';`) === '8.4.1|1',
+    'RMM: versión del TPV cruzada con programa_tpv y alertas abiertas');
+  ok(rmm('tito@ok.test', `select estado || ':' || equipos || ':' || conectados from hub.rmm_estado_local where local_id = '00000000-0000-0000-0000-0000000000c1';`) === 'alerta:2:1',
+    'RMM: semáforo de la sede');
+  ok(rmm('tito@ok.test', `select count(*) from hub.rmm_metricas where device_id = '00000000-0000-0000-0000-0000000000d1';`) === '1', 'RMM: métricas solo de las últimas 48 h');
+  ok(psql(como('service_role', null, `select count(*) from hub.rmm_alertas;`)).split('\n').pop() === '1', 'RMM: las funciones (service_role) leen las alertas');
+  for (const [v, sql] of [['rmm_metricas', `update hub.rmm_metricas set cpu = 0;`], ['rmm_equipos', `delete from hub.rmm_equipos;`],
+    ['rmm_alertas', `update hub.rmm_alertas set estado = 'resolved';`], ['rmm_acciones', `insert into hub.rmm_acciones (accion) values ('comando');`]]) {
+    ok(!psql(como('authenticated', 'ana@ok.test', sql), { esperaError: true }).ok, `RMM: nadie escribe por ${v} (ni un admin)`);
+    if (!sql.startsWith('insert')) ok(!psql(como('service_role', null, sql), { esperaError: true }).ok, `RMM: ni el service_role por ${v}`);
+  }
+  ok(huellaBreeze() === breezeAntes, 'RMM: los datos de Breeze siguen igual');
 
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
