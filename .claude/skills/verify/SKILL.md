@@ -68,7 +68,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   no ve dinero ni Cobros. OJO: el PostgREST en memoria no entiende
   `not.is.null` (lo trata como «todo»).
 
-`npm run verify` pasa los seis.
+- `verify-wiki.mjs`: wiki (crear con vista previa segura, subpágina, mover,
+  editar, historial y restaurar, archivar, reindexado al guardar) y Buscar
+  (respuesta en markdown seguro con citas, fuentes, estado del índice,
+  carpeta de Drive solo admin). Funciones simuladas en el propio arnés.
+
+`npm run verify` pasa los siete.
 
 ## Pantalla nueva
 

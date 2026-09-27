@@ -16,6 +16,7 @@ import { hubDb, type Db } from '../_shared/hub-db.ts'
 import { construirInforme, TIPOS } from '../_shared/informes.ts'
 import { telegram, enviarTelegram, telegramConfigurado, h } from '../_shared/mensajeria.ts'
 import { personaPorEmail, personaPorId } from '../_shared/personas.ts'
+import { preguntar } from '../_shared/rag.ts'
 
 const secreto = () => Deno.env.get('TELEGRAM_WEBHOOK_SECRET') ?? ''
 const URL_WEBHOOK = `${Deno.env.get('SUPABASE_URL')}/functions/v1/telegram-bot`
@@ -24,7 +25,7 @@ const HUB = 'https://okhub-tenerife.web.app/#/informes'
 const COMANDOS = Object.fromEntries(Object.entries(TIPOS).map(([tipo, t]) => [t.comando, tipo]))
 const AYUDA = (admin: boolean) => ['<b>Ok Computer Hub</b> — lo que te puedo mandar:',
   ...Object.values(TIPOS).filter(t => admin || !t.dinero).map(t => `/${t.comando} — ${h(t.nombre)}`),
-  '/baja — desvincular este chat', '', `Los informes automáticos se programan en <a href="${HUB}">Informes</a>.`].join('\n')
+  '/pregunta <lo que quieras saber> — busca en la wiki y los documentos', '/baja — desvincular este chat', '', `Los informes automáticos se programan en <a href="${HUB}">Informes</a>.`].join('\n')
 
 // deno-lint-ignore no-explicit-any
 async function atender(db: Db, msg: any) {
@@ -55,6 +56,15 @@ async function atender(db: Db, msg: any) {
   if (comando === 'baja') {
     await db.patch(`telegram_vinculos?usuario_id=eq.${p.id}`, { chat_id: null, vinculado_at: null })
     return enviarTelegram(chat, 'Hecho: este chat ya no está vinculado. Puedes volver a vincularlo desde el hub.')
+  }
+  if (comando === 'pregunta' || comando === 'p') {
+    const q = texto.replace(/^\/\S+\s*/, '')
+    if (!q) return enviarTelegram(chat, 'Escribe la pregunta detrás: /pregunta ¿qué router tiene el Hotel Playa?')
+    try {
+      const r = await preguntar(hubDb({ origen: 'telegram', email: p.email }), q)
+      const fuentes = r.fuentes.slice(0, 5).map(f => `[${f.n}] ${f.url ? `<a href="${h(f.url.startsWith('#') ? 'https://okhub-tenerife.web.app/' + f.url : f.url)}">${h(f.titulo)}</a>` : h(f.titulo)}`).join('\n')
+      return enviarTelegram(chat, `${h(r.respuesta ?? 'Esto es lo que he encontrado:')}\n\n<b>Fuentes</b>\n${fuentes || '—'}`)
+    } catch (e) { return enviarTelegram(chat, `⚠️ ${h((e as Error).message)}`) }
   }
   const tipo = COMANDOS[comando]
   if (!tipo) return enviarTelegram(chat, AYUDA(p.rol === 'admin'))
@@ -103,6 +113,7 @@ Deno.serve(async req => {
       await telegram('setWebhook', { url: URL_WEBHOOK, secret_token: secreto(), allowed_updates: ['message'], drop_pending_updates: true })
       await telegram('setMyCommands', { commands: [
         ...Object.values(TIPOS).map(t => ({ command: t.comando, description: t.nombre + (t.dinero ? ' (admins)' : '') })),
+        { command: 'pregunta', description: 'Preguntar a la wiki y los documentos' },
         { command: 'baja', description: 'Desvincular este chat' }, { command: 'ayuda', description: 'Qué te puedo mandar' }] })
       return json({ ok: true }, 200, cors)
     }

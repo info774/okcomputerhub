@@ -91,6 +91,10 @@ try {
   // «Breeze»: sus tablas en public (las que leen las vistas hub.rmm_*), que
   // nada del hub puede tocar.
   psql(readFileSync('scripts/breeze-falso.sql', 'utf8'));
+  // Breeze instaló `vector` en public; el hub solo usa su tipo (fase 5).
+  psql('create extension if not exists vector with schema public;');
+  // Como en el proyecto real: public cerrado a los roles de la API (tampoco service_role).
+  psql('revoke all on schema public from public; revoke all on schema public from anon, authenticated, service_role;');
   psql(`
     insert into public.organizations (id, name) values ('00000000-0000-0000-0000-00000000000a', 'JJ PUMARAN SL');
     insert into public.sites (id, org_id, name) values
@@ -140,7 +144,7 @@ try {
     }
   }
   ok(huellaPublic() === antes, 'public (Breeze) queda igual');
-  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '7', 'siete tareas de pg_cron, sin duplicar');
+  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '8', 'ocho tareas de pg_cron, sin duplicar');
 
   // ── Permisos y RLS ─────────────────────────────────────────────────────
   ok(!psql(como('anon', null, 'select count(*) from hub.clientes;'), { esperaError: true }).ok, 'anon no entra en hub');
@@ -404,6 +408,34 @@ try {
   psql(`update hub.zoho_facturas set saldo = 0, estado = 'paid' where invoice_id = 'f1'`);
   psql(como('service_role', null, `select hub.preparar_recordatorios();`));
   ok(psql(`select estado from hub.cobros_recordatorios`) === 'descartado', 'cobros: al cobrarse, el recordatorio pendiente se descarta');
+
+  // ── Wiki y buscador (fase 5) ───────────────────────────────────────────
+  const pag = idDe('tito@ok.test', `insert into hub.paginas (titulo, contenido) values ('Routers', 'Clave del router: admin') returning id;`);
+  ok(!!pag, 'wiki: un usuario crea una página');
+  psql(como('authenticated', 'tito@ok.test', `update hub.paginas set contenido = 'Clave del router: nueva' where id = '${pag}';`));
+  ok(psql(`select p.version || ':' || v.contenido from hub.paginas p join hub.paginas_versiones v on v.pagina_id = p.id where p.id = '${pag}'`) === '2:Clave del router: admin',
+    'wiki: cambiar el contenido guarda la versión anterior');
+  ok(psql(`select actualizado_por = '${titoId}' from hub.paginas where id = '${pag}'`) === 't', 'wiki: apunta quién la cambió');
+  const hija = idDe('tito@ok.test', `insert into hub.paginas (titulo, padre_id) values ('Router del bar', '${pag}') returning id;`);
+  ok(!psql(como('authenticated', 'tito@ok.test', `update hub.paginas set padre_id = '${hija}' where id = '${pag}';`), { esperaError: true }).ok,
+    'wiki: no se puede meter una página dentro de su propia hija');
+  ok(una('tito@ok.test', `select count(*) from hub.paginas where tsv @@ websearch_to_tsquery('spanish', 'routers');`) === '1', 'wiki: búsqueda de texto en español');
+  psql(como('authenticated', 'ana@ok.test', `delete from hub.paginas where id = '${hija}';`));
+  const vec = x => `'[${Array(384).fill(x).join(',')}]'`;
+  psql(`insert into hub.documentos (id, fuente, ref, titulo) values ('00000000-0000-0000-0000-00000000d0c1', 'wiki', '${pag}', 'Routers');`);
+  ok(psql(como('service_role', null, `select hub.guardar_fragmentos('00000000-0000-0000-0000-00000000d0c1', jsonb_build_array(
+      jsonb_build_object('orden', 0, 'texto', 'La clave del router del Hotel es 1234', 'embedding', ${vec(0.1)}),
+      jsonb_build_object('orden', 1, 'texto', 'Las cámaras graban 30 días', 'embedding', ${vec(-0.1)})));`)).split('\n').pop() === '2',
+    'buscador: la función guarda los trozos (el service_role no toca public)');
+  ok(!psql(como('authenticated', 'ana@ok.test', `select hub.guardar_fragmentos('00000000-0000-0000-0000-00000000d0c1', '[]');`), { esperaError: true }).ok,
+    'buscador: un usuario no escribe en el índice');
+  ok(una('tito@ok.test', `select texto from hub.buscar_fragmentos(${vec(0.1)}, 'clave router', 1);`) === 'La clave del router del Hotel es 1234',
+    'buscador: encuentra el trozo más parecido (significado + palabras)');
+  ok(psql(como('service_role', null, `select count(*) from hub.buscar_fragmentos(${vec(0.1)}, 'clave', 5);`)).split('\n').pop() === '2',
+    'buscador: el service_role busca sin USAGE en public');
+  ok(una('extrano@ok.test', `select count(*) from hub.buscar_fragmentos(${vec(0.1)}, 'clave', 5);`) === '0', 'buscador: quien no está en el hub no busca');
+  ok(!psql(como('authenticated', 'ana@ok.test', `insert into hub.documentos (fuente, ref, titulo) values ('wiki', 'x', 'x');`), { esperaError: true }).ok,
+    'buscador: el índice solo lo escribe la función');
 
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);

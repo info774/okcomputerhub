@@ -433,3 +433,22 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .ma-leyenda { margin-top: .5rem; }
 .ma-leyenda i { display: inline-block; width: .8rem; height: .8rem; border-radius: 50%; margin-right: .35rem; vertical-align: -1px; }
 @media (max-width: 1023px) { .op-ficha { grid-template-columns: 1fr; } }
+
+/* ── Wiki (wk-) y Buscar (bu-) ───────────────────────────────────────── */
+.wk-marco { display: grid; grid-template-columns: minmax(200px, 280px) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.wk-lateral { position: sticky; top: 72px; max-height: calc(100vh - 90px); overflow: auto; }
+.wk-lateral input[type=search] { width: 100%; }
+.wk-arbol { list-style: none; margin: 0; padding-left: .8rem; }
+.wk-lateral > .wk-arbol { padding-left: 0; margin-top: .5rem; }
+.wk-arbol a { display: block; padding: .25rem .4rem; border-radius: 6px; color: var(--texto); text-decoration: none; overflow-wrap: anywhere; }
+.wk-arbol a:hover { background: var(--fondo); }
+.wk-arbol a.activo { background: var(--primario); color: var(--primario-texto); }
+.wk-migas { font-size: .9rem; margin-bottom: .5rem; }
+.wk-contenido { min-height: 8rem; }
+.wk-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.wk-dos textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9rem; }
+.bu-caja input { flex: 1; min-width: min(420px, 100%); }
+.bu-respuesta .md { font-size: 1.05rem; }
+.bu-cita { font-size: .8em; vertical-align: super; text-decoration: none; }
+.bu-fuentes li { margin-bottom: .6rem; }
+@media (max-width: 900px) { .wk-marco { grid-template-columns: 1fr; } .wk-lateral { position: static; max-height: none; } .wk-dos { grid-template-columns: 1fr; } }

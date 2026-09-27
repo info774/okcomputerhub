@@ -7,6 +7,7 @@
 import { type Db, type Fila, limpio, esUuid, esFecha } from './hub-db.ts'
 import { ejecutarAccionRmm, COMANDOS, type AccionRmm } from './rmm-acciones.ts'
 import { construirInforme, TIPOS } from './informes.ts'
+import { preguntar } from './rag.ts'
 
 export type Alcance = 'lectura' | 'escritura' | 'admin'
 export const NIVEL: Record<Alcance, number> = { lectura: 1, escritura: 2, admin: 3 }
@@ -89,7 +90,7 @@ const lectura: Herramienta[] = [
       const areas = await db.get('areas?select=area,dueno,tablas,notas&order=area')
       return {
         areas,
-        propias_del_hub: ['proyectos', 'proyecto_objetivos', 'proyecto_hitos', 'proyecto_paginas', 'proyecto_tareas', 'proyecto_vinculos', 'claude_peticiones', 'rmm_sitios', 'rmm_acciones', 'oportunidades', 'pipelines', 'actividades', 'clientes_crm'],
+        propias_del_hub: ['proyectos', 'proyecto_objetivos', 'proyecto_hitos', 'proyecto_paginas', 'proyecto_tareas', 'proyecto_vinculos', 'claude_peticiones', 'rmm_sitios', 'rmm_acciones', 'oportunidades', 'pipelines', 'actividades', 'clientes_crm', 'paginas'],
         notas: [
           'Las tablas de áreas con dueño "app" son una copia de la app actual (se refresca cada 15 min): se leen, no se escriben.',
           'Estados de trabajos: Pendiente, En progreso, Completado, Para facturar, Facturado, Cancelado. Tickets: Abierto, En curso, Cerrado. Tareas (app): pendiente, en_progreso, completada.',
@@ -684,7 +685,61 @@ const ventas: Herramienta[] = [
   },
 ]
 
-export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...mando, ...ventas, ...escritura]
+// ── Wiki y buscador (fase 5) ────────────────────────────────────────────────
+const wiki: Herramienta[] = [
+  {
+    name: 'preguntar', alcance: 'lectura',
+    description: 'Pregunta en lenguaje natural sobre lo que hay en la wiki del hub, la carpeta de Drive indexada y el conocimiento de la app (claves, procedimientos, instalaciones de clientes…). Devuelve la respuesta citando las fuentes [n] y los trozos encontrados.',
+    inputSchema: obj({ pregunta: S('La pregunta') }, ['pregunta']),
+    ejecutar: (a, { db }) => preguntar(db, String(a.pregunta ?? '')),
+  },
+  {
+    name: 'wiki_buscar', alcance: 'lectura',
+    description: 'Busca páginas de la wiki por palabras (título y contenido). Para preguntas abiertas, mejor «preguntar».',
+    inputSchema: obj({ q: S('Palabras') }, ['q']),
+    async ejecutar(a, { db }) {
+      const q = limpio(a.q, 100)
+      if (q.length < 2) throw new Error('Escribe al menos 2 caracteres')
+      return db.get(`paginas?select=id,titulo,padre_id,updated_at&archivada=eq.false&tsv=wfts(spanish).${encodeURIComponent(q)}&limit=20`)
+    },
+  },
+  {
+    name: 'wiki_leer', alcance: 'lectura',
+    description: 'Lee una página de la wiki (markdown) y la lista de sus subpáginas.',
+    inputSchema: obj({ id: S('UUID de la página') }, ['id']),
+    async ejecutar(a, { db }) {
+      if (!esUuid(a.id)) throw new Error('id no válido')
+      const [p] = await db.get(`paginas?select=id,titulo,contenido,padre_id,proyecto_id,version,updated_at&id=eq.${a.id}`)
+      if (!p) throw new Error('No existe esa página')
+      return { ...p, subpaginas: await db.get(`paginas?select=id,titulo&padre_id=eq.${a.id}&archivada=eq.false&order=orden,titulo`) }
+    },
+  },
+  {
+    name: 'wiki_crear', alcance: 'escritura', tabla: 'paginas',
+    description: 'Crea una página de la wiki en markdown, opcionalmente dentro de otra (padre_id) o enlazada a un proyecto (numero).',
+    inputSchema: obj({ titulo: S('Título'), contenido: S('Markdown'), padre_id: S('UUID de la página madre'), numero: N('Número de proyecto') }, ['titulo']),
+    async ejecutar(a, { db, usuarioId }) {
+      const proyecto = a.numero ? (await proyectoPorNumero(db, a.numero)).id : undefined
+      const [p] = await db.post('paginas', soloDefinidos({ titulo: txt(a.titulo, 200), contenido: String(a.contenido ?? '').slice(0, 200000),
+        padre_id: esUuid(a.padre_id) ? a.padre_id : undefined, proyecto_id: proyecto, creado_por: usuarioId, actualizado_por: usuarioId }))
+      return { id: p.id, url: `#/wiki/${p.id}` }
+    },
+  },
+  {
+    name: 'wiki_editar', alcance: 'escritura', tabla: 'paginas',
+    description: 'Cambia el título o el contenido (markdown completo) de una página; la versión anterior queda en su historial.',
+    inputSchema: obj({ id: S('UUID'), titulo: S('Título'), contenido: S('Markdown completo') }, ['id']),
+    async ejecutar(a, { db, usuarioId }) {
+      if (!esUuid(a.id)) throw new Error('id no válido')
+      const filas = await db.patch(`paginas?id=eq.${a.id}`, soloDefinidos({ titulo: txt(a.titulo, 200),
+        contenido: a.contenido == null ? undefined : String(a.contenido).slice(0, 200000), actualizado_por: usuarioId }))
+      if (!filas.length) throw new Error('No existe esa página')
+      return { ok: true, version: filas[0].version }
+    },
+  },
+]
+
+export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...mando, ...ventas, ...wiki, ...escritura]
 
 // Tablas cuyo dueño es la app (no se escribe en ellas desde el hub).
 export async function tablasDeLaApp(db: Db): Promise<Set<string>> {

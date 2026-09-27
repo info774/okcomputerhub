@@ -49,6 +49,9 @@ export const TABLAS_APP: Record<string, TablaApp> = {
   // Área del hub desde la fase 4: solo se importan sus ALTAS (hub.areas.importar_altas).
   oportunidades: { auditada: true, columnas: c(`id created_at titulo cliente_id descripcion estado valor_estimado
     tecnico_id fecha_seguimiento motivo_perdida origen local_id contacto_id`) },
+  // Fase 5: se leen y se indexan en el buscador (sin audit_log en la app: pasada nocturna).
+  conocimiento: { auditada: false, columnas: c('id created_at titulo categoria tipo descripcion url palabras_clave') },
+  tablero_notas: { auditada: false, columnas: c('id user_id titulo descripcion created_at updated_at') },
   gastos: { auditada: true, columnas: c(`id created_at importe fecha categoria trabajo_id tecnico_id notas
     foto_url tipo descripcion contacto_id local_id`) },
 }

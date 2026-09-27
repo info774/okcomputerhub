@@ -7,6 +7,8 @@ import { moduloInformes } from './informes';
 import { moduloDatos } from './datos';
 import { moduloConector } from './conector';
 import { moduloProyectos } from './proyectos';
+import { moduloWiki } from './wiki';
+import { moduloBuscar } from './buscar';
 import { moduloMonitorizacion } from './monitorizacion';
 import { moduloClientes } from './clientes';
 import { moduloOportunidades } from './oportunidades';
@@ -19,6 +21,8 @@ export const MODULOS: Modulo[] = [
   moduloDireccion,
   moduloInformes,
   moduloProyectos,
+  moduloWiki,
+  moduloBuscar,
   moduloClientes,
   moduloOportunidades,
   moduloCobros,

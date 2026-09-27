@@ -26,5 +26,5 @@ jobs:
           npm run verify
       - name: Migraciones contra un Postgres de prueba
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql postgresql-16-pgvector >/dev/null
           npm run probar-migraciones

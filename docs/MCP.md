@@ -33,6 +33,14 @@ Una escritura sobre un área cuyo dueño sea la app (`hub.areas`) **ni se ofrece
 ni se ejecuta**: `ticket_crear` existe en el catálogo pero no aparece hasta que
 el área `tickets` se corte al hub (fase 6).
 
+## Wiki y buscador (fase 5)
+
+- `preguntar`: pregunta en lenguaje normal → respuesta de Claude con citas y
+  sus fuentes (wiki, Drive, conocimiento de la app).
+- `wiki_buscar`, `wiki_leer`: páginas por palabras y una página entera.
+- `wiki_crear`, `wiki_editar` (escritura): se reindexan solas en la siguiente
+  pasada de la cola; el historial lo guarda la base.
+
 ## Seguridad y rastro
 
 - En la base solo queda la huella sha256 del token (`hub.mcp_tokens`), su

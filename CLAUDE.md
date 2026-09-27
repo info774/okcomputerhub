@@ -30,6 +30,10 @@ bot de Telegram, que pone Fran. Detalle en `docs/FASE3.md`.
 **Fase 4 HECHA** (2026-09-27): ventas (`20261008_ventas.sql`, `#/clientes`
 ficha 360, `#/oportunidades`, `#/cobros`, `#/mapa`). Clientes/sedes/contactos
 siguen en la app; las OPORTUNIDADES son ya del hub. Detalle en `docs/FASE4.md`.
+**Fase 5 HECHA** (2026-09-27): wiki y buscador (`20261009_wiki.sql`, `#/wiki`,
+`#/buscar`, funciones `documentos-indexar`, `documentos-preguntar`). Detalle en
+`docs/FASE5.md`. Las decisiones de Fran para las fases 5 a Final están en
+`docs/DECISIONES_FASES.md` y lo que tiene que hacer él, en `docs/PENDIENTE_FRAN.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -260,6 +264,12 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   se define en `hub.pipelines` (la valida un trigger). Recordatorios de cobro:
   se PREPARAN (`hub.preparar_recordatorios`) y los manda una persona; nunca
   salen solos hacia un cliente.
+- Buscador (RAG): `public` está cerrado también al `service_role`, así que los
+  vectores (`public.vector(384)`, gte-small) solo entran y salen como TEXTO por
+  `hub.guardar_fragmentos` / `hub.buscar_fragmentos` (security definer). Algo
+  nuevo que deba encontrarse: una fila en `hub.documentos` (`pendiente`) y la
+  cola lo indexa; el extractor está en `documentos-indexar`. Claude, por
+  `_shared/claude.ts` (sin clave, se degrada: fuentes sin redacción).
 - Leaflet se importa de forma diferida (`import('leaflet')`) solo en `#/mapa`.
 - Al entrar se busca el correo de la sesión en `hub.usuarios` (activo): sin
   fila, se cierra la sesión y se avisa. La RLS usa la misma regla

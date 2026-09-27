@@ -10,6 +10,8 @@ function enLinea(t: string): string {
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    // Enlaces internos del hub: [texto](#/wiki/<id>)
+    .replace(/\[([^\]]+)\]\((#\/[A-Za-z0-9/_-]+)\)/g, '<a href="$2">$1</a>')
     .replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
 }
 

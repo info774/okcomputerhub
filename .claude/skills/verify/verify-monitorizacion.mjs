@@ -131,7 +131,7 @@ try {
   await page.waitForFunction(() => document.getElementById('toast')?.textContent.includes('Script lanzado'));
   const sc = breeze.find(b => b.accion === 'script');
   ok(sc?.script_id === 'sc1' && sc.device_ids?.[0] === D1, 'script: se lanza por breeze-api en el equipo');
-  ok((await page.textContent('#me-cuerpo')).includes('Limpiar temporales'), 'script: sale en «Scripts recientes»');
+  ok(await page.waitForFunction(() => document.getElementById('me-cuerpo')?.textContent.includes('Limpiar temporales'), null, { timeout: 5000 }).then(() => true, () => false), 'script: sale en «Scripts recientes»');
 
   await page.click('[data-action="mePestana"][data-p1="remoto"]');
   await page.waitForSelector(`a[href="https://breeze.oksistemas.online/remote/terminal/${D1}"]`);

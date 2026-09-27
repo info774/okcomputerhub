@@ -10,7 +10,9 @@ const DIR = 'supabase/migrations';
 const PROHIBIDO = [
   // Leer Breeze sí (regla 3: vistas hub.rmm_*): `from public.x` / `join public.x`.
   // Cualquier otra mención (crear, alterar, conceder, escribir) no.
-  [/\bpublic\s*\./i, 'nombra el esquema public fuera de un FROM/JOIN de lectura (es de Breeze)', l => l.replace(/\b(from|join)\s+public\.\w+/gi, '')],
+  // Y usar la extensión `vector`, que vive en public (decisión de Fran, fase 5): su tipo y su operador.
+  [/\bpublic\s*\./i, 'nombra el esquema public fuera de un FROM/JOIN de lectura (es de Breeze)',
+    l => l.replace(/\b(from|join)\s+public\.\w+/gi, '').replace(/\bpublic\.vector\b/gi, '').replace(/operator\s*\(\s*public\.<=>\s*\)/gi, '')],
   [/\bdelete\s+from\s+public\s*\./i, 'borra en una tabla de Breeze'],
   [/\bschema\s+public\b/i, 'toca el esquema public'],
   [/\b(alter|drop|create)\s+role\b/i, 'crea o cambia roles (los de Breeze no se tocan)'],
