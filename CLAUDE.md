@@ -14,9 +14,9 @@ OKHUB, de otra empresa) en `docs/referencias/OKHUB_INVENTARIO.md`.
 
 **Estado**: fase 0 en marcha (sync cada 15 min por el `audit_log` de la app,
 Auth con Google, 6 usuarios, front en `https://okhub-tenerife.web.app`).
-**Fase 1 en curso**: organizador de proyectos HECHO (migración
-`20261002_proyectos.sql` aplicada, pantalla `#/proyectos` publicada). Falta:
-MCP completo (`mcp`, tokens con alcance) y «lanzar a Claude»
+**Fase 1 en curso**: organizador de proyectos HECHO (`20261002_proyectos.sql`,
+`#/proyectos`) y conector MCP HECHO (`20261003_mcp.sql`, función `mcp`,
+pantalla «Conector MCP», `docs/MCP.md`). Falta «lanzar a Claude»
 (`claude_peticiones` + `lanzar-claude`). Plan de la fase en `docs/FASE1.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
@@ -205,6 +205,13 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   las tablas espejo (trabajos, tareas, tickets…) tienen dueño `app` y el hub no
   les escribe; un proyecto tiene sus PROPIAS tareas (`proyecto_tareas`) y ENLAZA
   lo de la app con `proyecto_vinculos`. Borrar un proyecto entero: solo admin.
+- Conector MCP: función `mcp` + catálogo ÚNICO `_shared/acciones.ts` (lo
+  reutilizarán voz y bot) + `_shared/hub-db.ts` (PostgREST del hub con
+  `x-hub-origen`/`x-hub-usuario` para que la auditoría ponga el autor). Tokens
+  `okh_…` en `hub.mcp_tokens` (solo la huella), los crea un admin en
+  `#/conector`. Herramienta nueva: ver `docs/MCP.md`. `npm run lint` incluye
+  `deno check` de las funciones.
+- `Modulo.soloAdmin` lo esconde del menú Y lo bloquea por URL (shell.ts).
 - El dispatcher delega también arrastrar y soltar (`data-on-dragstart`,
   `data-on-dragover` + `data-prevent="1"`, `data-on-drop`).
 - Al entrar se busca el correo de la sesión en `hub.usuarios` (activo): sin

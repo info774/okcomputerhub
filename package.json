@@ -7,9 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src scripts && tsc --noEmit && node scripts/comprobar-migraciones.mjs",
-    "verify": "node .claude/skills/verify/verify-shell.mjs && node .claude/skills/verify/verify-proyectos.mjs",
-    "probar-migraciones": "node scripts/probar-migraciones.mjs"
+    "lint": "eslint src scripts && tsc --noEmit && node scripts/comprobar-migraciones.mjs && npm run -s check:funciones",
+    "verify": "node .claude/skills/verify/verify-shell.mjs && node .claude/skills/verify/verify-proyectos.mjs && node .claude/skills/verify/verify-conector.mjs",
+    "probar-migraciones": "node scripts/probar-migraciones.mjs",
+    "check:funciones": "npx -y deno@latest check supabase/functions/*/index.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2"

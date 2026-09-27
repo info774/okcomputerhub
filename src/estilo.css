@@ -300,3 +300,9 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
   .pr-columna { scroll-snap-align: start; }
   .gantt-fila { grid-template-columns: 90px 1fr; }
 }
+
+/* ── Conector MCP ────────────────────────────────────────────────────── */
+.cm-recien { border-color: var(--aviso); }
+.cm-recien input, .cm-recien textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.cm-alcance { border: 1px solid var(--borde); border-radius: 8px; padding: .5rem .8rem; margin: 0 0 .8rem; display: grid; gap: .4rem; }
+.cm-alcance legend { color: var(--texto-suave); font-size: .9rem; padding: 0 .3rem; }

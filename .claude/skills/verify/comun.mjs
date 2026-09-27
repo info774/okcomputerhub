@@ -65,7 +65,7 @@ function cumple(fila, k, v) {
 }
 const RESERVADOS = new Set(['select', 'order', 'limit', 'offset', 'on_conflict']);
 
-export function baseMemoria(inicial = {}) {
+export function baseMemoria(inicial = {}, rpc = {}) {
   const db = structuredClone(inicial);
   const reg = { rest: [], escrituras: [], funciones: [] };
   let numero = 100;
@@ -79,6 +79,14 @@ export function baseMemoria(inicial = {}) {
     const h = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'Content-Range' };
     reg.rest.push({ metodo: m, tabla, perfil: req.headers()['accept-profile'], url: url.toString() });
     if (m === 'OPTIONS') return route.fulfill({ status: 204, headers: { ...h, 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*' } });
+    if (url.pathname.includes('/rpc/')) {
+      const f = rpc[tabla];
+      const cuerpo = req.postDataJSON();
+      reg.escrituras.push({ metodo: 'RPC', tabla, cuerpo });
+      if (!f) return route.fulfill({ status: 404, headers: h, contentType: 'application/json', body: '{"message":"rpc no simulada"}' });
+      try { return route.fulfill({ status: 200, headers: h, contentType: 'application/json', body: JSON.stringify(await f(cuerpo, db)) }); }
+      catch (e) { return route.fulfill({ status: 400, headers: h, contentType: 'application/json', body: JSON.stringify({ message: e.message }) }); }
+    }
     const filas = filtrar(tabla, url);
     if (m === 'HEAD') return route.fulfill({ status: 200, headers: { ...h, 'Content-Range': `0-0/${filas.length}` }, body: '' });
     if (m === 'GET') {

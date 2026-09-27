@@ -103,6 +103,8 @@ export class API {
   static post<T = Fila[]>(tabla: string, body: unknown) { return this.req<T>('POST', tabla, {}, body); }
   static patch(tabla: string, filtro: Params, body: unknown) { return this.req<null>('PATCH', tabla, filtro, body); }
   static delete(tabla: string, filtro: Params) { return this.req<null>('DELETE', tabla, filtro); }
+  // Función SQL expuesta por PostgREST (esquema hub).
+  static rpc<T = unknown>(funcion: string, args: Record<string, unknown> = {}) { return this.req<T>('POST', `rpc/${funcion}`, {}, args); }
 
   // Cuántas filas cumplen el filtro, sin traerlas (HEAD + count=exact).
   // Para las baldosas: un número en vivo no puede costar una tabla entera.

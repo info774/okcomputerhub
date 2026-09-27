@@ -3,6 +3,7 @@
 import type { Modulo } from '../core/modulo';
 import { moduloInicio } from './inicio';
 import { moduloDatos } from './datos';
+import { moduloConector } from './conector';
 import { moduloProyectos } from './proyectos';
 import { modulosAppActual } from './app-actual';
 
@@ -11,4 +12,5 @@ export const MODULOS: Modulo[] = [
   moduloProyectos,
   ...modulosAppActual,
   moduloDatos,
+  moduloConector,
 ];

@@ -2,7 +2,7 @@
 // hueco de la pantalla con su párrafo explicativo.
 import type { Modulo } from '../core/modulo';
 import { esc } from '../ui/dom';
-import { usuario } from '../core/estado';
+import { usuario, esAdmin } from '../core/estado';
 import { visibles, hrefDe } from '../modulos/inicio';
 
 export function pintarShell(raiz: HTMLElement) {
@@ -56,6 +56,12 @@ export async function mostrarModulo(m: Modulo, params: string[]) {
   document.title = `${m.titulo} · Ok Computer Hub`;
   const el = document.getElementById('pantalla')!;
   el.innerHTML = '';
+  // El menú ya no enseña lo de admin, pero la URL se puede escribir a mano.
+  // (Los datos los protege la RLS; esto evita una pantalla a medias.)
+  if (m.soloAdmin && !esAdmin()) {
+    el.innerHTML = '<p class="aviso">Esta pantalla es solo para administradores.</p>';
+    return;
+  }
   if (m.pintar) {
     try { await m.pintar(el, params); }
     catch (e: any) {

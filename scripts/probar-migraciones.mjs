@@ -80,6 +80,7 @@ try {
     grant usage on schema auth to anon, authenticated, service_role;
     grant execute on function auth.jwt() to anon, authenticated, service_role;
     create schema extensions;
+    create extension if not exists pgcrypto with schema extensions;
     create schema vault;
     create table vault.decrypted_secrets (name text, decrypted_secret text);
     -- «Breeze»: una tabla en public que nada del hub puede tocar.
@@ -214,6 +215,29 @@ try {
   psql(como('authenticated', 'ana@ok.test', `delete from hub.proyectos where id = '${pid}';`));
   ok(psql(`select (select count(*) from hub.proyectos where id = '${pid}') + (select count(*) from hub.proyecto_tareas where proyecto_id = '${pid}')`) === '0',
     'un admin lo borra y se lleva sus piezas');
+
+  // ── Tokens del conector MCP ────────────────────────────────────────────
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.mcp_crear_token('x', 'lectura');`), { esperaError: true }).ok,
+    'MCP: un técnico no crea tokens');
+  const tok = psql(como('authenticated', 'ana@ok.test', `select hub.mcp_crear_token('Claude Code', 'escritura', null, 30);`))
+    .split('\n').find(l => l.startsWith('okh_'));
+  ok(/^okh_[0-9a-f]{48}$/.test(tok ?? ''), 'MCP: un admin crea un token y lo ve una vez');
+  ok(psql(`select count(*) from hub.mcp_tokens where huella = encode(extensions.digest('${tok}', 'sha256'), 'hex')`) === '1'
+    && psql(`select count(*) from hub.mcp_tokens where huella = '${tok}' or prefijo = '${tok}'`) === '0', 'MCP: se guarda la huella, no el token');
+  ok(psql(como('service_role', null, `select email || ':' || alcance from hub.mcp_validar('${tok}');`)).split('\n').pop() === 'ana@ok.test:escritura',
+    'MCP: validar devuelve dueño y alcance');
+  ok(!psql(como('authenticated', 'ana@ok.test', `select * from hub.mcp_validar('${tok}');`), { esperaError: true }).ok,
+    'MCP: un usuario no puede llamar a mcp_validar');
+  ok(psql(como('service_role', null, `select count(*) from hub.mcp_validar('okh_falso');`)).split('\n').pop() === '0', 'MCP: un token falso no vale');
+  psql(como('service_role', null, `insert into hub.proyectos (titulo) values ('desde mcp');`, { 'x-hub-usuario': 'ana@ok.test', 'x-hub-origen': 'mcp' }));
+  ok(psql(`select usuario_email || ':' || origen from hub.auditoria where tabla = 'proyectos' order by id desc limit 1`) === 'ana@ok.test:mcp',
+    'MCP: lo escrito por la función queda a nombre del dueño del token, origen mcp');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.proyectos (titulo) values ('suplantar');`, { 'x-hub-usuario': 'ana@ok.test' }));
+  ok(psql(`select usuario_email from hub.auditoria where tabla = 'proyectos' order by id desc limit 1`) === 'tito@ok.test',
+    'MCP: un navegador no puede suplantar a nadie con la cabecera');
+  const tid = psql(`select id from hub.mcp_tokens limit 1`);
+  psql(como('authenticated', 'ana@ok.test', `select hub.mcp_revocar_token('${tid}');`));
+  ok(psql(como('service_role', null, `select count(*) from hub.mcp_validar('${tok}');`)).split('\n').pop() === '0', 'MCP: un token revocado deja de valer');
 
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);

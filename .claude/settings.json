@@ -42,7 +42,21 @@
       "mcp__github__pull_request_read",
       "mcp__github__actions_list",
       "mcp__github__actions_get",
-      "mcp__github__get_job_logs"
+      "mcp__github__get_job_logs",
+      "mcp__okhub__buscar",
+      "mcp__okhub__esquema",
+      "mcp__okhub__cliente_detalle",
+      "mcp__okhub__trabajos_listar",
+      "mcp__okhub__trabajo_detalle",
+      "mcp__okhub__tickets_listar",
+      "mcp__okhub__tareas_app_listar",
+      "mcp__okhub__agenda_dia",
+      "mcp__okhub__presupuestos_listar",
+      "mcp__okhub__proyectos_listar",
+      "mcp__okhub__proyecto_detalle",
+      "mcp__okhub__proyecto_pagina_leer",
+      "mcp__okhub__equipo",
+      "mcp__okhub__sync_estado"
     ],
     "deny": [
       "Bash(rm -rf:*)",
