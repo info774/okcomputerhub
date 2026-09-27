@@ -57,7 +57,7 @@ begin;
 set local role ${rol};
 select set_config('request.jwt.claims', '${JSON.stringify({ role: rol, email })}', true);
 select set_config('request.headers', '${JSON.stringify(headers)}', true);
-${sql}
+${/;\s*$/.test(sql) ? sql : sql + ';'}
 commit;`;
 
 try {
@@ -615,6 +615,52 @@ try {
   psql(como('authenticated', 'ana@ok.test', `select hub.emitir_factura('${f1}');`));
   ok(psql(`select codigo || '|' || (huella_anterior is null) from hub.facturas where id = '${f1}'`) === `F-${new Date().getFullYear()}-0001|true`, 'facturas: activada, la serie real empieza su propia cadena');
   psql(`update hub.config set valor = 'false' where clave = 'facturacion_activa'`);
+
+  // ── Fase Final: antes del corte todo es de solo lectura ─────────────────
+  const tr = psql(`insert into hub.trabajos (id, numero, descripcion, estado, tecnicos) values ('00000000-0000-0000-0000-0000000000e1', 700, 'Cambiar router', 'Pendiente', '{Tito}') returning id`).split('\n')[0];
+  const noCortado = psql(como('authenticated', 'tito@ok.test', `select hub.fichar('inicio', 'trabajo', '${tr}');`), { esperaError: true });
+  ok(!noCortado.ok && /app/.test(noCortado.err), 'final: sin el corte, fichar desde el hub avisa de que se hace en la app');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_guardar_lineas('${tr}', '[]');`), { esperaError: true }).ok, 'final: sin el corte, el material tampoco');
+  // Chat
+  const gen = psql(`select id from hub.chat_canales where nombre = 'General'`);
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.chat_mensajes (canal_id, texto) values ('${gen}', 'Hola equipo');`));
+  ok(una('ana@ok.test', `select sin_leer || '|' || ultimo_texto from hub.chat_resumen() where id = '${gen}'`) === '1|Hola equipo', 'chat: mensaje en General, sin leer para los demás');
+  const dm = psql(como('authenticated', 'tito@ok.test', `select hub.chat_directo('${anaId}');`)).split('\n').pop();
+  ok(psql(como('authenticated', 'ana@ok.test', `select hub.chat_directo('${titoId}');`)).split('\n').pop() === dm, 'chat: el directo entre dos es siempre el mismo canal');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.chat_mensajes (canal_id, texto) values ('${dm}', 'Secreto');`));
+  ok(una('extrano@ok.test', `select count(*) from hub.chat_mensajes`) === '0' && una('ana@ok.test', `select count(*) from hub.chat_mensajes where canal_id = '${dm}'`) === '1',
+    'chat: un directo solo lo leen sus dos personas');
+  ok(!psql(como('authenticated', 'ana@ok.test', `update hub.chat_mensajes set texto = 'x' where canal_id = '${dm}';`) + `\nselect 1/(select count(*) from hub.chat_mensajes where texto = 'x');`, { esperaError: true }).ok,
+    'chat: nadie edita lo que escribió otro');
+
+  // ── Corte final (preparado, NO aplicado en producción): se prueba aquí ──
+  psql(`begin;
+${readFileSync('supabase/cortes/corte_final.sql', 'utf8')}
+commit;`);
+  ok(psql(`select count(*) from hub.areas where dueno = 'app'`) === '0', 'corte final: todas las áreas pasan al hub');
+  psql(`insert into hub.furgoneta_inventario (id, nombre, cantidad) values ('00000000-0000-0000-0000-0000000000b9', 'Router', 2)`);
+  const fch = psql(como('authenticated', 'tito@ok.test', `select hub.fichar('traslado');`)).split('\n').pop();
+  ok(fch.includes('"ok": true'), 'corte final: fichar el traslado');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.fichar('traslado');`), { esperaError: true }).ok, 'fichar: no hay dos sesiones abiertas');
+  psql(como('authenticated', 'tito@ok.test', `select hub.fichar('inicio', 'trabajo', '${tr}');`));
+  ok(psql(`select count(*) || '|' || bool_and(inicio is not null and traslado is not null) from hub.sesiones where entidad_id = '${tr}'`) === '1|true'
+    && psql(`select estado from hub.trabajos where id = '${tr}'`) === 'En progreso', 'fichar: el inicio reusa el traslado y pone el trabajo en progreso');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_estado('${tr}', 'Completado');`), { esperaError: true }).ok, 'trabajo: no se completa sin fichar el fin');
+  psql(como('authenticated', 'tito@ok.test', `select hub.fichar('fin');`));
+  psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_estado('${tr}', 'Completado');`));
+  ok(psql(`select estado from hub.trabajos where id = '${tr}'`) === 'Completado', 'trabajo: con inicio y fin, se completa');
+  psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_guardar_lineas('${tr}', '[{"nombre":"Router","cantidad":3,"precio":40,"inventario_id":"00000000-0000-0000-0000-0000000000b9"},{"nombre":"Mano de obra","cantidad":1,"precio":35}]');`));
+  ok(psql(`select cantidad from hub.furgoneta_inventario where id = '00000000-0000-0000-0000-0000000000b9'`) === '0'
+    && psql(`select tipo || cantidad || (trabajo_id = '${tr}') from hub.furgoneta_movimientos where producto_id = '00000000-0000-0000-0000-0000000000b9'`) === 'salida2true',
+    'material: gastar 3 con 2 en stock deja 0 y apunta la salida REAL (2) con el trabajo');
+  psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_guardar_lineas('${tr}', '[{"nombre":"Router","cantidad":1,"precio":40,"inventario_id":"00000000-0000-0000-0000-0000000000b9"}]');`));
+  ok(psql(`select cantidad from hub.furgoneta_inventario where id = '00000000-0000-0000-0000-0000000000b9'`) === '2'
+    && psql(`select count(*) from hub.documento_lineas where trabajo_id = '${tr}'`) === '1', 'material: bajar de 3 a 1 devuelve 2 al stock');
+  psql(como('authenticated', 'ana@ok.test', `delete from hub.trabajos where id = '${tr}';`));
+  ok(psql(`select cantidad from hub.furgoneta_inventario where id = '00000000-0000-0000-0000-0000000000b9'`) === '3', 'material: borrar el trabajo devuelve lo que tenía');
+  ok(psql(`select count(*) from cron.job where jobname in ('hub-sync-app', 'hub-sync-app-completo')`) === '0', 'corte final: el sync con la app se apaga');
+  const nt = psql(como('authenticated', 'ana@ok.test', `insert into hub.trabajos (descripcion) values ('Nuevo tras el corte') returning numero;`)).split('\n').pop();
+  ok(Number(nt) > 700, `corte final: los trabajos nuevos siguen la numeración (${nt})`);
 
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);

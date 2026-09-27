@@ -122,7 +122,8 @@ try {
     await page.waitForFunction(() => document.querySelector('#bal-trabajos .baldosa-valor')?.textContent === '7');
     ok(true, 'baldosa Trabajos con número del espejo (7)');
     ok(await page.getAttribute('#bal-tareas', 'data-tono') === 'bien', 'baldosa a 0 → tono bien');
-    ok(await page.getAttribute('#bal-trabajos', 'href') === 'https://okcomputertenerife.web.app', 'Trabajos enlaza a la app actual');
+    ok(await page.getAttribute('#bal-trabajos', 'href') === '#/trabajos' && await page.getAttribute('#bal-tareas', 'href') === 'https://okcomputertenerife.web.app',
+      'Trabajos es pantalla del hub; Tareas sigue enlazando a la app actual');
     await page.waitForFunction(() => document.querySelector('#bal-datos')?.dataset.tono === 'bien');
     ok(true, 'baldosa Datos: sync reciente → bien');
     await page.screenshot({ path: `${CAPTURAS}/inicio.png`, fullPage: true });

@@ -105,7 +105,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   borrador de prueba (cliente, línea, IGIC), emitir por RPC, emitida (marca
   PRUEBA, huella, no editable, cobro, rectificar), desde trabajos, emisor.
 
-`npm run verify` pasa los trece.
+- `verify-final.mjs`: trabajos, calendario, hoy y chat en los dos mundos: con
+  las áreas de la app (todo se ve, nada se edita, avisa) y cortadas (estado,
+  material, mover, fichar, terminar con foto, por sus RPC). El GPS no
+  contesta en el arnés: el fichaje sigue a los 6 s sin él.
+
+`npm run verify` pasa los catorce.
 
 ## Pantalla nueva
 

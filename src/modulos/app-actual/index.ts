@@ -9,7 +9,6 @@ import type { Modulo, Contador } from '../../core/modulo';
 import { API } from '../../core/api';
 import { APP_ACTUAL_URL } from '../../core/config';
 
-const hoy = () => new Date().toLocaleDateString('sv-SE'); // AAAA-MM-DD en hora local
 
 async function cuenta(tabla: string, filtro: Record<string, string>, sub: string, tonoSiHay: Contador['tono'] = 'neutro'): Promise<Contador | null> {
   const n = await API.contar(tabla, filtro);
@@ -24,19 +23,11 @@ function enlace(id: string, titulo: string, icono: string, contador?: Modulo['co
 }
 
 export const modulosAppActual: Modulo[] = [
-  enlace('trabajos', 'Trabajos', '🛠', () => cuenta('trabajos', { estado: 'in.(Pendiente,"En progreso")' }, 'pendientes o en curso')),
-  enlace('calendario', 'Calendario', '📅', () => {
-    const d = hoy();
-    const inicio = new Date(`${d}T00:00:00`).toISOString();
-    const fin = new Date(`${d}T23:59:59`).toISOString();
-    return cuenta('agenda', { and: `(inicio.lte.${fin},fin.gte.${inicio})` }, 'bloques hoy');
-  }),
   enlace('tareas', 'Tareas', '✅', () => cuenta('tareas', { estado: 'in.(pendiente,en_progreso)' }, 'pendientes')),
   enlace('presupuestos', 'Presupuestos', '📄', () => cuenta('presupuestos', { estado: 'eq.Borrador' }, 'en borrador')),
   enlace('facturacion-app', 'Facturación y cobros (app)', '💶'),
   enlace('mantenimientos', 'Mantenimientos', '🔁'),
   enlace('inventario', 'Inventario', '📦'),
-  enlace('chat', 'Chat', '💬'),
   enlace('whatsapp', 'WhatsApp', '📱'),
   enlace('fichaje', 'Fichaje y horas', '⏱'),
 ];

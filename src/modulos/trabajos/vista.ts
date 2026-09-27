@@ -1,0 +1,194 @@
+// Trabajos (fase Final): #/trabajos (lista con filtros) y #/trabajos/<numero>
+// (ficha). Mientras el área `trabajos` sea de la app, solo lectura; al cortarla,
+// escribe por las funciones de la base que portan las reglas de la app:
+// hub.trabajo_estado (Completado exige fichaje), hub.trabajo_guardar_lineas
+// (el material mueve el stock). Prefijo de ids: tr-.
+import { API } from '../../core/api';
+import { usuario } from '../../core/estado';
+import { equipo } from '../../core/equipo';
+import { registrarAcciones } from '../../core/dispatcher';
+import { ir, resolver } from '../../core/router';
+import { esDelHub, avisoSoloLectura } from '../../core/areas';
+import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { markdown } from '../../ui/markdown';
+import { nombresClientes, telWhatsApp, eur } from '../ventas/datos';
+
+interface Trabajo { id: string; numero: number; created_at: string; titulo: string | null; descripcion: string | null; estado: string; tecnicos: string[] | null;
+  cliente_id: string | null; local_id: string | null; contacto_id: string | null; fecha_programada: string | null; hora_llegada: string | null; prioridad: string | null;
+  materiales: string | null; observaciones: string | null; presupuesto_id: string | null; zoho_invoice_number: string | null; duracion_teorica: number | null }
+interface Linea { id?: string; nombre: string; cantidad: number; precio: number; descuento: number; inventario_id: string | null; furgoneta_id: string | null; categoria: string | null }
+
+export const ESTADOS = ['Pendiente', 'En progreso', 'Completado', 'Para facturar', 'Facturado', 'No facturar', 'Cancelado'];
+const FILTROS: Record<string, string[] | null> = { abiertos: ['Pendiente', 'En progreso'], facturar: ['Completado', 'Para facturar'], cerrados: ['Facturado', 'No facturar', 'Cancelado'], todos: null };
+const TONO: Record<string, string> = { Pendiente: '', 'En progreso': 'aviso', Completado: 'bien', 'Para facturar': 'aviso', Facturado: 'bien', 'No facturar': '', Cancelado: '' };
+const leer = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
+const guardar = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } };
+const norm = (s: string | null | undefined) => (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+export const esMio = (tecnicos: string[] | null) => { const n = norm(usuario()?.nombre); return (tecnicos ?? []).some(t => { const g = norm(t); return g === n || g === n.split(/\s+/)[0]; }); };
+
+let _lista: Trabajo[] = [];
+let _nombres = new Map<string, string>();
+let _t: Trabajo | null = null;
+let _lineas: Linea[] = [];
+
+function filas(): Trabajo[] {
+  const q = norm(leer('hub_tr_q', ''));
+  const tec = leer('hub_tr_tecnico', '');
+  return _lista.filter(t => (!tec || (tec === '__yo' ? esMio(t.tecnicos) : (t.tecnicos ?? []).includes(tec)))
+    && (!q || norm(`${t.numero} ${t.titulo ?? ''} ${t.descripcion ?? ''} ${_nombres.get(t.cliente_id ?? '') ?? ''}`).includes(q)));
+}
+const tabla = () => { const fs = filas(); return fs.length ? `<div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>#</th><th>Trabajo</th><th>Cliente</th><th>Técnicos</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
+  ${fs.map(t => `<tr class="fila-clic" data-action="trAbrir" data-p0="${t.numero}"><td>${t.numero}</td><td><strong>${esc(t.titulo ?? '')}</strong><br><small class="nota">${esc((t.descripcion ?? '').slice(0, 90))}</small></td>
+    <td>${esc(_nombres.get(t.cliente_id ?? '') ?? '')}</td><td>${esc((t.tecnicos ?? []).join(', '))}</td><td>${esc(t.fecha_programada ?? '')}${t.hora_llegada ? ` ${esc(t.hora_llegada.slice(0, 5))}` : ''}</td>
+    <td><span class="chip ${TONO[t.estado] ?? ''}">${esc(t.estado)}</span></td></tr>`).join('')}</tbody></table></div>` : '<p class="vacio">Ningún trabajo con ese filtro.</p>'; };
+
+async function vistaLista(): Promise<string> {
+  const f = leer('hub_tr_filtro', 'abiertos');
+  const est = FILTROS[f];
+  const [{ data, error }, personas, escribe] = await Promise.all([
+    API.get<Trabajo[]>('trabajos', { select: 'id,numero,created_at,titulo,descripcion,estado,tecnicos,cliente_id,fecha_programada,hora_llegada,prioridad',
+      ...(est ? { estado: `in.(${est.map(e => `"${e}"`).join(',')})` } : {}), order: 'numero.desc', limit: '400' }),
+    equipo(), esDelHub('trabajos')]);
+  if (error) return `<p class="aviso mal">${esc(error.message)}</p>`;
+  _lista = data ?? [];
+  _nombres = await nombresClientes(_lista.map(t => t.cliente_id));
+  const tec = leer('hub_tr_tecnico', '');
+  return `${escribe ? '' : avisoSoloLectura('Trabajos')}
+    <div class="acciones pr-barra"><div class="segmentado" role="tablist">${Object.keys(FILTROS).map(k => `<button role="tab" aria-selected="${k === f}" class="${k === f ? 'activo' : ''}" data-action="trFiltro" data-p0="${k}">${{ abiertos: 'Abiertos', facturar: 'Por facturar', cerrados: 'Cerrados', todos: 'Todos' }[k]}</button>`).join('')}</div>
+      <select id="tr-tecnico" data-on-change="trTecnico:$value" aria-label="Técnico"><option value="">Todos</option><option value="__yo" ${tec === '__yo' ? 'selected' : ''}>Los míos</option>${personas.map(p => `<option ${tec === p.nombre ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>
+      <input id="tr-q" type="search" placeholder="Buscar nº, cliente, texto…" value="${esc(leer('hub_tr_q', ''))}" data-on-input="trBuscar:$value" aria-label="Buscar trabajos"></div>
+    <div id="tr-lista">${tabla()}</div>`;
+}
+
+function editorLineas(): string {
+  return `<table class="tabla tr-lineas"><thead><tr><th>Material o concepto</th><th>Cant.</th><th>Precio</th><th>Dto. %</th><th></th></tr></thead><tbody>
+    ${_lineas.map((l, i) => `<tr><td>${esc(l.nombre)}${l.inventario_id ? ' <small class="nota">(del inventario)</small>' : ''}</td>
+      <td><input type="number" min="0" step="any" value="${l.cantidad}" data-on-change="trLinea:${i},cantidad,$value" aria-label="Cantidad"></td>
+      <td><input type="number" step="0.01" value="${l.precio}" data-on-change="trLinea:${i},precio,$value" aria-label="Precio"></td>
+      <td><input type="number" min="0" max="100" value="${l.descuento}" data-on-change="trLinea:${i},descuento,$value" aria-label="Descuento"></td>
+      <td><button class="btn secundario" data-action="trQuitarLinea" data-p0="${i}" aria-label="Quitar">✕</button></td></tr>`).join('') || '<tr><td colspan="5" class="vacio">Sin material.</td></tr>'}
+    </tbody></table>
+    <form class="acciones" data-on-submit="trAnadirLinea" data-prevent="1"><input id="tr-l-q" placeholder="Material del inventario o texto libre" autocomplete="off" data-on-input="trBuscarInv:$value" aria-label="Material">
+      <input id="tr-l-cant" type="number" min="0" step="any" value="1" aria-label="Cantidad"><input type="hidden" id="tr-l-inv"><input type="hidden" id="tr-l-furgo"><input type="hidden" id="tr-l-precio">
+      <button class="btn secundario" type="submit">Añadir</button></form><ul id="tr-inv-res" class="resultados"></ul>
+    <div class="acciones"><button class="btn" data-action="trGuardarLineas">Guardar material</button><span class="nota">Lo que se añade del inventario se descuenta del stock; lo que se quita, vuelve.</span></div>`;
+}
+
+async function vistaFicha(numero: string): Promise<string> {
+  const { data: t } = await API.single<Trabajo>('trabajos', { select: '*', numero: `eq.${Number(numero) || 0}` });
+  if (!t) return '<p class="aviso mal">No existe ese trabajo.</p><p><a href="#/trabajos">← Trabajos</a></p>';
+  _t = t;
+  const [cli, loc, con, bloques, ses, lin, coms, fotos, tks, personas, escribe] = await Promise.all([
+    t.cliente_id ? API.single<any>('clientes', { select: 'id,nombre,telefono', id: `eq.${t.cliente_id}` }) : Promise.resolve({ data: null }),
+    t.local_id ? API.single<any>('locales', { select: 'id,nombre,direccion,lat,lng,maps_url', id: `eq.${t.local_id}` }) : Promise.resolve({ data: null }),
+    t.contacto_id ? API.single<any>('contactos', { select: 'nombre,telefono', id: `eq.${t.contacto_id}` }) : Promise.resolve({ data: null }),
+    API.get<any[]>('agenda', { select: 'id,inicio,fin,tecnicos,estado,notas', trabajo_id: `eq.${t.id}`, order: 'inicio' }),
+    API.get<any[]>('sesiones', { select: 'id,traslado,inicio,fin,duracion_min,tecnico_nombre', entidad_tipo: 'eq.trabajo', entidad_id: `eq.${t.id}`, order: 'inicio' }),
+    API.get<Linea[]>('documento_lineas', { select: 'id,nombre,cantidad,precio,descuento,inventario_id,furgoneta_id,categoria', trabajo_id: `eq.${t.id}`, order: 'orden' }),
+    API.get<any[]>('trabajo_comentarios', { select: '*', trabajo_id: `eq.${t.id}`, order: 'created_at' }),
+    API.get<any[]>('trabajo_fotos', { select: 'id,created_at,descripcion,drive_url,archivo_path,tecnico_id', trabajo_id: `eq.${t.id}`, order: 'created_at' }),
+    API.get<any[]>('tickets', { select: 'numero,titulo,estado', trabajo_id: `eq.${t.id}` }), equipo(), esDelHub('trabajos', 'documento_lineas', 'furgoneta_inventario')]);
+  _lineas = (lin.data ?? []).map(l => ({ ...l, cantidad: Number(l.cantidad), precio: Number(l.precio), descuento: Number(l.descuento ?? 0) }));
+  const tel = con.data?.telefono ?? cli.data?.telefono, wa = telWhatsApp(tel);
+  const mapa = loc.data?.lat && loc.data?.lng ? `https://www.google.com/maps/dir/?api=1&destination=${loc.data.lat},${loc.data.lng}` : loc.data?.direccion ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc.data.direccion)}` : null;
+  const horas = (ses.data ?? []).reduce((a, s) => a + Number(s.duracion_min ?? 0), 0);
+  const total = _lineas.reduce((a, l) => a + l.cantidad * l.precio * (1 - l.descuento / 100), 0);
+  return `<p><a href="#/trabajos">← Trabajos</a>${t.cliente_id ? ` · <a href="#/clientes/${esc(t.cliente_id)}">Ficha del cliente</a>` : ''}</p>
+    ${escribe ? '' : avisoSoloLectura('Este trabajo')}
+    <div class="tarjeta-cab"><h2>🛠 #${t.numero} ${esc(t.titulo ?? '')}</h2>
+      ${escribe ? `<select id="tr-estado" data-on-change="trEstado:$value" aria-label="Estado">${ESTADOS.map(e => `<option ${e === t.estado ? 'selected' : ''}>${e}</option>`).join('')}</select>` : `<span class="chip ${TONO[t.estado] ?? ''}">${esc(t.estado)}</span>`}</div>
+    <p class="nota">Creado ${esc(hace(t.created_at))}${t.fecha_programada ? ` · para el ${esc(t.fecha_programada)}${t.hora_llegada ? ` a las ${esc(t.hora_llegada.slice(0, 5))}` : ''}` : ''}${t.zoho_invoice_number ? ` · factura ${esc(t.zoho_invoice_number)}` : ''}</p>
+    <div class="acciones">${tel ? `<a class="btn secundario" href="tel:${esc(tel)}">📞 Llamar</a>` : ''}${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
+      ${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">🗺 Cómo llegar</a>` : ''}</div>
+    <div class="op-ficha"><div>
+      <section class="tarjeta"><h3>Qué hay que hacer</h3><div class="md">${markdown(t.descripcion) || '<p class="nota">Sin descripción.</p>'}</div>
+        ${t.observaciones ? `<h4>Lo que se hizo</h4><div class="md">${markdown(t.observaciones)}</div>` : ''}</section>
+      <section class="tarjeta mo-scroll"><h3>Material · ${eur(total, 2)}</h3>${escribe ? editorLineas() : `<table class="tabla"><tbody>${_lineas.map(l => `<tr><td>${esc(l.nombre)}</td><td>${l.cantidad}</td><td>${eur(l.precio, 2)}</td></tr>`).join('') || '<tr><td class="vacio">Sin material.</td></tr>'}</tbody></table>`}</section>
+      <section class="tarjeta"><h3>Comentarios</h3><ul class="di-ultimo">${(coms.data ?? []).map(c => `<li><small class="nota" title="${esc(fechaHora(c.created_at))}">${esc(hace(c.created_at))}</small><span><strong>${esc(c.autor_nombre ?? '')}</strong> ${esc(c.texto)}</span></li>`).join('') || '<li class="nota">Ninguno.</li>'}</ul>
+        ${escribe ? '<form class="acciones" data-on-submit="trComentar" data-prevent="1"><input id="tr-com" required placeholder="Escribe un comentario…" aria-label="Comentario"><button class="btn secundario" type="submit">Añadir</button></form>' : ''}</section>
+    </div><div>
+      <section class="tarjeta"><h3>Dónde y quién</h3><dl class="tk-dl"><dt>Cliente</dt><dd>${esc(cli.data?.nombre ?? '—')}</dd><dt>Sede</dt><dd>${loc.data ? `<a href="#/monitorizacion/sede/${esc(loc.data.id)}">${esc(loc.data.nombre)}</a><br><small class="nota">${esc(loc.data.direccion ?? '')}</small>` : '—'}</dd>
+        <dt>Contacto</dt><dd>${esc(con.data?.nombre ?? '—')}</dd><dt>Técnicos</dt><dd>${escribe ? `<div class="tr-tecnicos">${personas.map(p => `<label class="check"><input type="checkbox" value="${esc(p.nombre)}" ${(t.tecnicos ?? []).includes(p.nombre) ? 'checked' : ''} data-on-change="trTecnicos"> ${esc(p.nombre)}</label>`).join('')}</div>` : esc((t.tecnicos ?? []).join(', ') || '—')}</dd></dl></section>
+      <section class="tarjeta"><h3>Días de agenda</h3><ul>${(bloques.data ?? []).map(b => `<li>${esc(fechaHora(b.inicio))} → ${esc(new Date(b.fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }))} · ${esc((b.tecnicos ?? []).join(', '))}</li>`).join('') || '<li class="nota">Sin programar.</li>'}</ul>
+        <p class="nota"><a href="#/calendario">Ver en el calendario</a></p></section>
+      <section class="tarjeta"><h3>Fichajes · ${Math.floor(horas / 60)} h ${horas % 60} min</h3><ul>${(ses.data ?? []).map(s => `<li>${esc(s.tecnico_nombre ?? '')}: ${esc(fechaHora(s.traslado ?? s.inicio))} → ${s.fin ? esc(new Date(s.fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })) : '<strong>en curso</strong>'}</li>`).join('') || '<li class="nota">Nadie ha fichado aún.</li>'}</ul></section>
+      ${(fotos.data ?? []).length ? `<section class="tarjeta"><h3>Fotos</h3><ul>${(fotos.data ?? []).map(f => `<li>${f.drive_url && /^https:\/\//.test(f.drive_url) ? `<a href="${esc(f.drive_url)}" target="_blank" rel="noopener">${esc(f.descripcion || 'Foto')}</a>` : f.archivo_path ? `<button class="btn secundario" data-action="trVerFoto" data-p0="${esc(f.id)}">${esc(f.descripcion || 'Foto')}</button>` : esc(f.descripcion || 'Foto')} <small class="nota">${esc(hace(f.created_at))}</small></li>`).join('')}</ul></section>` : ''}
+      ${(tks.data ?? []).length ? `<section class="tarjeta"><h3>Tickets</h3><ul>${(tks.data ?? []).map(k => `<li><a href="#/tickets/${k.numero}">#${k.numero} ${esc(k.titulo)}</a> · ${esc(k.estado)}</li>`).join('')}</ul></section>` : ''}
+    </div></div>`;
+}
+
+export async function pintar(el: HTMLElement, params: string[]) {
+  el.innerHTML = '<p class="cargando">Cargando…</p>';
+  el.innerHTML = params[0] ? await vistaFicha(params[0]) : await vistaLista();
+}
+
+const val = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value.trim() ?? '';
+let _timer = 0;
+registrarAcciones({
+  trAbrir(n: string) { ir('trabajos', n); },
+  trFiltro(f: string) { guardar('hub_tr_filtro', f); resolver(); },
+  trTecnico(v: string) { guardar('hub_tr_tecnico', v); const c = document.getElementById('tr-lista'); if (c) c.innerHTML = tabla(); },
+  trBuscar(q: string) { guardar('hub_tr_q', q); const c = document.getElementById('tr-lista'); if (c) c.innerHTML = tabla(); },
+  async trEstado(estado: string) {
+    if (!_t) return;
+    const r = await API.rpc('trabajo_estado', { p_id: _t.id, p_estado: estado });
+    if (r.error) { toast(r.error.message, 'error'); resolver(); } else toast(`Trabajo: ${estado}`);
+  },
+  async trTecnicos() {
+    if (!_t) return;
+    const tecnicos = [...document.querySelectorAll<HTMLInputElement>('.tr-tecnicos input:checked')].map(i => i.value);
+    const r = await API.patch('trabajos', { id: `eq.${_t.id}` }, { tecnicos });
+    if (r.error) toast(`No se pudo: ${r.error.message}`, 'error'); else toast('Técnicos guardados');
+  },
+  trLinea(i: string, campo: string, v: string) {
+    const l = _lineas[Number(i)];
+    if (l && ['cantidad', 'precio', 'descuento'].includes(campo)) (l as any)[campo] = Number(v) || 0;
+  },
+  trQuitarLinea(i: string) {
+    _lineas.splice(Number(i), 1);
+    const s = document.querySelector('.tr-lineas')?.closest('section');
+    if (s) s.innerHTML = `<h3>Material</h3>${editorLineas()}`;
+  },
+  trBuscarInv(q: string) {
+    clearTimeout(_timer);
+    (document.getElementById('tr-l-inv') as HTMLInputElement).value = '';
+    _timer = window.setTimeout(async () => {
+      const ul = document.getElementById('tr-inv-res'), t = q.replace(/[*,()%\\]/g, ' ').trim();
+      if (!ul) return;
+      if (t.length < 2) { ul.innerHTML = ''; return; }
+      const { data } = await API.get<any[]>('furgoneta_inventario', { select: 'id,nombre,cantidad,furgoneta_id,precio,categoria', nombre: `ilike.*${t}*`, order: 'nombre', limit: '8' });
+      const { data: fs } = await API.get<any[]>('furgonetas', { select: 'id,nombre' });
+      ul.innerHTML = (data ?? []).map(p => `<li><button type="button" class="btn secundario" data-action="trElegirInv" data-p0="${p.id}" data-p1="${esc(p.nombre)}" data-p2="${esc(p.furgoneta_id ?? '')}" data-p3="${p.precio ?? 0}">${esc(p.nombre)}
+        <small class="nota">${esc((fs ?? []).find(f => f.id === p.furgoneta_id)?.nombre ?? '')} · quedan ${p.cantidad}</small></button></li>`).join('');
+    }, 250);
+  },
+  trElegirInv(id: string, nombre: string, furgo: string, precio: string) {
+    (document.getElementById('tr-l-inv') as HTMLInputElement).value = id;
+    (document.getElementById('tr-l-furgo') as HTMLInputElement).value = furgo;
+    (document.getElementById('tr-l-precio') as HTMLInputElement).value = precio;
+    (document.getElementById('tr-l-q') as HTMLInputElement).value = nombre;
+    const ul = document.getElementById('tr-inv-res'); if (ul) ul.innerHTML = '';
+  },
+  trAnadirLinea() {
+    if (!val('tr-l-q')) return;
+    _lineas.push({ nombre: val('tr-l-q'), cantidad: Number(val('tr-l-cant')) || 1, precio: Number(val('tr-l-precio')) || 0, descuento: 0,
+      inventario_id: val('tr-l-inv') || null, furgoneta_id: val('tr-l-furgo') || null, categoria: null });
+    const s = document.querySelector('.tr-lineas')?.closest('section');
+    if (s) s.innerHTML = `<h3>Material</h3>${editorLineas()}`;
+  },
+  async trGuardarLineas() {
+    if (!_t) return;
+    const r = await API.rpc<number>('trabajo_guardar_lineas', { p_trabajo: _t.id, p_lineas: _lineas.map(l => ({ nombre: l.nombre, cantidad: l.cantidad, precio: l.precio, descuento: l.descuento, inventario_id: l.inventario_id, furgoneta_id: l.furgoneta_id, categoria: l.categoria })) });
+    if (r.error) toast(r.error.message, 'error'); else { toast('Material guardado (y el stock ajustado)'); resolver(); }
+  },
+  async trComentar() {
+    if (!_t) return;
+    const r = await API.post('trabajo_comentarios', { trabajo_id: _t.id, texto: val('tr-com'), autor_nombre: usuario()?.nombre ?? null });
+    if (r.error) toast(`No se pudo: ${r.error.message}`, 'error'); else resolver();
+  },
+  async trVerFoto(id: string) {
+    const { llamarFuncion } = await import('../../core/funciones');
+    const r = await llamarFuncion<{ url: string }>('trabajo-foto', { accion: 'url', id });
+    if (r.error || !r.data) toast(`No se pudo: ${r.error}`, 'error'); else window.open(r.data.url, '_blank', 'noopener');
+  },
+});

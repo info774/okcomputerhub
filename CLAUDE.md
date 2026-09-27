@@ -50,6 +50,10 @@ Detalle en `docs/FASE10.md`.
 **Fase 11 PROGRAMADA SIN ACTIVAR** (2026-09-27): facturación propia
 (`20261015_facturacion.sql`, `#/facturacion`); Zoho sigue facturando; solo emite
 la serie de PRUEBA. Detalle y pasos para activarla en `docs/FASE11.md`.
+**Fase Final PROGRAMADA SIN EL CAMBIO** (2026-09-27): `#/trabajos`, `#/calendario`,
+`#/chat`, `#/hoy` (`20261016_final.sql`); el corte está preparado en
+`supabase/cortes/corte_final.sql` y NO se aplica sin el OK de Fran. Pasos en
+`docs/FASE_FINAL.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -316,6 +320,16 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `hub.config.facturacion_activa = true` con el OK de Fran (no hay botón). Una
   factura se emite SOLO con `hub.emitir_factura()`; lo emitido es inmutable
   (se rectifica con `hub.crear_rectificativa()`).
+- Áreas aún de la app (trabajos, agenda, sesiones, inventario…): las pantallas
+  del hub preguntan `esDelHub()` (`src/core/areas.ts`) y, si es de la app,
+  enseñan en solo lectura con `avisoSoloLectura()`. Las escrituras de esas
+  áreas van por funciones de la base (`hub.fichar`, `hub.trabajo_guardar_lineas`,
+  `hub.trabajo_estado`, `hub.agenda_mover`) que llaman a `hub.exigir_area()`:
+  el corte (supabase/cortes/) las enciende sin tocar el front.
+- Pantallas pesadas: `pintar` hace `import('./vista')` (se cargan bajo demanda);
+  el `index.ts` del módulo solo lleva el contrato y el `contador()`.
+- `supabase/cortes/`: SQL preparado que NO se aplica solo (lo comprueba
+  `comprobar-migraciones` y lo prueba `probar-migraciones`).
 - Avisos de fases nuevas: cada fase tiene su gancho (`hub.avisos_portal`,
   `_comandas`, `_almacen`, `_personas`, `_facturacion`; este último solo para
   admins) que junta `hub.avisos_extra()` y llama `panorama_direccion`. Un aviso

@@ -525,3 +525,42 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .fa-lineas input, .fa-lineas select, .fa-lineas textarea { width: 100%; min-width: 4.5rem; }
 .fa-trabajos { list-style: none; padding: 0; display: grid; gap: .35rem; }
 @media print { .fa-factura, .fa-factura * { visibility: visible; } .fa-factura { position: absolute; inset: 0; border: 0; } }
+
+/* ── Fase Final: trabajos, calendario, chat, hoy ────────────────────────── */
+.area-app { border-left: 4px solid var(--aviso); }
+#tr-q { min-width: 12rem; flex: 1; }
+.tr-lineas input { width: 100%; min-width: 4rem; }
+.tr-tecnicos { display: grid; gap: .2rem; }
+.ca-semana { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .5rem; }
+.ca-dia { padding: .6rem; min-height: 8rem; } .ca-dia h3 { font-size: .9rem; margin: 0 0 .4rem; text-transform: capitalize; }
+.ca-hoy { outline: 2px solid var(--primario); }
+.ca-bloque { border-left: 4px solid var(--primario); background: var(--fondo); border-radius: 6px; padding: .35rem .5rem; margin-bottom: .35rem; font-size: .85rem; overflow-wrap: anywhere; }
+.ca-bloque[draggable="true"] { cursor: grab; }
+.ca-bloque small { display: block; }
+.ca-real { font-size: .78rem; background: repeating-linear-gradient(45deg, var(--fondo), var(--fondo) 4px, var(--superficie) 4px, var(--superficie) 8px); border-radius: 6px; padding: .2rem .4rem; margin-bottom: .25rem; }
+.ca-tabla td { vertical-align: top; min-width: 7rem; }
+@media (max-width: 1023px) { .ca-semana { grid-template-columns: 1fr; } }
+.ch-marco { display: grid; grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.ch-lista ul { list-style: none; padding: 0; margin: 0 0 .75rem; display: grid; gap: .15rem; }
+.ch-lista a { display: grid; grid-template-columns: 1fr auto; gap: 0 .4rem; padding: .45rem .5rem; border-radius: 8px; text-decoration: none; color: var(--texto); }
+.ch-lista a.activo { background: var(--fondo); font-weight: 600; }
+.ch-lista a small { grid-column: 1 / -1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-conversacion { display: flex; flex-direction: column; min-height: 60vh; }
+.ch-cab { display: flex; align-items: center; gap: .5rem; } .ch-cab h3 { margin: 0; }
+.ch-volver { display: none; font-size: 1.5rem; text-decoration: none; min-width: 44px; }
+.ch-mensajes { flex: 1; overflow-y: auto; max-height: 60vh; display: flex; flex-direction: column; gap: .5rem; padding: .5rem 0; }
+.ch-msg { position: relative; max-width: 85%; background: var(--fondo); border-radius: 12px; padding: .45rem .75rem; align-self: flex-start; overflow-wrap: anywhere; }
+.ch-msg.ch-mio { align-self: flex-end; background: var(--aviso-fondo); }
+.ch-msg .md > :first-child { margin-top: 0; } .ch-msg .md > :last-child { margin-bottom: 0; }
+.ch-borrar { position: absolute; top: .2rem; right: .3rem; border: 0; background: none; color: var(--texto-suave, inherit); cursor: pointer; opacity: .5; }
+.ch-escribir { display: flex; gap: .5rem; align-items: flex-end; } .ch-escribir textarea { flex: 1; }
+@media (max-width: 767px) {
+  .ch-marco { grid-template-columns: 1fr; }
+  .ch-marco.ch-con-canal .ch-lista { display: none; }
+  .ch-marco:not(.ch-con-canal) .ch-conversacion { display: none; }
+  .ch-volver { display: inline-block; }
+}
+.ho-siguiente { border: 2px solid var(--primario); }
+.ho-parada header { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.ho-botones .btn { min-height: 44px; }
+.ho-terminar textarea, .ho-terminar input[type=file] { width: 100%; }

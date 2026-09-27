@@ -36,6 +36,9 @@ export const TABLAS_APP: Record<string, TablaApp> = {
     estado notas created_at created_by tipo`) },
   sesiones: { auditada: true, columnas: c(`id entidad_tipo entidad_id traslado inicio fin duracion_min tecnico_id
     tecnico_nombre gps_lat gps_lng created_at agenda_id`) },
+  // Fase Final: para la ficha del trabajo (sin la foto en crudo: solo su enlace de Drive).
+  trabajo_comentarios: { auditada: false, columnas: c('id created_at trabajo_id autor_nombre texto') },
+  trabajo_fotos: { auditada: false, columnas: c('id created_at trabajo_id tecnico_id descripcion drive_file_id drive_url') },
   documento_lineas: { auditada: false, columnas: c(`id created_at trabajo_id presupuesto_id nombre cantidad
     precio descuento subtotal orden inventario_id furgoneta_id categoria`) },
   tareas: { auditada: true, columnas: c(`id created_at titulo estado prioridad fecha_vencimiento tecnico_id notas
