@@ -140,7 +140,7 @@ try {
     }
   }
   ok(huellaPublic() === antes, 'public (Breeze) queda igual');
-  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '6', 'seis tareas de pg_cron, sin duplicar');
+  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '7', 'siete tareas de pg_cron, sin duplicar');
 
   // ── Permisos y RLS ─────────────────────────────────────────────────────
   ok(!psql(como('anon', null, 'select count(*) from hub.clientes;'), { esperaError: true }).ok, 'anon no entra en hub');
@@ -154,7 +154,7 @@ try {
   const escribir = email => psql(como('authenticated', email, `insert into hub.clientes (nombre) values ('Nuevo');`), { esperaError: true });
   ok(!escribir('ana@ok.test').ok, 'nadie escribe en un área con dueño app (ni un admin)');
   ok(!psql(como('authenticated', 'tito@ok.test', `update hub.areas set dueno = 'hub' where area = 'clientes';`) +
-    `\nselect 1/(select count(*) from hub.areas where dueno = 'hub');`, { esperaError: true }).ok,
+    `\nselect 1/(select count(*) from hub.areas where dueno = 'hub' and area = 'clientes');`, { esperaError: true }).ok,
     'un técnico no corta áreas');
   psql(como('authenticated', 'ana@ok.test', `update hub.areas set dueno = 'hub', cortada_at = now() where area = 'clientes';`));
   ok(escribir('tito@ok.test').ok, 'con el área cortada, un usuario escribe');
@@ -355,6 +355,55 @@ try {
   ok(psql(`select string_agg(decrypted_secret, ',') from vault.decrypted_secrets where name = 'zoho_hub_refresh_token'`) === 'r2', 'secretos: guarda y actualiza sin duplicar');
   ok(!psql(como('authenticated', 'ana@ok.test', `select hub.guardar_secreto('zoho_hub_refresh_token', 'x');`), { esperaError: true }).ok, 'secretos: un usuario no puede guardar');
   ok(psql(`select hub.lanzar_funcion('zoho-lectura')`) === '1', 'lanzar_funcion llama a net.http_post');
+
+  // ── Ventas (fase 4) ────────────────────────────────────────────────────
+  const una = (email, sql) => psql(como('authenticated', email, sql)).split('\n').pop();
+  const idDe = (email, sql) => psql(como('authenticated', email, sql)).split('\n').find(l => /^[0-9a-f-]{36}$/.test(l));
+  ok(psql(`select dueno || importar_altas from hub.areas where area = 'oportunidades'`) === 'hubtrue', 'ventas: oportunidades es área del hub e importa altas');
+  const op = idDe('tito@ok.test', `insert into hub.oportunidades (titulo, valor_estimado) values ('Cámaras hotel', 3000) returning id;`);
+  ok(!!op, 'ventas: un usuario crea una oportunidad (embudo por defecto)');
+  ok(!psql(como('authenticated', 'tito@ok.test', `update hub.oportunidades set estado = 'Inventado' where id = '${op}';`), { esperaError: true }).ok,
+    'ventas: una etapa que no existe en el embudo no vale');
+  psql(como('authenticated', 'tito@ok.test', `update hub.oportunidades set estado = 'Ganado' where id = '${op}';`));
+  ok(psql(`select cerrada_at is not null from hub.oportunidades where id = '${op}'`) === 't', 'ventas: ganar la cierra (cerrada_at)');
+  psql(como('authenticated', 'tito@ok.test', `update hub.oportunidades set estado = 'Propuesta' where id = '${op}';`));
+  ok(psql(`select cerrada_at is null from hub.oportunidades where id = '${op}'`) === 't', 'ventas: reabrirla la vuelve a abrir');
+  psql(como('authenticated', 'tito@ok.test', `delete from hub.oportunidades where id = '${op}';`));
+  ok(psql(`select count(*) from hub.oportunidades where id = '${op}'`) === '1', 'ventas: un técnico no borra oportunidades');
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.pipelines (nombre, etapas) values ('x', '[]');`), { esperaError: true }).ok, 'ventas: un técnico no crea embudos');
+
+  psql(`insert into hub.clientes (id, nombre, zoho_id) values ('00000000-0000-0000-0000-0000000000e1', 'Bar Grande SL', 'z1'), ('00000000-0000-0000-0000-0000000000e2', 'Tienda', 'z2')`);
+  ok(!!idDe('tito@ok.test', `insert into hub.actividades (tipo, texto, cliente_id) values ('llamada', 'Llamé, quiere presupuesto', '00000000-0000-0000-0000-0000000000e1') returning id;`),
+    'ventas: apuntar una actividad (a su nombre)');
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.actividades (texto, usuario_id) values ('suplantar', '${anaId}');`), { esperaError: true }).ok,
+    'ventas: nadie apunta actividades a nombre de otro');
+  psql(como('authenticated', 'ana@ok.test', `update hub.actividades set texto = 'cambiado' where usuario_id = '${titoId}';`));
+  ok(psql(`select texto from hub.actividades where usuario_id = '${titoId}'`) === 'cambiado', 'ventas: un admin corrige actividades');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.clientes_crm (cliente_id, siguiente_fecha, siguiente_texto, responsable_id)
+    values ('00000000-0000-0000-0000-0000000000e2', current_date - 2, 'Llamar para la renovación', '${titoId}');`));
+  ok(una('tito@ok.test', `select clase from hub.clases_clientes() where cliente_id = '00000000-0000-0000-0000-0000000000e1';`) === 'A',
+    'ventas: el cliente que más factura es clase A (Pareto)');
+  psql(como('authenticated', 'tito@ok.test', `update hub.clientes_crm set clase_manual = 'A' where cliente_id = '00000000-0000-0000-0000-0000000000e2';`));
+  ok(una('tito@ok.test', `select clase || clase_auto from hub.clases_clientes() where cliente_id = '00000000-0000-0000-0000-0000000000e2';`) === 'AC',
+    'ventas: la clase puesta a mano manda sobre la calculada');
+  ok(una('tito@ok.test', `select count(*) filter (where tipo in ('factura','cobro')) || '/' || count(*) filter (where tipo like 'actividad%') from hub.linea_tiempo('00000000-0000-0000-0000-0000000000e1');`) === '0/1',
+    'ventas: la línea de tiempo de un técnico no lleva facturas');
+  ok(una('ana@ok.test', `select count(*) filter (where tipo = 'factura') from hub.linea_tiempo('00000000-0000-0000-0000-0000000000e1');`) === '2',
+    'ventas: la de un admin, sí');
+
+  ok(psql(como('service_role', null, `select hub.preparar_recordatorios();`)).split('\n').pop() === '1', 'cobros: prepara el recordatorio de la factura vencida');
+  ok(psql(`select nivel || ':' || (texto like '%F26-1%' and texto like '%800,00 €%') from hub.cobros_recordatorios`) === '3:true',
+    'cobros: nivel según los días de retraso y el texto con número e importe');
+  ok(psql(como('service_role', null, `select hub.preparar_recordatorios();`)).split('\n').pop() === '0', 'cobros: no lo duplica');
+  ok(una('tito@ok.test', `select count(*) from hub.cobros_recordatorios;`) === '0', 'cobros: un técnico no los ve');
+  const avisosDe = email => una(email, `select coalesce(string_agg(distinct tipo, ',' order by tipo), 'nada') from hub.panorama_direccion();`);
+  psql(`insert into hub.oportunidades (titulo, origen, created_at) values ('Web: quiero TPV', 'web', now() - interval '2 days')`);
+  const at = avisosDe('tito@ok.test'), aa = avisosDe('ana@ok.test');
+  ok(at.includes('lead_sin_contestar') && at.includes('siguiente_vencido') && !at.includes('recordatorio_cobro'), `avisos: lead y «lo siguiente» para todos (${at})`);
+  ok(aa.includes('recordatorio_cobro'), 'avisos: recordatorio de cobro listo, solo admins');
+  psql(`update hub.zoho_facturas set saldo = 0, estado = 'paid' where invoice_id = 'f1'`);
+  psql(como('service_role', null, `select hub.preparar_recordatorios();`));
+  ok(psql(`select estado from hub.cobros_recordatorios`) === 'descartado', 'cobros: al cobrarse, el recordatorio pendiente se descarta');
 
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);

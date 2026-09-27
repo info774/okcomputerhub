@@ -97,6 +97,35 @@ async function tablasDeLaApp(): Promise<string[]> {
   return Object.keys(TABLAS_APP).filter(t => set.has(t))
 }
 
+// ── Áreas ya cortadas cuyas ALTAS sigue creando la app (hub.areas.importar_altas):
+// p. ej. las oportunidades que entran por el formulario web o por WhatsApp.
+// Solo se INSERTAN las que el hub no tiene; lo editado en el hub no se pisa nunca.
+const ETAPAS_APP = ['Detectado', 'Contactado', 'Propuesta', 'Negociando', 'Ganado', 'Perdido']
+
+async function altas(entera: boolean): Promise<Record<string, number>> {
+  const areas = await hub('GET', 'areas?select=tablas&dueno=eq.hub&importar_altas=eq.true') ?? []
+  const tablas = [...new Set(areas.flatMap(a => (a.tablas as string[]) ?? []))].filter(t => TABLAS_APP[t])
+  if (!tablas.length) return {}
+  const e = await estado('altas')
+  const inicio = new Date().toISOString()
+  const desde = entera || !e.corte_ts ? null : new Date(new Date(String(e.corte_ts)).getTime() - MARGEN_MS).toISOString()
+  const detalle: Record<string, number> = {}
+  for (const tabla of tablas) {
+    const sel = TABLAS_APP[tabla].columnas.join(',')
+    const rs = await appGet(`${tabla}?select=${sel}${desde ? `&created_at=gte.${encodeURIComponent(desde)}` : ''}&order=created_at.asc&limit=5000`)
+    const filas = tabla === 'oportunidades'
+      ? rs.map(r => ({ ...r, estado: ETAPAS_APP.includes(String(r.estado)) ? r.estado : 'Detectado' }))
+      : rs
+    for (const lote of trozos(filas, LOTE_UPSERT)) {
+      await hub('POST', `${tabla}?on_conflict=id`, lote, 'resolution=ignore-duplicates,return=minimal')
+    }
+    detalle[tabla] = filas.length
+  }
+  await hub('POST', 'sync_estado?on_conflict=clave', [{ clave: 'altas', corte_ts: inicio, ultima_ok: inicio,
+    filas: Object.values(detalle).reduce((a, b) => a + b, 0), detalle, ultimo_error: null }], 'resolution=merge-duplicates,return=minimal')
+  return detalle
+}
+
 async function subir(tabla: string, filas: Fila[]): Promise<void> {
   for (const lote of trozos(filas, LOTE_UPSERT)) {
     await hub('POST', `${tabla}?on_conflict=id`, lote, 'resolution=merge-duplicates,return=minimal')
@@ -211,7 +240,7 @@ async function incremental(): Promise<Fila> {
   await guardarEstado('audit', {
     corte_id: hasta, ultima_ok: new Date().toISOString(), filas, detalle, ultimo_error: null,
   })
-  return { filas, corte: hasta, detalle }
+  return { filas, corte: hasta, detalle, altas: await altas(false) }
 }
 
 // ── Completo (nocturno) ────────────────────────────────────────────────────
@@ -251,6 +280,7 @@ async function completo(todas: boolean): Promise<Fila> {
     filas += detalle[tabla]
   }
   await guardarEstado('completo', { ultima_ok: new Date().toISOString(), filas, detalle, ultimo_error: null })
+  detalle.altas = Object.values(await altas(true)).reduce((a, b) => a + b, 0)
   if (cortePendiente != null) {
     await guardarEstado('audit', { corte_id: cortePendiente, ultimo_error: null })
     return { filas, detalle, carga_inicial: true, corte: cortePendiente }

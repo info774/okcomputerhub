@@ -46,6 +46,9 @@ export const TABLAS_APP: Record<string, TablaApp> = {
     tecnico_id resolucion via_contacto numero contacto_id trabajo_id resolucion_categoria`) },
   presupuestos: { auditada: true, columnas: c(`id created_at cliente_id local_id titulo exigencias estado total
     tecnico_id zoho_estimate_id fecha oportunidad_id numero_presupuesto contacto_id`) },
+  // Área del hub desde la fase 4: solo se importan sus ALTAS (hub.areas.importar_altas).
+  oportunidades: { auditada: true, columnas: c(`id created_at titulo cliente_id descripcion estado valor_estimado
+    tecnico_id fecha_seguimiento motivo_perdida origen local_id contacto_id`) },
   gastos: { auditada: true, columnas: c(`id created_at importe fecha categoria trabajo_id tecnico_id notas
     foto_url tipo descripcion contacto_id local_id`) },
 }
