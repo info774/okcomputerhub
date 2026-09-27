@@ -101,7 +101,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   OJO al simular funciones: un cuerpo puede traer su propio `nombre`
   (`{ ...b, nombre }`, no al revés).
 
-`npm run verify` pasa los doce.
+- `verify-facturacion.mjs`: sin activar (aviso, serie real deshabilitada),
+  borrador de prueba (cliente, línea, IGIC), emitir por RPC, emitida (marca
+  PRUEBA, huella, no editable, cobro, rectificar), desde trabajos, emisor.
+
+`npm run verify` pasa los trece.
 
 ## Pantalla nueva
 

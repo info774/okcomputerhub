@@ -47,6 +47,9 @@ Detalle en `docs/FASE9.md`.
 **Fase 10 HECHA** (2026-09-27): personas (`20261014_personas.sql`, `#/personas`,
 `#/firmas`, `firmar.html`, `gestoria.html`, funciones `gastos-ocr` y `firma`).
 Detalle en `docs/FASE10.md`.
+**Fase 11 PROGRAMADA SIN ACTIVAR** (2026-09-27): facturación propia
+(`20261015_facturacion.sql`, `#/facturacion`); Zoho sigue facturando; solo emite
+la serie de PRUEBA. Detalle y pasos para activarla en `docs/FASE11.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -309,6 +312,10 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `hub.firma_firmar` (service_role, con la huella) lo pasa a firmado.
 - Ficheros privados (Storage, cubo `gastos`): los sube y firma URLs
   `_shared/archivos.ts` con la service key; el navegador nunca toca Storage.
+- Facturación propia: SIN ACTIVAR. Nada la activa salvo
+  `hub.config.facturacion_activa = true` con el OK de Fran (no hay botón). Una
+  factura se emite SOLO con `hub.emitir_factura()`; lo emitido es inmutable
+  (se rectifica con `hub.crear_rectificativa()`).
 - Avisos de fases nuevas: cada fase tiene su gancho (`hub.avisos_portal`,
   `_comandas`, `_almacen`, `_personas`, `_facturacion`; este último solo para
   admins) que junta `hub.avisos_extra()` y llama `panorama_direccion`. Un aviso

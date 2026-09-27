@@ -512,3 +512,16 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
   .no-imprimir { display: none !important; }
   .solo-imprimir { display: block; }
 }
+
+/* ── Facturación propia (fase 11) ───────────────────────────────────────── */
+.fa-banner { border-left: 4px solid var(--aviso); }
+.fa-factura { position: relative; }
+.fa-cab { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.fa-num { text-align: right; } .fa-num h2 { margin: 0 0 .25rem; }
+.fa-cliente { margin-bottom: 1rem; }
+.fa-totales { max-width: 32rem; margin-left: auto; }
+.fa-huella { font-size: .75rem; overflow-wrap: anywhere; color: var(--texto-suave, inherit); }
+.fa-marca { position: absolute; top: 40%; left: 0; right: 0; text-align: center; font-size: 2rem; font-weight: 700; color: var(--mal); opacity: .18; transform: rotate(-12deg); pointer-events: none; margin: 0; }
+.fa-lineas input, .fa-lineas select, .fa-lineas textarea { width: 100%; min-width: 4.5rem; }
+.fa-trabajos { list-style: none; padding: 0; display: grid; gap: .35rem; }
+@media print { .fa-factura, .fa-factura * { visibility: visible; } .fa-factura { position: absolute; inset: 0; border: 0; } }

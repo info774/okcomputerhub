@@ -33,7 +33,7 @@ export const modulosAppActual: Modulo[] = [
   }),
   enlace('tareas', 'Tareas', '✅', () => cuenta('tareas', { estado: 'in.(pendiente,en_progreso)' }, 'pendientes')),
   enlace('presupuestos', 'Presupuestos', '📄', () => cuenta('presupuestos', { estado: 'eq.Borrador' }, 'en borrador')),
-  enlace('facturacion', 'Facturación y cobros', '💶'),
+  enlace('facturacion-app', 'Facturación y cobros (app)', '💶'),
   enlace('mantenimientos', 'Mantenimientos', '🔁'),
   enlace('inventario', 'Inventario', '📦'),
   enlace('chat', 'Chat', '💬'),

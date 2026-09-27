@@ -17,6 +17,7 @@ import { moduloOportunidades } from './oportunidades';
 import { moduloTickets } from './tickets';
 import { moduloPortal } from './portal';
 import { moduloFirmas } from './firmas';
+import { moduloFacturacion } from './facturacion';
 import { moduloCobros } from './cobros';
 import { moduloMapa } from './mapa';
 import { moduloAlmacen } from './almacen';
@@ -37,6 +38,7 @@ export const MODULOS: Modulo[] = [
   moduloPortal,
   moduloFirmas,
   moduloCobros,
+  moduloFacturacion,
   moduloMapa,
   moduloMonitorizacion,
   moduloAlmacen,

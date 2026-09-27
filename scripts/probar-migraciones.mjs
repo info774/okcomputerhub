@@ -586,6 +586,36 @@ try {
     && psql(`insert into hub.portal_accesos (email, tipo, nombre) values ('gestoria@asesor.es', 'gestoria', 'Asesoría') returning tipo`).split('\n')[0] === 'gestoria',
     'gestoría: acceso del portal sin cliente (un cliente sigue necesitándolo)');
 
+  // ── Facturación propia (fase 11, SIN ACTIVAR) ──────────────────────────
+  const fac = (serie) => idDe('ana@ok.test', `insert into hub.facturas (serie, cliente_id) values ('${serie}', '${cliP}') returning id;`);
+  const f1 = fac('F');
+  psql(como('authenticated', 'ana@ok.test', `insert into hub.factura_lineas (factura_id, concepto, cantidad, precio, impuesto_pct) values ('${f1}', 'Mantenimiento', 2, 50, 7), ('${f1}', 'Cable', 1, 10, 3);`));
+  ok(psql(`select base_total || '|' || impuesto_total || '|' || total from hub.facturas where id = '${f1}'`) === '110.00|7.30|117.30', 'facturas: totales con IGIC por línea (7 % y 3 %)');
+  ok(!psql(como('authenticated', 'ana@ok.test', `select hub.emitir_factura('${f1}');`), { esperaError: true }).ok, 'facturas: sin activar, la serie real no emite (Zoho sigue)');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select count(*) from hub.facturas;`) + `\nselect 1/(select count(*) from hub.facturas);`, { esperaError: true }).ok || una('tito@ok.test', 'select count(*) from hub.facturas') === '0', 'facturas: un técnico no las ve');
+  const p1 = fac('P'), p2 = fac('P');
+  for (const p of [p1, p2]) psql(como('authenticated', 'ana@ok.test', `insert into hub.factura_lineas (factura_id, concepto, cantidad, precio) values ('${p}', 'Prueba', 1, 100);`));
+  psql(como('authenticated', 'ana@ok.test', `select hub.emitir_factura('${p2}'); select hub.emitir_factura('${p1}');`));
+  ok(psql(`select string_agg(codigo, ',' order by numero) from hub.facturas where serie = 'P'`) === `P-${new Date().getFullYear()}-0001,P-${new Date().getFullYear()}-0002`, 'facturas: la serie de PRUEBA numera correlativo, en el orden de emisión');
+  ok(psql(`select (select huella_anterior from hub.facturas where id = '${p1}') = (select huella from hub.facturas where id = '${p2}')`) === 't', 'facturas: cada emitida encadena la huella de la anterior');
+  ok(psql(`select cliente_nombre from hub.facturas where id = '${p1}'`) === 'Cliente portal', 'facturas: los datos del cliente se congelan al emitir');
+  ok(!psql(como('authenticated', 'ana@ok.test', `update hub.facturas set total = 1 where id = '${p1}';`), { esperaError: true }).ok, 'facturas: lo emitido no se toca (ni un admin)');
+  ok(!psql(como('authenticated', 'ana@ok.test', `update hub.factura_lineas set precio = 1 where factura_id = '${p1}';`), { esperaError: true }).ok, 'facturas: ni sus líneas');
+  ok(!psql(como('authenticated', 'ana@ok.test', `delete from hub.facturas where id = '${p1}';`), { esperaError: true }).ok, 'facturas: ni se borra');
+  ok(!psql(como('authenticated', 'ana@ok.test', `update hub.facturas set estado = 'emitida' where id = '${f1}';`), { esperaError: true }).ok, 'facturas: solo se emite con emitir_factura()');
+  psql(como('authenticated', 'ana@ok.test', `insert into hub.factura_cobros (factura_id, importe) values ('${p1}', 50);`));
+  ok(psql(`select cobrado from hub.facturas where id = '${p1}'`) === '50.00', 'facturas: se cobra (parcial)');
+  const rid = psql(como('authenticated', 'ana@ok.test', `select hub.crear_rectificativa('${p1}', 'Precio mal puesto');`)).split('\n').pop();
+  ok(psql(`select tipo || '|' || total || '|' || serie from hub.facturas where id = '${rid}'`) === 'rectificativa|-107.00|P', 'facturas: rectificativa en borrador con las líneas en negativo');
+  psql(como('authenticated', 'ana@ok.test', `select hub.emitir_factura('${rid}');`));
+  ok(psql(`select estado from hub.facturas where id = '${p1}'`) === 'rectificada', 'facturas: al emitir la rectificativa, la original queda rectificada');
+  psql(`update hub.config set valor = 'true' where clave = 'facturacion_activa'`);
+  ok(!psql(como('authenticated', 'ana@ok.test', `select hub.emitir_factura('${f1}');`), { esperaError: true }).ok, 'facturas: activada, sin los datos fiscales del emisor no emite');
+  psql(`update hub.config set valor = jsonb_set(valor, '{nif}', '"B38000000"') where clave = 'facturacion_emisor'`);
+  psql(como('authenticated', 'ana@ok.test', `select hub.emitir_factura('${f1}');`));
+  ok(psql(`select codigo || '|' || (huella_anterior is null) from hub.facturas where id = '${f1}'`) === `F-${new Date().getFullYear()}-0001|true`, 'facturas: activada, la serie real empieza su propia cadena');
+  psql(`update hub.config set valor = 'false' where clave = 'facturacion_activa'`);
+
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
   ok(!sinRls, `todas las tablas de hub con RLS${sinRls ? ' (faltan: ' + sinRls + ')' : ''}`);
