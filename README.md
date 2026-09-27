@@ -6,7 +6,8 @@ solo sitio lo que hoy se reparte entre la PWA de gestión
 Zoho One y la web de Breeze (RMM), con las ideas del producto OKHUB como
 referencia.
 
-- **Estado (2026-09-27)**: solo documentación. El plan por fases está en
+- **Estado (2026-09-27)**: fase 0 escrita y probada en local, pendiente de
+  aplicar y desplegar: [`docs/FASE0.md`](docs/FASE0.md). El plan por fases está en
   [`docs/PLAN_SISTEMA_UNIFICADO.md`](docs/PLAN_SISTEMA_UNIFICADO.md) y la
   referencia de OKHUB en
   [`docs/referencias/OKHUB_INVENTARIO.md`](docs/referencias/OKHUB_INVENTARIO.md).

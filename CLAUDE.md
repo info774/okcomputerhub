@@ -12,8 +12,9 @@ web de Breeze. El plan completo, con las decisiones tomadas y las fases, está
 en `docs/PLAN_SISTEMA_UNIFICADO.md`; la referencia de producto (la demo de
 OKHUB, de otra empresa) en `docs/referencias/OKHUB_INVENTARIO.md`.
 
-**Estado**: solo documentación. No hay código todavía; la fase 0 del plan es
-el scaffold.
+**Estado**: fase 0 (cimientos) escrita y probada en local, SIN aplicar ni
+desplegar: los pasos a mano (migraciones, secrets, carga inicial, Auth,
+Firebase) están en `docs/FASE0.md`. Siguiente: fase 1 (proyectos + MCP).
 
 ## Los tres vecinos — LO MÁS IMPORTANTE
 
@@ -74,15 +75,25 @@ el scaffold.
 - Carga inicial: `scripts/importar-app.mjs` desde el dump nocturno de la app
   (`pg_dump -Fc --schema=public`) pasando por el esquema temporal
   `app_import`. Repetible; no toca la base viva.
-- `sync-app`: lectura incremental del PostgREST de `okcomputer` (service key
-  en el Vault; `updated_at > último corte`; las tablas sin `updated_at`, una
-  pasada nocturna). Solo deltas. **Un sync que falla no mueve el corte.**
+- `sync-app`: lectura incremental por el **`audit_log` de la app** (id
+  creciente; casi ninguna tabla de la app tiene `updated_at`): desde el último
+  id, junta los registros tocados y pide su estado ACTUAL (lo que existe se
+  sube, lo que ya no existe se borra). `documento_lineas` (sin auditoría) y
+  `locales` (columnas que los crons tocan y audit_log ignora) se copian enteras
+  cada noche. **Un sync que falla no mueve el corte** (`hub.sync_estado`). Las
+  columnas que copia están en `_shared/tablas-app.ts`, que tiene que cuadrar
+  con la migración de la tabla.
+- Lo que escribe el sync (cabecera `x-hub-sync`) y el importador (GUC
+  `hub.sin_auditoria`) no entra en `hub.auditoria`: ya lo auditó la app.
+- Las tablas espejo no llevan claves foráneas ni secuencias (el espejo llega
+  por deltas y en cualquier orden; `numero` lo pone la app): se añaden en la
+  migración que corte su área.
 - `hub.areas` (área, dueño `app` | `hub`): con dueño `app` el hub enseña el
   área en solo lectura y el sync la refresca; al cortar, el hub manda y el
   sync la salta. **Ninguna escritura del hub sobre un área con dueño `app`**
   (lo comprueban `acciones.ts` y la RLS).
 
-## Stack y estructura prevista (fase 0)
+## Stack y estructura (fase 0)
 
 - **Frontend**: Vite + TypeScript **sin framework**. Módulos ES, una carpeta
   por pantalla en `src/modulos/<nombre>/`, hash-routing `#/ruta`, PWA
@@ -109,12 +120,33 @@ el scaffold.
   + Chromium con la red de Supabase interceptada y fixtures; nunca contra
   datos reales) y la comprobación de migraciones.
 
-## Comandos (cuando exista el scaffold)
+## Comandos
 
-- `npm run dev` — Vite en local.
-- `npm run build` — `dist/`.
-- `npm run lint` — ESLint + `tsc --noEmit`.
-- `npm run verify` — arnés de verificación sin tocar datos reales.
+- `npm run dev` — Vite en local (contra el Supabase REAL del hub: para
+  probar sin datos reales, `verify`).
+- `npm run build` — `dist/` (sella el service worker con `HUB_BUILD`).
+- `npm run lint` — ESLint + `tsc --noEmit` + `comprobar-migraciones.mjs`.
+  Ejecutar antes de cerrar cambios.
+- `npm run verify` — arnés del shell (tras `npm run build`); ver
+  `.claude/skills/verify/SKILL.md`.
+- `npm run probar-migraciones` — aplica las migraciones dos veces en un
+  Postgres local desechable y prueba RLS, áreas, auditoría, que `public` no
+  cambia y el importador. Al tocar una migración o `importar-app.mjs`.
+
+## Piezas del front
+
+- `src/core/`: `config.ts` (URL y anon key del hub), `auth.ts` (supabase-js,
+  solo Auth), `api.ts` (PostgREST sobre `hub`; `API.contar()` = HEAD con
+  `count=exact` para las baldosas), `dispatcher.ts` (`registrarAcciones({...})`
+  en vez del puente `window.*` de la app actual), `router.ts` (`#/<id>/…`),
+  `modulo.ts` (el contrato de una pantalla).
+- `src/modulos/index.ts` registra las pantallas; el orden es el del menú.
+  `app-actual/` son los enlaces a la app actual con contador sacado del
+  ESPEJO del hub (ni una consulta más a producción).
+- `src/shell/`: shell, login, buscador (Ctrl+K), tema, tour.
+- Al entrar se busca el correo de la sesión en `hub.usuarios` (activo): sin
+  fila, se cierra la sesión y se avisa. La RLS usa la misma regla
+  (`hub.es_usuario()`, `hub.es_admin()`).
 
 ## Convenciones
 

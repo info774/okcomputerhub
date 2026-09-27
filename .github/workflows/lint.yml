@@ -1,0 +1,30 @@
+name: Lint y verificación
+
+# En cada PR y en cada push que no sea a main (main ya lo hace en deploy.yml):
+# ESLint + tsc + comprobación de migraciones (ninguna toca public ni los roles
+# de Breeze) + build + arnés del shell con la red interceptada.
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - name: Arnés (Playwright + Chromium, sin datos reales)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run verify
+      - name: Migraciones contra un Postgres de prueba
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql >/dev/null
+          npm run probar-migraciones

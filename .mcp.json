@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "okhub": {
+      "type": "http",
+      "url": "https://adomalsxsymxzuozksmt.supabase.co/functions/v1/mcp",
+      "headers": { "Authorization": "Bearer ${OKHUB_MCP_TOKEN}" }
+    }
+  }
+}

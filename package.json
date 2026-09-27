@@ -1,0 +1,26 @@
+{
+  "name": "okcomputerhub",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src scripts && tsc --noEmit && node scripts/comprobar-migraciones.mjs",
+    "verify": "node .claude/skills/verify/verify-shell.mjs",
+    "probar-migraciones": "node scripts/probar-migraciones.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "playwright": "^1.56.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vite": "^8.3.1"
+  }
+}
