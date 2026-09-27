@@ -487,3 +487,14 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .co-texto { margin: .35rem 0; overflow-wrap: anywhere; }
 .co-tarjeta select { max-width: 100%; }
 #co-grabar[aria-pressed="true"] { background: var(--mal-fondo); color: var(--mal); border-color: var(--mal); }
+
+/* ── Almacén (fase 9) ───────────────────────────────────────────────────── */
+.al-pestanas { margin-bottom: 1rem; flex-wrap: wrap; }
+.al-pestanas a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 .9rem; text-decoration: none; color: var(--texto); background: var(--superficie); }
+.al-pestanas a.activo { background: var(--primario); color: var(--primario-texto); }
+.al-urgente td:first-child { box-shadow: inset 4px 0 0 var(--mal); }
+.al-tabla details summary { cursor: pointer; }
+.al-tabla details ul { margin: .25rem 0 0; padding-left: 1rem; font-size: .9rem; }
+#al-q { min-width: 12rem; flex: 1; }
+.al-cant { width: 6rem; }
+#al-texto { width: 100%; font-family: inherit; }

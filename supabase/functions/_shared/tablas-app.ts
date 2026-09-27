@@ -55,6 +55,12 @@ export const TABLAS_APP: Record<string, TablaApp> = {
   // Fase 5: se leen y se indexan en el buscador (sin audit_log en la app: pasada nocturna).
   conocimiento: { auditada: false, columnas: c('id created_at titulo categoria tipo descripcion url palabras_clave') },
   tablero_notas: { auditada: false, columnas: c('id user_id titulo descripcion created_at updated_at') },
+  // Fase 9: espejo del inventario para el MRP (el stock se sigue moviendo en la app).
+  catalogo: { auditada: true, columnas: c('id created_at nombre categoria precio unidad referencia descripcion activo zoho_item_id') },
+  furgonetas: { auditada: false, columnas: c('id created_at nombre tecnico_responsable') },
+  furgoneta_inventario: { auditada: true, columnas: c(`id created_at furgoneta_id nombre categoria cantidad stock_minimo notas
+    codigo_principal codigo_barra precio catalogo_id`) },
+  furgoneta_movimientos: { auditada: false, columnas: c('id created_at furgoneta_id producto_id tipo cantidad destino_id tecnico_id notas trabajo_id') },
   gastos: { auditada: true, columnas: c(`id created_at importe fecha categoria trabajo_id tecnico_id notas
     foto_url tipo descripcion contacto_id local_id`) },
 }

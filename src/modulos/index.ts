@@ -17,6 +17,7 @@ import { moduloTickets } from './tickets';
 import { moduloPortal } from './portal';
 import { moduloCobros } from './cobros';
 import { moduloMapa } from './mapa';
+import { moduloAlmacen } from './almacen';
 import { modulosAppActual } from './app-actual';
 
 export const MODULOS: Modulo[] = [
@@ -34,6 +35,7 @@ export const MODULOS: Modulo[] = [
   moduloCobros,
   moduloMapa,
   moduloMonitorizacion,
+  moduloAlmacen,
   ...modulosAppActual,
   moduloDatos,
   moduloConector,

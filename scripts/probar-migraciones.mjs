@@ -506,6 +506,43 @@ try {
   psql(como('authenticated', 'ana@ok.test', `delete from hub.comanda_tareas where id = '${ct}';`));
   ok(psql(`select count(*) from hub.comanda_tareas where id = '${ct}'`) === '0', 'comandas: quien la creó sí la borra');
 
+  // ── Almacén (fase 9) ───────────────────────────────────────────────────
+  ok(!psql(como('authenticated', 'ana@ok.test', `insert into hub.catalogo (nombre) values ('x');`), { esperaError: true }).ok, 'almacén: el catálogo es espejo (ni un admin escribe)');
+  psql(`insert into hub.catalogo (id, nombre, categoria) values ('00000000-0000-0000-0000-0000000000c1', 'Cable RJ45 Cat6', 'Material');
+        insert into hub.furgonetas (id, nombre) values ('00000000-0000-0000-0000-0000000000f1', 'Almacén'), ('00000000-0000-0000-0000-0000000000f2', 'Furgo Tito');
+        insert into hub.furgoneta_inventario (id, furgoneta_id, nombre, cantidad, stock_minimo, catalogo_id) values
+          ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000f1', 'Cable RJ45', 4, 5, '00000000-0000-0000-0000-0000000000c1'),
+          ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000f2', 'Cable RJ45', 2, 1, '00000000-0000-0000-0000-0000000000c1');
+        insert into hub.furgoneta_movimientos (furgoneta_id, producto_id, tipo, cantidad, created_at) values
+          ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000a1', 'salida', 45, now() - interval '10 days'),
+          ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000a1', 'salida', 900, now() - interval '200 days');`);
+  const prov = idDe('tito@ok.test', `insert into hub.proveedores (nombre, plazo_dias) values ('Distribuidora Canaria', 5) returning id;`);
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.material_proveedor (catalogo_id, proveedor_id, precio_compra, preferido) values ('00000000-0000-0000-0000-0000000000c1', '${prov}', 0.8, true);`));
+  // stock 6, mínimo 6, consumo 45 en 90 días = 0,5/día; plazo 5 + 30 de cobertura → 17,5 + 6 − 6 = 17,5 → 18
+  ok(una('tito@ok.test', `select stock || '|' || minimo || '|' || consumo_90 || '|' || sugerido || '|' || proveedor || '|' || urgente from hub.mrp()`) === '6|6|45|18|Distribuidora Canaria|false',
+    'MRP: junta ubicaciones, consumo de 90 días, proveedor preferido y cuánto pedir');
+  const pc = idDe('tito@ok.test', `insert into hub.pedidos_compra (proveedor_id) values ('${prov}') returning id;`);
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.pedido_compra_lineas (pedido_compra_id, catalogo_id, nombre, cantidad, precio) values ('${pc}', '00000000-0000-0000-0000-0000000000c1', 'Cable RJ45', 18, 0.8);`));
+  ok(psql(`select total from hub.pedidos_compra where id = '${pc}'`) === '14.4', 'compras: el total del pedido es la suma de sus líneas');
+  ok(una('tito@ok.test', `select en_camino || '|' || sugerido from hub.mrp()`) === '18|0', 'MRP: lo pedido cuenta como en camino');
+  psql(como('authenticated', 'tito@ok.test', `update hub.pedidos_compra set estado = 'Enviado' where id = '${pc}';`));
+  ok(psql(`select (esperado_para = current_date + 5) and enviado_at is not null from hub.pedidos_compra where id = '${pc}'`) === 't', 'compras: al enviarlo se espera para dentro del plazo del proveedor');
+  psql(`update hub.pedidos_compra set esperado_para = current_date - 1 where id = '${pc}'`);
+  ok(avisosDe('tito@ok.test').includes('pedido_retrasado'), 'avisos: pedido de compra retrasado');
+  psql(como('authenticated', 'tito@ok.test', `update hub.pedidos_compra set estado = 'Recibido' where id = '${pc}';`));
+  ok(avisosDe('tito@ok.test').includes('pedido_sin_entrada'), 'avisos: recibido sin dar entrada en el inventario de la app');
+  psql(`update hub.furgoneta_inventario set cantidad = 0`);
+  psql(`delete from hub.pedido_compra_lineas`);
+  ok(avisosDe('tito@ok.test').includes('hay_que_comprar'), 'avisos: hay que comprar lo que se queda sin stock');
+  psql(como('authenticated', 'tito@ok.test', `delete from hub.proveedores where id = '${prov}';`));
+  ok(psql(`select count(*) from hub.proveedores where id = '${prov}'`) === '1', 'compras: un técnico no borra proveedores');
+  const envio = idDe('tito@ok.test', `insert into hub.envios (agencia, seguimiento, destinatario, estado) values ('Correos', 'PQ123', 'Hotel Playa', 'enviado') returning id;`);
+  psql(`update hub.envios set enviado_at = now() - interval '6 days' where id = '${envio}'`);
+  ok(avisosDe('tito@ok.test').includes('envio_atascado'), 'avisos: envío sin entregar después de 5 días');
+  psql(como('authenticated', 'tito@ok.test', `update hub.envios set estado = 'entregado' where id = '${envio}';`));
+  ok(psql(`select entregado_at is not null from hub.envios where id = '${envio}'`) === 't' && !avisosDe('tito@ok.test').includes('envio_atascado'), 'envíos: entregado apunta la hora y quita el aviso');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select * from hub.avisos_almacen(null, false);`), { esperaError: true }).ok, 'avisos: los ganchos por fase no se llaman sueltos');
+
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
   ok(!sinRls, `todas las tablas de hub con RLS${sinRls ? ' (faltan: ' + sinRls + ')' : ''}`);

@@ -41,6 +41,9 @@ Detalle en `docs/FASE6.md`.
 `portal.html`, función `portal`, `#/portal`). Detalle en `docs/FASE7.md`.
 **Fase 8 HECHA** (2026-09-27): comandas (`20261012_comandas.sql`, `#/comandas`,
 función `comandas`, notas de voz al bot). Detalle en `docs/FASE8.md`.
+**Fase 9 HECHA** (2026-09-27): almacén (`20261013_almacen.sql`, `#/almacen`, MRP en
+`hub.mrp()`, proveedores, pedidos de compra y envíos; inventario en espejo).
+Detalle en `docs/FASE9.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -294,8 +297,13 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
 - Comandas: tareas DEL HUB (`hub.comanda_tareas`), no las de la app (que no se
   cortan). Todo lo que crea comandas pasa por `crearComanda()` de
   `_shared/comandas.ts` (pantalla, bot y MCP), que también avisa por Telegram.
-- Avisos de fases nuevas: redefinir `hub.avisos_extra(p_para, p_admin)` (la
-  llama `panorama_direccion`), sin volver a copiar el motor entero.
+- Avisos de fases nuevas: cada fase tiene su gancho (`hub.avisos_portal`,
+  `_comandas`, `_almacen`, `_personas`, `_facturacion`; este último solo para
+  admins) que junta `hub.avisos_extra()` y llama `panorama_direccion`. Un aviso
+  nuevo se añade redefiniendo SOLO el gancho de su fase.
+- Almacén: el inventario es ESPEJO (área `inventario`, dueño `app`); el MRP
+  (`hub.mrp()`) lo lee. Lo recibido se da de entrada en la app y se marca
+  «entrada dada» en el pedido.
 - El shell pinta cada navegación en un contenedor nuevo (`.vista`): un
   `pintar()` lento que acaba tarde escribe en el suyo, ya fuera del documento.
 - Leaflet se importa de forma diferida (`import('leaflet')`) solo en `#/mapa`.

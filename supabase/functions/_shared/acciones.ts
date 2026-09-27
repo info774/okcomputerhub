@@ -818,7 +818,52 @@ const comandas: Herramienta[] = [
   },
 ]
 
-export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...mando, ...ventas, ...wiki, ...comandas, ...escritura]
+// ── Almacén (fase 9) ────────────────────────────────────────────────────────
+const almacen: Herramienta[] = [
+  {
+    name: 'stock', alcance: 'lectura',
+    description: 'Stock de un material en todas las ubicaciones (almacén y furgonetas), con su mínimo, consumo de 90 días, lo pedido en camino y el proveedor. Sin texto: lo que hay que pedir ya.',
+    inputSchema: obj({ q: S('Parte del nombre del material (vacío = lo urgente)') }),
+    async ejecutar(a, { db }) {
+      const filas = (await db.rpc('mrp', {})) as Fila[] ?? []
+      const q = limpio(a.q ?? '').toLowerCase()
+      return q ? filas.filter(f => String(f.nombre ?? '').toLowerCase().includes(q)).slice(0, 30) : filas.filter(f => f.urgente)
+    },
+  },
+  {
+    name: 'compras_sugeridas', alcance: 'lectura',
+    description: 'MRP: qué pedir y a quién (cantidad sugerida por material con el consumo, el plazo del proveedor y lo que ya viene), agrupado por proveedor.',
+    inputSchema: obj({}),
+    async ejecutar(_a, { db }) {
+      const filas = ((await db.rpc('mrp', {})) as Fila[] ?? []).filter(f => Number(f.sugerido) > 0)
+      const por: Record<string, Fila[]> = {}
+      for (const f of filas) (por[String(f.proveedor ?? 'Sin proveedor')] ??= []).push({ nombre: f.nombre, pedir: f.sugerido, stock: f.stock, urgente: f.urgente, precio: f.precio_compra })
+      return por
+    },
+  },
+  {
+    name: 'envios_listar', alcance: 'lectura',
+    description: 'Envíos por agencia (Correos, Correos Express…) que no se han entregado, o los últimos.',
+    inputSchema: obj({ todos: B('También los entregados (últimos 50)') }),
+    async ejecutar(a, { db }) {
+      return db.get(`envios?select=id,sentido,agencia,seguimiento,estado,destinatario,contenido,enviado_at,entregado_at&${a.todos ? '' : 'estado=not.in.(entregado,devuelto)&'}order=created_at.desc&limit=50`)
+    },
+  },
+  {
+    name: 'envio_crear', alcance: 'escritura', tabla: 'envios',
+    description: 'Apunta un envío con su agencia y número de seguimiento.',
+    inputSchema: obj({ agencia: S('Correos | Correos Express | MRW | SEUR | GLS | Otra'), seguimiento: S('Número de seguimiento'), destinatario: S('A quién'),
+      contenido: S('Qué va'), sentido: S('salida | entrada'), cliente_id: S('UUID del cliente') }, ['agencia']),
+    async ejecutar(a, { db }) {
+      const [e] = await db.post('envios', soloDefinidos({ agencia: txt(a.agencia, 40), seguimiento: txt(a.seguimiento, 80), destinatario: txt(a.destinatario, 200),
+        contenido: txt(a.contenido, 500), sentido: a.sentido === 'entrada' ? 'entrada' : 'salida', cliente_id: esUuid(a.cliente_id) ? a.cliente_id : undefined,
+        estado: a.seguimiento ? 'enviado' : 'preparado' }))
+      return { id: e.id, estado: e.estado }
+    },
+  },
+]
+
+export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...mando, ...ventas, ...wiki, ...comandas, ...almacen, ...escritura]
 
 // Tablas cuyo dueño es la app (no se escribe en ellas desde el hub).
 export async function tablasDeLaApp(db: Db): Promise<Set<string>> {

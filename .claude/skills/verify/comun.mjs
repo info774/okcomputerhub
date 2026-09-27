@@ -105,10 +105,11 @@ export function baseMemoria(inicial = {}, rpc = {}) {
         ...(tabla.startsWith('proyecto_') ? { orden: 0, fuentes: [], hecho: false, estado: 'pendiente' } : {}),
         ...(tabla === 'tickets' ? { numero: ++numero + 5000, valoracion_token: randomUUID(), primera_respuesta_at: null, cerrado_at: null, valoracion: null } : {}),
         ...(tabla === 'ticket_comentarios' ? { enviado_at: null, envio_error: null, canal: null } : {}),
+        ...(tabla === 'pedidos_compra' ? { numero: ++numero, total: 0, esperado_para: null, entrada_app_at: null, notas: null, proveedor_id: null } : {}),
         ...(tabla === 'paginas' ? { version: 1, archivada: false, orden: 0, icono: null, proyecto_id: null, creado_por: 'u-ana', actualizado_por: null } : {}),
         ...(tabla === 'claude_peticiones' ? { estado: 'pendiente', resultado: null, error: null } : {}),
         ...c,
-      }));
+      })).map(f => tabla === 'pedido_compra_lineas' ? { cantidad_recibida: 0, ...f, subtotal: Number(f.cantidad ?? 0) * Number(f.precio ?? 0) } : f);
       const clave = url.searchParams.get('on_conflict');
       if (clave) {
         // upsert: si ya hay una fila con esa clave, se mezcla con ella

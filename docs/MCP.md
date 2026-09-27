@@ -49,6 +49,11 @@ su conversación.
   por persona (y se les avisa por Telegram).
 - `comandas_listar`, `comanda_tarea_actualizar` (estado o persona).
 
+## Almacén (fase 9)
+
+- `stock` (un material en todas las ubicaciones, o lo urgente),
+  `compras_sugeridas` (MRP por proveedor), `envios_listar`, `envio_crear`.
+
 ## Seguridad y rastro
 
 - En la base solo queda la huella sha256 del token (`hub.mcp_tokens`), su

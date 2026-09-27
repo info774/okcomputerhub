@@ -89,7 +89,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   tablero (botones y arrastre; ventana alta para que arrastrar no desplace la
   página), repartir, tarea suelta, filtro por persona, borrar solo lo propio.
 
-`npm run verify` pasa los diez.
+- `verify-almacen.mjs`: stock y filtros (MRP simulado por RPC), «Qué pedir» →
+  pedido en borrador, ficha (línea del catálogo, cantidad, enviar pide
+  proveedor, recibido, entrada dada), proveedor y sus materiales (preferido),
+  envíos (seguimiento, estado); nada escribe en el espejo del inventario.
+
+`npm run verify` pasa los once.
 
 ## Pantalla nueva
 
