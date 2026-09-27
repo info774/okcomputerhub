@@ -19,6 +19,17 @@ front publicado en `https://okhub-tenerife.web.app`. Falta la clave de LECTURA
 de la app para que `sync-app` copie los datos (ver «Autonomía»). Siguiente:
 fase 1 (proyectos + MCP).
 
+## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
+
+Cuando haga falta algo suyo (una clave, un clic en un panel, un ajuste), se
+explica **paso a paso y exactamente dónde está**: la web o app, el menú, el
+botón con su nombre tal cual aparece en pantalla, qué copiar y dónde pegarlo
+(y en qué formato). Nada de «ponlo en los secrets» a secas. Si hay una captura
+suya de la pantalla, se le señala qué pulsar en ella. Las claves nunca se
+piden por el chat: van a las variables de entorno del entorno cloud (menú del
+entorno en la barra de título de la sesión → Edit → variables, una por línea
+`NOMBRE=valor`).
+
 ## Autonomía de Claude (acordado el 2026-09-27)
 
 - **Sin preguntar**: fusionar en `main`, desplegar el front
