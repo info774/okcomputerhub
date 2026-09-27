@@ -8,9 +8,9 @@ desplegada, clave de lectura de la app en el Vault, **carga inicial hecha
 en Auth, y el front en `https://okhub-tenerife.web.app`. `public` comprobado
 igual antes y después.
 
-**Aviso**: en producción la app no tiene `audit_log` (su migración
-`20260911_audit_log.sql` no se aplicó), así que el sync va en modo «sin log»:
-filas nuevas cada 15 min y cambios/borrados cada noche. Ver CLAUDE.md.
+**`audit_log` en la app**: no existía en producción; se aplicó el 2026-09-27
+(con permiso) y desde entonces el sync va por el log cada 15 min. Tras
+activarlo se hizo una pasada completa para cerrar el hueco.
 
 ## Qué hay en el repo
 

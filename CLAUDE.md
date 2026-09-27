@@ -123,12 +123,12 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
 - `sync-app`: lectura incremental por el **`audit_log` de la app** (id
   creciente; casi ninguna tabla de la app tiene `updated_at`): desde el último
   id, junta los registros tocados y pide su estado ACTUAL (lo que existe se
-  sube, lo que ya no existe se borra). **OJO: en producción `audit_log` NO
-  existe** (la migración `20260911_audit_log.sql` de la app no está aplicada,
-  comprobado el 2026-09-27). Mientras falte, `sync-app` va en modo «sin log»:
-  cada 15 min solo filas NUEVAS por `created_at` (con una hora de margen) y
-  los cambios y borrados llegan en la pasada nocturna, que copia TODAS las
-  tablas. En cuanto exista el log, pasa sola al modo por log desde `corte_ts`.
+  sube, lo que ya no existe se borra). `audit_log` se aplicó en producción el
+  2026-09-27 (con permiso de Fran: migración `20260911_audit_log.sql` de la
+  app, 17 triggers); hasta entonces el sync fue en modo «sin log» (filas nuevas
+  por `created_at` y el resto en la pasada nocturna), que sigue en el código
+  por si el log desaparece. Tras activar el log se hizo una pasada completa
+  para cerrar el hueco entre los dos modos.
   **Un sync que falla no mueve el corte** (`hub.sync_estado`). Las columnas
   que copia están en `_shared/tablas-app.ts`, que tiene que cuadrar con la
   migración de la tabla.
