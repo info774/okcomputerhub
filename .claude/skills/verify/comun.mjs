@@ -106,6 +106,12 @@ export function baseMemoria(inicial = {}, rpc = {}) {
         ...(tabla === 'claude_peticiones' ? { estado: 'pendiente', resultado: null, error: null } : {}),
         ...c,
       }));
+      const clave = url.searchParams.get('on_conflict');
+      if (clave) {
+        // upsert: si ya hay una fila con esa clave, se mezcla con ella
+        const hechas = nuevas.map(n => { const v = db[tabla].find(f => f[clave] === n[clave]); if (v) { Object.assign(v, n, { id: v.id }); return v; } db[tabla].push(n); return n; });
+        return route.fulfill({ status: 201, headers: h, contentType: 'application/json', body: JSON.stringify(hechas) });
+      }
       db[tabla].push(...nuevas);
       return route.fulfill({ status: 201, headers: h, contentType: 'application/json', body: JSON.stringify(nuevas) });
     }

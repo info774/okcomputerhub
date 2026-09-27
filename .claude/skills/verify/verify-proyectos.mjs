@@ -15,7 +15,7 @@ const U_ADMIN = { id: 'u-ana', nombre: 'Ana Admin', email: 'ana@ok.test', rol: '
 const U_TEC = { id: 'u-tito', nombre: 'Tito', email: 'tito@ok.test', rol: 'tecnico', activo: true };
 const INICIAL = {
   usuarios: [U_ADMIN, U_TEC],
-  areas: [], sync_estado: [],
+  areas: [], sync_estado: [], config: [],
   proyectos: [{ id: 'p1', numero: 7, titulo: 'Copias en la nube', tipo: 'interno', estado: 'definicion', prioridad: 'alta',
     responsable_id: 'u-tito', orden: 1, created_at: '2026-09-20T10:00:00Z', updated_at: '2026-09-20T10:00:00Z', descripcion: 'Idea base' }],
   proyecto_objetivos: [], proyecto_hitos: [], proyecto_paginas: [], proyecto_vinculos: [],
@@ -131,7 +131,14 @@ try {
   await page.click('.pf-pestana[data-p1="coste"]');
   await page.waitForSelector('.baldosa');
   const coste = await page.textContent('#pf-cuerpo');
-  ok(coste.includes('2.5 h') && coste.includes('240') && coste.includes('usado 24%'), 'Coste: horas fichadas, material y % del previsto');
+  ok(coste.includes('2.5 h') && coste.includes('240') && coste.includes('usado 24%') && coste.includes('Falta la tarifa'),
+    'Coste sin tarifa: horas, material y % (solo material + gastos)');
+  await page.fill('#pfc-tarifa', '40');
+  await page.click('form[data-on-submit="pfGuardarTarifa"] button');
+  await page.waitForFunction(() => document.getElementById('pf-cuerpo')?.textContent.includes('a 40,00'));
+  const coste2 = await page.textContent('#pf-cuerpo');
+  ok(base.db.config?.[0]?.valor === 40 && coste2.includes('100,00') && coste2.includes('usado 34%'),
+    'con tarifa 40 €/h: 2,5 h = 100 € y el % incluye las horas');
   await page.screenshot({ path: `${CAPTURAS}/proyectos-coste.png`, fullPage: true });
 
   // Claude: pedir, ver resultado, cancelar

@@ -19,7 +19,9 @@ desplegable sola.
   Objetivos, Investigación, Roadmap (hitos + Gantt), Tareas (tablero con
   arrastre), Vinculado (buscar y enlazar trabajos/tickets/presupuestos/gastos/
   tareas de la app), Coste (horas fichadas, material, gastos, % del previsto).
-- Pendiente de decidir: **tarifa por hora** para pasar horas a euros.
+- Tarifa por hora: **una sola** para todo el equipo (decidido el 2026-09-27),
+  en `hub.config.tarifa_hora` (`20261005_config.sql`); la pone un admin en la
+  pestaña Coste. Sin ella, las horas no se pasan a euros.
 
 ## 2. MCP completo (`mcp`) — ✅ hecho (2026-09-27)
 

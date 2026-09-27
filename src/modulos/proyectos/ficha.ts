@@ -272,32 +272,43 @@ async function tabVinculado(): Promise<string> {
 async function tabCoste(p: Proyecto): Promise<string> {
   const ids = (t: string) => _pz!.vinculos.filter(v => v.tabla === t).map(v => v.registro_id);
   const trabajos = ids('trabajos'), gastos = ids('gastos'), presus = ids('presupuestos');
-  const [ses, lin, gas, pre] = await Promise.all([
+  const [ses, lin, gas, pre, cfg] = await Promise.all([
     trabajos.length ? API.get('sesiones', { select: 'inicio,fin,duracion_min', entidad_id: `in.(${trabajos.join(',')})` }) : { data: [], error: null },
     trabajos.length ? API.get('documento_lineas', { select: 'subtotal', trabajo_id: `in.(${trabajos.join(',')})` }) : { data: [], error: null },
     gastos.length ? API.get('gastos', { select: 'importe', id: `in.(${gastos.join(',')})` }) : { data: [], error: null },
     presus.length ? API.get('presupuestos', { select: 'total', id: `in.(${presus.join(',')})` }) : { data: [], error: null },
+    API.get('config', { select: 'valor', clave: 'eq.tarifa_hora' }),
   ]);
   const min = (ses.data ?? []).reduce((s, x) => s + (x.duracion_min ?? (x.inicio && x.fin ? (Date.parse(x.fin) - Date.parse(x.inicio)) / 60000 : 0)), 0);
   const suma = (r: { data: Fila[] | null }, c: string) => (r.data ?? []).reduce((s, x) => s + Number(x[c] ?? 0), 0);
   const material = suma(lin, 'subtotal'), gastado = suma(gas, 'importe'), presupuestado = suma(pre, 'total');
   const eur = (n: number) => n.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
-  const dinero = material + gastado;
+  // Una sola tarifa por hora para todo el equipo (hub.config.tarifa_hora); sin ella las horas no se pasan a euros.
+  const tarifa = Number(cfg.data?.[0]?.valor) > 0 ? Number(cfg.data![0].valor) : null;
+  const manoObra = tarifa ? (min / 60) * tarifa : 0;
+  const dinero = manoObra + material + gastado;
   const previsto = p.presupuesto ?? 0;
   const pctUso = previsto ? Math.round((dinero / previsto) * 100) : null;
   const horasPrev = _pz!.tareas.reduce((s, t) => s + Number(t.horas_previstas ?? 0), 0);
+  const queCuenta = tarifa ? 'horas + material + gastos' : 'material + gastos';
   return `<div class="baldosas">
       <div class="baldosa"><span class="baldosa-titulo">Horas fichadas</span><span class="baldosa-valor">${(min / 60).toFixed(1)} h</span>
-        <span class="baldosa-sub">${horasPrev ? `previstas ${horasPrev.toFixed(1)} h` : 'de los trabajos enlazados'}</span></div>
+        <span class="baldosa-sub">${tarifa ? `${eur(manoObra)} a ${eur(tarifa)}/h` : 'sin tarifa: no se pasan a euros'}${horasPrev ? ` · previstas ${horasPrev.toFixed(1)} h` : ''}</span></div>
       <div class="baldosa"><span class="baldosa-titulo">Material</span><span class="baldosa-valor">${eur(material)}</span><span class="baldosa-sub">líneas de los trabajos</span></div>
       <div class="baldosa"><span class="baldosa-titulo">Gastos</span><span class="baldosa-valor">${eur(gastado)}</span><span class="baldosa-sub">gastos enlazados</span></div>
+      <div class="baldosa"><span class="baldosa-titulo">Coste total</span><span class="baldosa-valor">${eur(dinero)}</span><span class="baldosa-sub">${queCuenta}</span></div>
       <div class="baldosa" data-tono="${pctUso == null ? 'neutro' : pctUso > 100 ? 'mal' : pctUso > 80 ? 'aviso' : 'bien'}"><span class="baldosa-titulo">Previsto</span>
         <span class="baldosa-valor">${previsto ? eur(previsto) : '—'}</span>
-        <span class="baldosa-sub">${pctUso == null ? 'pon el presupuesto en Idea' : `usado ${pctUso}% (material + gastos)`}</span></div>
+        <span class="baldosa-sub">${pctUso == null ? 'pon el presupuesto en Idea' : `usado ${pctUso}%`}</span></div>
       ${presus.length ? `<div class="baldosa"><span class="baldosa-titulo">Presupuestado al cliente</span><span class="baldosa-valor">${eur(presupuestado)}</span>
         <span class="baldosa-sub">${presus.length} presupuesto(s) enlazado(s)</span></div>` : ''}
     </div>
-    <p class="nota">Las horas se muestran en horas y no en euros: la tarifa por hora aún no está decidida. El coste sale de lo enlazado en «Vinculado».</p>`;
+    <p class="nota">El coste sale de lo enlazado en «Vinculado». ${tarifa ? `Tarifa por hora: ${eur(tarifa)} (una para todo el equipo).` : 'Falta la tarifa por hora para pasar las horas a euros.'}</p>
+    ${esAdmin() ? `<form class="acciones" data-on-submit="pfGuardarTarifa" data-prevent="1">
+      <label>Tarifa por hora para todo el equipo (€/h, sin impuestos)
+        <input id="pfc-tarifa" type="number" min="0" step="0.5" value="${tarifa ?? ''}" placeholder="p. ej. 40"></label>
+      <button class="btn secundario" type="submit">Guardar tarifa</button>
+    </form>` : ''}`;
 }
 
 // ── Claude: peticiones de trabajo ──────────────────────────────────────────
@@ -406,6 +417,15 @@ registrarAcciones({
     _pidiendo = tipo;
     if (_p && _pestana !== 'claude') ir('proyectos', String(_p.numero), 'claude');
     else void pintarCuerpo();
+  },
+  async pfGuardarTarifa() {
+    const v = Number((document.getElementById('pfc-tarifa') as HTMLInputElement).value);
+    if (!(v > 0)) { toast('Pon una tarifa mayor que 0', 'error'); return; }
+    const r = await API.upsert('config', 'clave',
+      { clave: 'tarifa_hora', valor: v, descripcion: 'Tarifa por hora (€/h, sin impuestos), una para todo el equipo' });
+    if (await falla(r, 'guardar la tarifa')) return;
+    toast('Tarifa guardada');
+    await pintarCuerpo();
   },
   pfCancelarForm() { _pidiendo = null; void pintarCuerpo(); },
   async pfEnviarClaude(tipo: string) {

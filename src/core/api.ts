@@ -57,7 +57,7 @@ async function unaVez(method: Metodo, url: string, extra: Record<string, string>
 
 export class API {
   static async req<T = Fila[]>(method: Metodo, tabla: string, params: Params = {}, body: unknown = null,
-    opciones: { single?: boolean; contar?: boolean } = {}): Promise<Resultado<T>> {
+    opciones: { single?: boolean; contar?: boolean; upsert?: boolean } = {}): Promise<Resultado<T>> {
     const url = new URL(`${API_BASE}/${tabla}`);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
@@ -66,6 +66,7 @@ export class API {
     };
     const prefer: string[] = [];
     if (method === 'POST') prefer.push('return=representation');
+    if (method === 'POST' && opciones.upsert) prefer.push('resolution=merge-duplicates');
     if (method === 'PATCH' || method === 'DELETE') prefer.push('return=minimal');
     if (opciones.contar) prefer.push('count=exact');
     if (prefer.length) extra.Prefer = prefer.join(',');
@@ -101,6 +102,10 @@ export class API {
   static get<T = Fila[]>(tabla: string, params: Params = {}) { return this.req<T>('GET', tabla, params); }
   static single<T = Fila>(tabla: string, params: Params = {}) { return this.req<T>('GET', tabla, params, null, { single: true }); }
   static post<T = Fila[]>(tabla: string, body: unknown) { return this.req<T>('POST', tabla, {}, body); }
+  // Insertar o actualizar por la clave indicada (on_conflict).
+  static upsert<T = Fila[]>(tabla: string, clave: string, body: unknown) {
+    return this.req<T>('POST', tabla, { on_conflict: clave }, body, { upsert: true });
+  }
   static patch(tabla: string, filtro: Params, body: unknown) { return this.req<null>('PATCH', tabla, filtro, body); }
   static delete(tabla: string, filtro: Params) { return this.req<null>('DELETE', tabla, filtro); }
   // Función SQL expuesta por PostgREST (esquema hub).
