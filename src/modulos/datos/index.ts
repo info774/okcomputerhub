@@ -10,6 +10,7 @@ import { esAdmin } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { esc, fechaHora, hace, toast } from '../../ui/dom';
 import { ir } from '../../core/router';
+import { llamarFuncion } from '../../core/funciones';
 
 const RETRASO_MAX_MIN = 60; // más de esto sin una pasada buena = algo va mal
 
@@ -53,6 +54,7 @@ async function pintar(el: HTMLElement) {
   const e = new Map((estado.data ?? []).map(x => [x.clave, x]));
 
   el.innerHTML = `
+    ${esAdmin() ? '<section class="tarjeta" id="da-zoho"><h2>Zoho Books</h2><p class="cargando">Comprobando…</p></section>' : ''}
     <section class="tarjeta">
       <div class="tarjeta-cab">
         <h2>Sincronización con la app actual</h2>
@@ -82,6 +84,29 @@ async function pintar(el: HTMLElement) {
         </tr>`).join('')}</tbody>
       </table>
     </section>`;
+  if (esAdmin()) void pintarZoho();
+}
+
+// ── Zoho Books (solo admins): conectar con el código del Self Client y
+// sincronizar el espejo de facturas y cobros (función zoho-lectura). ──────────
+interface EstadoZoho { cliente: boolean; conectado: boolean; organizacion: string; sync: Fila | null }
+async function pintarZoho() {
+  const caja = document.getElementById('da-zoho');
+  if (!caja) return;
+  const r = await llamarFuncion<EstadoZoho>('zoho-lectura', { accion: 'estado' });
+  const z = r.data;
+  let cuerpo: string;
+  if (r.error || !z) cuerpo = `<p class="aviso mal">No se pudo comprobar: ${esc(r.error ?? '')}</p>`;
+  else if (!z.cliente) cuerpo = '<p class="aviso">Falta el cliente de Zoho del hub (ID y secreto del «Self Client»). Los pasos están en <code>docs/FASE3.md</code>.</p>';
+  else if (!z.conectado) cuerpo = `<p>Genera un código en la consola de Zoho (pasos en <code>docs/FASE3.md</code>) y pégalo aquí antes de que caduque:</p>
+    <form class="acciones" data-on-submit="datosZohoConectar" data-prevent="1">
+      <input id="da-zoho-codigo" placeholder="1000.xxxxxxxx…" autocomplete="off" aria-label="Código de Zoho" required>
+      <button class="btn" type="submit">Conectar</button></form>`;
+  else cuerpo = `<p><span class="chip bien">Conectado</span> Organización ${esc(z.organizacion)} · solo lectura.</p>
+    <table class="tabla"><thead><tr><th>Copia</th><th>Última buena</th><th>Filas</th><th>Estado</th></tr></thead><tbody>${filaEstado(z.sync ?? {}, 'Facturas y cobros')}</tbody></table>
+    <div class="acciones"><button class="btn secundario" data-action="datosZohoSync" data-p0="incremental">Sincronizar ahora</button>
+      <button class="btn secundario" data-action="datosZohoSync" data-p0="completo">Copia completa (24 meses)</button></div>`;
+  caja.innerHTML = `<h2>Zoho Books</h2><p class="nota">Copia de solo lectura de facturas y cobros para el puesto de mando y los informes (cada 30 min; completa cada noche). Nada se escribe en Zoho.</p>${cuerpo}`;
 }
 
 async function sincronizar(modo: string) {
@@ -100,7 +125,23 @@ async function sincronizar(modo: string) {
   ir('datos');
 }
 
-registrarAcciones({ datosSincronizar: sincronizar });
+registrarAcciones({
+  datosSincronizar: sincronizar,
+  async datosZohoConectar() {
+    const codigo = (document.getElementById('da-zoho-codigo') as HTMLInputElement).value.trim();
+    toast('Conectando con Zoho y haciendo la primera copia…');
+    const r = await llamarFuncion<{ organizacion: string; sync: { facturas: number; cobros: number } }>('zoho-lectura', { accion: 'conectar', codigo }, 120000);
+    toast(r.error ? `No se pudo conectar: ${r.error}` : `Conectado a ${r.data?.organizacion}: ${r.data?.sync.facturas} facturas y ${r.data?.sync.cobros} cobros`, r.error ? 'error' : 'info');
+    void pintarZoho();
+  },
+  async datosZohoSync(modo: string) {
+    toast('Copiando de Zoho…');
+    const r = await llamarFuncion<{ ok: boolean; facturas: number; cobros: number; error?: string }>('zoho-lectura', { accion: 'sincronizar', modo }, 120000);
+    const err = r.error ?? (r.data?.ok ? null : r.data?.error ?? 'no se pudo');
+    toast(err ? `Falló: ${err}` : `Hecho: ${r.data?.facturas} facturas y ${r.data?.cobros} cobros`, err ? 'error' : 'info');
+    void pintarZoho();
+  },
+});
 
 export const moduloDatos: Modulo = {
   id: 'datos',

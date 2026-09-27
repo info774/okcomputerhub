@@ -55,7 +55,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   SIN `isMobile` (con él, el navegador ensancha el viewport y esconde el
   desborde).
 
-`npm run verify` pasa los cuatro.
+- `verify-mando.mjs`: Puesto de mando (cifras, avisos agrupados y «Los
+  míos», gráfica de ventas con hover y tabla), Informes (vincular Telegram,
+  programar, vista previa saneada, enviar ahora, pausar, configurar el bot),
+  conexión de Zoho en Datos; un técnico no ve dinero; móvil.
+
+`npm run verify` pasa los cinco.
 
 ## Pantalla nueva
 

@@ -2,6 +2,8 @@
 // Pantalla nueva = carpeta en src/modulos/ + entrada aquí (ver CLAUDE.md).
 import type { Modulo } from '../core/modulo';
 import { moduloInicio } from './inicio';
+import { moduloDireccion } from './direccion';
+import { moduloInformes } from './informes';
 import { moduloDatos } from './datos';
 import { moduloConector } from './conector';
 import { moduloProyectos } from './proyectos';
@@ -10,6 +12,8 @@ import { modulosAppActual } from './app-actual';
 
 export const MODULOS: Modulo[] = [
   moduloInicio,
+  moduloDireccion,
+  moduloInformes,
   moduloProyectos,
   moduloMonitorizacion,
   ...modulosAppActual,

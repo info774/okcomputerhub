@@ -25,7 +25,7 @@ por HTTP sin estado. Nada de SQL libre: solo las herramientas de
 
 | Alcance | Puede |
 |---|---|
-| `lectura` | Todas las consultas: buscar, esquema, clientes, trabajos, tickets, tareas de la app, agenda, presupuestos, proyectos, equipo, estado del sync y monitorización (`rmm_resumen`, `rmm_equipos`, `rmm_equipo_detalle`, `rmm_scripts`). |
+| `lectura` | Todas las consultas: buscar, esquema, clientes, trabajos, tickets, tareas de la app, agenda, presupuestos, proyectos, equipo, estado del sync monitorización (`rmm_resumen`, `rmm_equipos`, `rmm_equipo_detalle`, `rmm_scripts`) y puesto de mando (`avisos`, `informe`; lo de dinero solo si el dueño del token es admin). |
 | `escritura` | Además crear y editar proyectos y sus piezas (objetivos, hitos, tareas, páginas con fuentes, vínculos) y pedirle cosas a Breeze: `rmm_acusar_alerta`, `rmm_comando`, `rmm_script` (quedan en `hub.rmm_acciones`). |
 | `admin` | Todo lo anterior; reservado para lo que se añada de administración. |
 

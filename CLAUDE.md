@@ -23,6 +23,10 @@ pantalla «Conector MCP», `docs/MCP.md`) y «lanzar a Claude» HECHO en el hub
 **Fase 2 HECHA** (2026-09-27): monitorización sobre Breeze (`20261006_rmm.sql`,
 `#/monitorizacion`, función `breeze-api`, herramientas `rmm_*`); falta que Fran
 dé de alta el usuario de servicio en Breeze. Detalle en `docs/FASE2.md`.
+**Fase 3 HECHA** (2026-09-27): puesto de mando (`20261007_mando.sql`,
+`#/direccion`, `#/informes`, funciones `zoho-lectura`, `informes-enviar`,
+`telegram-bot`); faltan las credenciales de Zoho (Self Client) y el token del
+bot de Telegram, que pone Fran. Detalle en `docs/FASE3.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -231,6 +235,20 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
 - Gráficas: SVG propio (sin librerías), una serie por gráfica, hover por
   `data-on-pointermove`/`pointerout` (el dispatcher los delega). El atributo
   `hidden` no esconde un elemento SVG: va con CSS (`[hidden] { display: none }`).
+- Puesto de mando: `hub.panorama_direccion(p_para)` es el ÚNICO motor de
+  avisos (panel, bot, informes, MCP); un aviso nuevo se añade ahí, con
+  `dinero = true` si es de dinero (solo admins). Es `security definer`: filtra
+  él mismo con `hub.admin_para()`. Dinero de Zoho: espejo de SOLO LECTURA
+  (`hub.zoho_*`, RLS solo admins) que rellena `zoho-lectura`; el hub nunca
+  escribe en Zoho. Los 7 informes viven en `_shared/informes.ts` (texto en el
+  HTML de Telegram, escapado con `h()`); el front lo pinta con `htmlTelegram()`,
+  que solo deja pasar `<b>`, `<i>`, `<code>` y enlaces https.
+- Los técnicos se guardan por NOMBRE en la app y no siempre igual («Matteo» /
+  «Matteo Monastero»): para saber si algo es de alguien, nombre completo o de
+  pila (`esDe` en `_shared/informes.ts`, `esMio` en `direccion/`).
+- Funciones que llama pg_cron: `hub.lanzar_funcion('<nombre>', cuerpo)` (misma
+  URL base y token que el sync) y van en `SIN_JWT`.
+- Llamar a una función desde el front: `llamarFuncion()` de `src/core/funciones.ts`.
 - Al entrar se busca el correo de la sesión en `hub.usuarios` (activo): sin
   fila, se cierra la sesión y se avisa. La RLS usa la misma regla
   (`hub.es_usuario()`, `hub.es_admin()`).
