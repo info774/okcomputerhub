@@ -1,11 +1,9 @@
 # Fase 0 · Cimientos — qué hay y cómo se pone en marcha
 
-Estado a 2026-09-27: **migraciones APLICADAS** en `okcomputer-hub`
-(20261001, b, c y d, por el conector de Supabase; `public` comprobado igual
-antes y después: 1708 objetos, misma huella). Lo demás (exponer `hub`,
-secrets, funciones, carga inicial, Auth, Firebase) sigue pendiente. Los pasos de abajo tocan el proyecto real
-(`okcomputer-hub`, compartido con Breeze) o cuentas externas y se hacen a mano,
-en este orden.
+Estado a 2026-09-27: **migraciones (20261001 a e) APLICADAS y `sync-app`
+DESPLEGADA** en `okcomputer-hub`, por el conector de Supabase; `public`
+comprobado igual antes y después (1708 objetos, misma huella). Lo marcado ⏳
+abajo sigue pendiente y se hace a mano: toca el panel o cuentas externas.
 
 ## Qué hay en el repo
 
@@ -44,38 +42,45 @@ se repasan enteras cada noche.
    (sesión, IPv4) y, si no es `aws-1-eu-west-1.pooler.supabase.com`,
    corregirlo en `.github/workflows/aplicar-migracion.yml`.
 4. ✅ Hecho el 2026-09-27: `20261001_hub_cimientos.sql`,
-   `20261001b_hub_tablas_app.sql`, `20261001c_hub_sync_app.sql` y
-   `20261001d_hub_search_path.sql`. Las siguientes, con Actions →
-   **Aplicar migración**, una a una y en orden.
-   - `create extension pg_cron` / `pg_net` pueden pedir que se habiliten antes
-     en Database → Extensions; si la primera falla por eso, se habilitan ahí y
-     se relanza (va en transacción: no queda nada a medias).
-5. Settings → API → **Exposed schemas**: AÑADIR `hub`. No quitar nada y no
-   añadir `public` (hoy está cerrado y tiene 16 tablas de Breeze sin RLS).
+   `20261001b_hub_tablas_app.sql`, `20261001c_hub_sync_app.sql`,
+   `20261001d_hub_search_path.sql` y `20261001e_hub_secretos.sql`. Las
+   siguientes, con Actions → **Aplicar migración**, una a una y en orden.
+5. ⏳ **Settings → API → Exposed schemas: AÑADIR `hub`.** Hoy están
+   `public` y `graphql_public`; se dejan como están (`public` está cerrado por
+   permisos: `anon` y `authenticated` no tienen USAGE). Sin este paso ni el
+   front ni `sync-app` llegan a nada: PostgREST contesta `PGRST106 Invalid
+   schema: hub`.
 
 ### 2. Sincronización
 
-1. Edge Functions → Secrets:
-   - `APP_SUPABASE_URL` = `https://gaksrtxgnuuuvhvgwxue.supabase.co`
-   - `APP_SERVICE_ROLE_KEY` = service key de `okcomputer` (solo se usa para
-     LEER; nunca sale de la función)
-   - `HUB_SYNC_TOKEN` = una cadena aleatoria larga
-2. Actions → **Deploy funciones** (vacío = todas). `sync-app` va sin JWT.
-3. SQL Editor del hub, para que el cron sepa a quién llamar:
+Las claves van en el **Vault del hub** (las lee `hub.secreto()`, solo
+service_role); una variable de entorno de la función con el mismo nombre en
+mayúsculas manda sobre el Vault si se pone.
+
+1. ✅ `sync-app` desplegada (sin JWT) el 2026-09-27.
+2. ✅ En el Vault: `hub_sync_url`, `hub_sync_token` (aleatorio, generado
+   dentro de la base: no lo ha visto nadie) y `app_supabase_url`.
+3. ⏳ **La service key de la app actual**, en el SQL Editor del hub (la
+   clave está en okcomputer → Settings → API → `service_role`; solo se usa
+   para LEER y no sale de la función):
    ```sql
-   select vault.create_secret('https://adomalsxsymxzuozksmt.supabase.co/functions/v1/sync-app', 'hub_sync_url');
-   select vault.create_secret('<el mismo HUB_SYNC_TOKEN>', 'hub_sync_token');
+   select vault.create_secret('<service_role de okcomputer>', 'app_service_role_key');
    ```
-4. **Carga inicial**: bajar el último `backup_AAAA-MM-DD.dump` (okcomputerclaude
-   → Actions → «Backup diario completo» → artefacto, o la carpeta de Drive) y,
-   con PostgreSQL 17 cliente y las variables `PGHOST`/`PGPORT`/`PGUSER`/
-   `PGDATABASE`/`PGPASSWORD` del hub:
-   ```bash
-   node scripts/importar-app.mjs backup_2026-09-27.dump --seco   # mira qué haría
-   node scripts/importar-app.mjs backup_2026-09-27.dump
+4. **Carga inicial** (tras 1.5 y 2.3): una pasada completa de `sync-app`,
+   que copia todo (~7.000 filas hoy) y deja el corte puesto para el cron:
+   ```sql
+   select net.http_post(
+     url := (select decrypted_secret from vault.decrypted_secrets where name = 'hub_sync_url'),
+     headers := jsonb_build_object('Content-Type', 'application/json', 'x-sync-token',
+                (select decrypted_secret from vault.decrypted_secrets where name = 'hub_sync_token')),
+     body := '{"modo":"completo","todas":true}', timeout_milliseconds := 300000);
+   -- y a los pocos segundos:
+   select status_code, content from net._http_response order by id desc limit 1;
    ```
-   Deja el corte en la fecha del fichero; el cron sigue desde ahí.
-   Trae también `usuarios`: quien esté activo en la app puede entrar en el hub.
+   Trae también `usuarios`: quien esté activo en la app puede entrar en el
+   hub. La otra vía, sin tocar producción en absoluto, es el dump:
+   `node scripts/importar-app.mjs backup_AAAA-MM-DD.dump` con las variables
+   `PG*` del hub.
 
 ### 3. Auth
 

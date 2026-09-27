@@ -187,6 +187,14 @@ try {
     'deja el corte del sync en la fecha del dump');
   ok(!psql(`select 1 from pg_namespace where nspname = 'app_import'`), 'no deja el esquema app_import');
 
+  psql(`insert into vault.decrypted_secrets values ('app_service_role_key', 'clave-app'), ('otro_secreto', 'x')`);
+  ok(psql(como('service_role', null, `select hub.secreto('app_service_role_key');`)).split('\n').pop() === 'clave-app',
+    'hub.secreto: service_role lee un secreto de la lista');
+  ok(psql(como('service_role', null, `select coalesce(hub.secreto('otro_secreto'), 'nada');`)).split('\n').pop() === 'nada',
+    'hub.secreto: un nombre fuera de la lista no se devuelve');
+  ok(!psql(como('authenticated', 'ana@ok.test', `select hub.secreto('app_service_role_key');`), { esperaError: true }).ok,
+    'hub.secreto: un usuario no puede llamarla');
+
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
   ok(!sinRls, `todas las tablas de hub con RLS${sinRls ? ' (faltan: ' + sinRls + ')' : ''}`);

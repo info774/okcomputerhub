@@ -13,18 +13,27 @@
 //
 // Regla: UN SYNC QUE FALLA NO MUEVE EL CORTE (hub.sync_estado.corte_id).
 //
-// Autorización (va en SIN_JWT): cabecera x-sync-token = HUB_SYNC_TOKEN (cron),
+// Autorización (va en SIN_JWT): cabecera x-sync-token = hub_sync_token (cron),
 // o sesión de un admin del hub («Sincronizar ahora» en la pantalla Datos).
 //
-// Secrets: APP_SUPABASE_URL, APP_SERVICE_ROLE_KEY (de `okcomputer`, solo se
-// usa para LEER), HUB_SYNC_TOKEN. SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY son
-// los del propio hub, que pone Supabase.
+// Configuración: cada clave se lee de su variable de entorno y, si no está,
+// del Vault del hub (hub.secreto(), solo service_role):
+//   APP_SUPABASE_URL     / app_supabase_url
+//   APP_SERVICE_ROLE_KEY / app_service_role_key   (de `okcomputer`, solo para LEER)
+//   HUB_SYNC_TOKEN       / hub_sync_token         (el mismo que usa el cron)
+// SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY son los del propio hub (los pone
+// Supabase).
+//
+// Carga inicial: `{ modo: 'completo', todas: true }` con el corte sin poner
+// copia todas las tablas y deja el corte en el último id de audit_log leído
+// ANTES de empezar, así lo que cambie durante la copia entra en la siguiente
+// pasada incremental. (La otra vía, desde el dump: scripts/importar-app.mjs.)
 
 import { makeCorsHeaders, json, getAuthedUser, isAdminUser, mismoToken, unauthorized } from '../_shared/http.ts'
 import { TABLAS_APP } from '../_shared/tablas-app.ts'
 
-const APP_URL = (Deno.env.get('APP_SUPABASE_URL') ?? '').replace(/\/$/, '')
-const APP_KEY = Deno.env.get('APP_SERVICE_ROLE_KEY') ?? ''
+let APP_URL = ''
+let APP_KEY = ''
 const HUB_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const HUB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
@@ -66,6 +75,20 @@ const trozos = <T>(xs: T[], n: number): T[][] => {
   const out: T[][] = []
   for (let i = 0; i < xs.length; i += n) out.push(xs.slice(i, i + n))
   return out
+}
+
+// Variable de entorno o, si falta, el Vault del hub.
+async function config(env: string, vault: string): Promise<string> {
+  const v = Deno.env.get(env)
+  if (v) return v
+  const res = await fetch(`${HUB_URL}/rest/v1/rpc/secreto`, {
+    method: 'POST',
+    headers: { apikey: HUB_KEY, Authorization: `Bearer ${HUB_KEY}`, 'Content-Profile': 'hub', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_nombre: vault }),
+    signal: AbortSignal.timeout(10000),
+  })
+  if (!res.ok) throw new Error(`No se pudo leer ${vault} del Vault: ${res.status} ${(await res.text()).slice(0, 200)}`)
+  return (await res.json()) ?? ''
 }
 
 async function tablasDeLaApp(): Promise<string[]> {
@@ -156,7 +179,15 @@ async function incremental(): Promise<Fila> {
 }
 
 // ── Completo (nocturno) ────────────────────────────────────────────────────
+async function ultimoIdLog(): Promise<number> {
+  const [ultimo] = await appGet('audit_log?select=id&order=id.desc&limit=1')
+  return ultimo ? Number(ultimo.id) : 0
+}
+
 async function completo(todas: boolean): Promise<Fila> {
+  // ¿Carga inicial? Sin corte, se apunta el log ANTES de copiar.
+  const e = await estado('audit')
+  const cortePendiente = todas && e.corte_id == null && e.corte_ts == null ? await ultimoIdLog() : null
   const tablas = (await tablasDeLaApp()).filter(t => todas || !TABLAS_APP[t].auditada || TABLAS_APP[t].nocturna)
   const detalle: Record<string, number> = {}
   let filas = 0
@@ -180,6 +211,10 @@ async function completo(todas: boolean): Promise<Fila> {
     filas += detalle[tabla]
   }
   await guardarEstado('completo', { ultima_ok: new Date().toISOString(), filas, detalle, ultimo_error: null })
+  if (cortePendiente != null) {
+    await guardarEstado('audit', { corte_id: cortePendiente, ultimo_error: null })
+    return { filas, detalle, carga_inicial: true, corte: cortePendiente }
+  }
   return { filas, detalle }
 }
 
@@ -187,10 +222,20 @@ Deno.serve(async req => {
   const cors = makeCorsHeaders(req)
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
-  const token = Deno.env.get('HUB_SYNC_TOKEN') ?? ''
+  let token = ''
+  try {
+    token = await config('HUB_SYNC_TOKEN', 'hub_sync_token')
+    APP_URL = (await config('APP_SUPABASE_URL', 'app_supabase_url')).replace(/\/$/, '')
+    APP_KEY = await config('APP_SERVICE_ROLE_KEY', 'app_service_role_key')
+  } catch (e) {
+    console.error('[sync-app] configuración:', e)
+    return json({ error: e instanceof Error ? e.message : String(e) }, 503, cors)
+  }
   const porCron = mismoToken(req.headers.get('x-sync-token') ?? '', token)
   if (!porCron && !(await isAdminUser(await getAuthedUser(req)))) return unauthorized(cors)
-  if (!APP_URL || !APP_KEY) return json({ error: 'Faltan APP_SUPABASE_URL / APP_SERVICE_ROLE_KEY' }, 503, cors)
+  if (!APP_URL || !APP_KEY) {
+    return json({ error: 'Falta app_supabase_url / app_service_role_key (Vault del hub o secrets de la función)' }, 503, cors)
+  }
 
   const body = await req.json().catch(() => ({}))
   const modo = body?.modo === 'completo' ? 'completo' : 'incremental'
