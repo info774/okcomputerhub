@@ -137,8 +137,10 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
   /* visibility además del transform: plegado no se enfoca con el tabulador */
   body.menu-abierto .menu { transform: none; visibility: visible; box-shadow: var(--sombra); }
   .principal { padding: 1rem 16px 3rem; }
-  .cabecera { padding-left: 16px; padding-right: 16px; }
+  /* En 390 px no cabían los siete elementos con gap de .5rem (413 px). */
+  .cabecera { padding-left: 16px; padding-right: 16px; gap: .25rem; }
   .cabecera .btn.secundario { padding: 0 .6rem; }
+  .marca { font-size: .95rem; }
 }
 
 /* ── Tarjetas, tablas, chips ─────────────────────────────────────────── */
@@ -306,3 +308,45 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .cm-recien input, .cm-recien textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .cm-alcance { border: 1px solid var(--borde); border-radius: 8px; padding: .5rem .8rem; margin: 0 0 .8rem; display: grid; gap: .4rem; }
 .cm-alcance legend { color: var(--texto-suave); font-size: .9rem; padding: 0 .3rem; }
+
+/* ── Monitorización (mo- lista, me- equipo) ─────────────────────────── */
+.mo-scroll { overflow-x: auto; }
+.mo-barra { margin: 0 0 .75rem; }
+.mo-barra input[type=search] { min-width: min(320px, 100%); }
+.mo-punto { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; margin-right: .25rem; vertical-align: middle; }
+.mo-punto.bien { background: var(--bien); }
+.mo-punto.mal { background: var(--mal); }
+.mo-sedes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .75rem; }
+.mo-sede { border-left: 4px solid var(--borde); }
+.mo-sede.bien { border-left-color: var(--bien); }
+.mo-sede.aviso { border-left-color: var(--aviso); }
+.mo-sede.mal { border-left-color: var(--mal); }
+.mo-sede h3 { margin: 0 0 .3rem; font-size: 1rem; }
+.me-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: .75rem; align-items: start; }
+.me-ancho { grid-column: 1 / -1; }
+.me-datos { display: grid; gap: .35rem; margin: 0; }
+.me-dato { display: grid; grid-template-columns: minmax(120px, 45%) 1fr; gap: .5rem; }
+.me-dato dt { color: var(--texto-suave); font-size: .9rem; }
+.me-dato dd { margin: 0; overflow-wrap: anywhere; }
+.me-disco { margin-bottom: .75rem; }
+.me-disco-cab { display: flex; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+.me-barra { height: 10px; background: var(--fondo); border-radius: 5px; overflow: hidden; margin: .25rem 0; }
+.me-barra span { display: block; height: 100%; border-radius: 5px; }
+.me-barra span.bien { background: var(--bien); }
+.me-barra span.aviso { background: var(--aviso); }
+.me-barra span.mal { background: var(--mal); }
+.me-graficas { display: grid; gap: .75rem; }
+.me-graf { position: relative; height: 120px; margin-top: .5rem; touch-action: pan-y; }
+.me-graf svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.me-linea { fill: none; stroke: var(--primario); stroke-width: 2; stroke-linejoin: round; }
+.me-rejilla { stroke: var(--borde); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+.me-base { stroke: var(--borde); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.me-cursor { stroke: var(--texto-suave); stroke-width: 1; }
+.me-cursor[hidden] { display: none; } /* el atributo hidden no esconde un elemento SVG */
+.me-eje-y { position: absolute; left: 0; transform: translateY(2px); padding: 0 .2rem; font-size: .7rem; line-height: 1; color: var(--texto-suave); background: var(--superficie); pointer-events: none; }
+.me-punto-hover { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+  background: var(--primario); box-shadow: 0 0 0 2px var(--superficie); pointer-events: none; }
+.me-tip { position: absolute; top: -.5rem; transform: translate(-50%, -100%); padding: .2rem .5rem; border-radius: 6px; white-space: nowrap;
+  background: var(--superficie); color: var(--texto); border: 1px solid var(--borde); font-size: .8rem; pointer-events: none; }
+.me-eje { display: flex; justify-content: space-between; font-size: .75rem; color: var(--texto-suave); margin-top: .25rem; }
+.me-salida { max-height: 300px; overflow: auto; white-space: pre-wrap; font-size: .8rem; background: var(--fondo); padding: .5rem; border-radius: 6px; }

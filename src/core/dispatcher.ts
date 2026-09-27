@@ -108,10 +108,11 @@ export function instalarDispatcher() {
     f(...args);
   };
 
-  // Arrastrar y soltar también burbujea: se delega igual. `dragover` necesita
+  // Arrastrar y soltar también burbujea: se delega igual. `pointermove` /
+  // `pointerout` (burbujean; `pointerleave` no) son para el hover de las gráficas. `dragover` necesita
   // data-prevent="1" en la zona de soltar (si no, el navegador no deja soltar).
   for (const ev of ['input', 'change', 'keyup', 'keydown', 'submit', 'dblclick', 'contextmenu', 'paste',
-                    'dragstart', 'dragend', 'dragover', 'dragleave', 'drop']) {
+                    'dragstart', 'dragend', 'dragover', 'dragleave', 'drop', 'pointermove', 'pointerout']) {
     document.addEventListener(ev, e => despachar(ev, e));
   }
   for (const ev of ['focus', 'blur']) {

@@ -48,7 +48,14 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   arrastre, vínculo a un trabajo, coste), tareas por persona, que no se escribe
   en tablas espejo, técnico sin «Borrar proyecto», móvil.
 
-`npm run verify` pasa los dos.
+- `verify-monitorizacion.mjs`: sedes con semáforo, equipos y buscador, alertas
+  y «Acusar» por `breeze-api`, emparejado manual (upsert en `rmm_sitios`),
+  ficha del equipo (TPV, gráfica con hover, comando y script por `breeze-api`,
+  enlaces a Breeze), botones apagados sin usuario de servicio, móvil a 390 px
+  SIN `isMobile` (con él, el navegador ensancha el viewport y esconde el
+  desborde).
+
+`npm run verify` pasa los cuatro.
 
 ## Pantalla nueva
 

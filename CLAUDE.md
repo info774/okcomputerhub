@@ -20,6 +20,9 @@ pantalla «Conector MCP», `docs/MCP.md`) y «lanzar a Claude» HECHO en el hub
 (`20261004_claude_peticiones.sql`, pestaña Claude de la ficha, herramientas
 `claude_peticion_*`); trabajador EN MARCHA desde el 2026-09-27 (sesión
 «Trabajador de Claude (hub)» + Routine horaria, `docs/CLAUDE_TRABAJADOR.md`). Plan de la fase en `docs/FASE1.md`.
+**Fase 2 HECHA** (2026-09-27): monitorización sobre Breeze (`20261006_rmm.sql`,
+`#/monitorizacion`, función `breeze-api`, herramientas `rmm_*`); falta que Fran
+dé de alta el usuario de servicio en Breeze. Detalle en `docs/FASE2.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -104,7 +107,8 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
 4. **Migraciones con fecha** (`supabase/migrations/20261001_proyectos.sql`),
    aplicadas A MANO con el workflow «Aplicar migración» (secret
    `HUB_DB_PASSWORD`, transacción con `ON_ERROR_STOP`). No se editan las ya
-   aplicadas. Ninguna contiene `public.` ni `alter role breeze`; el arnés lo
+   aplicadas. Ninguna contiene `public.` (salvo en un FROM/JOIN de lectura,
+   para las vistas `hub.rmm_*`) ni `alter role breeze`; el arnés lo
    comprueba y falla.
 5. **Edge functions** en `supabase/functions/<nombre>/index.ts` (Deno) con
    `_shared/` propio: `http.ts` (CORS con lista blanca + JWT de sesión real),
@@ -216,6 +220,17 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
 - `Modulo.soloAdmin` lo esconde del menú Y lo bloquea por URL (shell.ts).
 - El dispatcher delega también arrastrar y soltar (`data-on-dragstart`,
   `data-on-dragover` + `data-prevent="1"`, `data-on-drop`).
+- Monitorización (`src/modulos/monitorizacion/`): lee SOLO las vistas
+  `hub.rmm_*`; lo que se le pide a Breeze va por `breeze-api` (catálogo
+  `_shared/rmm-acciones.ts`, compartido con el MCP) y queda en
+  `hub.rmm_acciones`. Las vistas son solo SELECT (una vista simple es
+  actualizable y escribiría en Breeze): toda vista nueva sobre `public`, con
+  `hub.ve_rmm()` en el `where` y su `revoke`. `comprobar-migraciones` deja
+  nombrar `public.` solo en FROM/JOIN. Resolver alertas y control remoto: en el
+  panel de Breeze (el usuario de servicio es Partner Technician, sin MFA).
+- Gráficas: SVG propio (sin librerías), una serie por gráfica, hover por
+  `data-on-pointermove`/`pointerout` (el dispatcher los delega). El atributo
+  `hidden` no esconde un elemento SVG: va con CSS (`[hidden] { display: none }`).
 - Al entrar se busca el correo de la sesión en `hub.usuarios` (activo): sin
   fila, se cierra la sesión y se avisa. La RLS usa la misma regla
   (`hub.es_usuario()`, `hub.es_admin()`).

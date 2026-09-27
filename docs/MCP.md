@@ -25,8 +25,8 @@ por HTTP sin estado. Nada de SQL libre: solo las herramientas de
 
 | Alcance | Puede |
 |---|---|
-| `lectura` | Todas las consultas: buscar, esquema, clientes, trabajos, tickets, tareas de la app, agenda, presupuestos, proyectos, equipo, estado del sync. |
-| `escritura` | Además crear y editar proyectos y sus piezas (objetivos, hitos, tareas, páginas con fuentes, vínculos). |
+| `lectura` | Todas las consultas: buscar, esquema, clientes, trabajos, tickets, tareas de la app, agenda, presupuestos, proyectos, equipo, estado del sync y monitorización (`rmm_resumen`, `rmm_equipos`, `rmm_equipo_detalle`, `rmm_scripts`). |
+| `escritura` | Además crear y editar proyectos y sus piezas (objetivos, hitos, tareas, páginas con fuentes, vínculos) y pedirle cosas a Breeze: `rmm_acusar_alerta`, `rmm_comando`, `rmm_script` (quedan en `hub.rmm_acciones`). |
 | `admin` | Todo lo anterior; reservado para lo que se añada de administración. |
 
 Una escritura sobre un área cuyo dueño sea la app (`hub.areas`) **ni se ofrece

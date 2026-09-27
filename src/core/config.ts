@@ -12,3 +12,7 @@ export const ESQUEMA = 'hub';
 export const APP_ACTUAL_URL = 'https://okcomputertenerife.web.app';
 
 export const FUNCIONES_URL = `${SUPABASE_URL}/functions/v1`;
+
+// Panel de Breeze (RMM): lo que el usuario de servicio del hub no puede hacer
+// (resolver alertas, escritorio y terminal remotos) se abre allí.
+export const BREEZE_URL = 'https://breeze.oksistemas.online';

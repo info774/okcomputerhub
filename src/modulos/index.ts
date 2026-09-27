@@ -5,11 +5,13 @@ import { moduloInicio } from './inicio';
 import { moduloDatos } from './datos';
 import { moduloConector } from './conector';
 import { moduloProyectos } from './proyectos';
+import { moduloMonitorizacion } from './monitorizacion';
 import { modulosAppActual } from './app-actual';
 
 export const MODULOS: Modulo[] = [
   moduloInicio,
   moduloProyectos,
+  moduloMonitorizacion,
   ...modulosAppActual,
   moduloDatos,
   moduloConector,
