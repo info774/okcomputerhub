@@ -60,3 +60,12 @@ ficha → claude_peticiones (pendiente) → Routine cada hora → conector MCP
    `OKHUB_MCP_TOKEN` en las variables del entorno cloud.
 2. Claude crea la sesión trabajadora (con este repo) y la Routine horaria que
    le manda el texto de arriba.
+
+## Estado
+
+En marcha desde el 2026-09-27: token `OKHUB_MCP_TOKEN` en el entorno cloud,
+sesión «Trabajador de Claude (hub)» (`session_01DGzJg79jMby36AsMaRdrc2`, con
+este repo, modo auto) y la Routine «Trabajador de Claude (hub) — cada hora»
+(`trig_0193sEVZJvuuAHD8TGAguv9M`, minuto 18 de cada hora) que le manda el texto
+de arriba. Pausarla o cambiar el texto: lista de Routines de claude.ai (o
+`update_trigger` desde una sesión).

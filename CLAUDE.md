@@ -18,8 +18,8 @@ Auth con Google, 6 usuarios, front en `https://okhub-tenerife.web.app`).
 `#/proyectos`), conector MCP HECHO (`20261003_mcp.sql`, función `mcp`,
 pantalla «Conector MCP», `docs/MCP.md`) y «lanzar a Claude» HECHO en el hub
 (`20261004_claude_peticiones.sql`, pestaña Claude de la ficha, herramientas
-`claude_peticion_*`); falta poner en marcha el trabajador (token + Routine,
-`docs/CLAUDE_TRABAJADOR.md`). Plan de la fase en `docs/FASE1.md`.
+`claude_peticion_*`); trabajador EN MARCHA desde el 2026-09-27 (sesión
+«Trabajador de Claude (hub)» + Routine horaria, `docs/CLAUDE_TRABAJADOR.md`). Plan de la fase en `docs/FASE1.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
