@@ -31,8 +31,8 @@ en el Vault, la carga inicial, Auth y Firebase. Siguiente: fase 1 (proyectos + M
   Hosting Admin en `okcomputerclaude`), `GOOGLE_OAUTH_CLIENT_SECRET` (cliente
   OAuth del proyecto GCP 508620194342) y, opcional, `GITHUB_TOKEN` (secrets
   de Actions de este repo). Red: `api.supabase.com` y `*.supabase.co`
-  permitidos. Lo único que no se automatiza: la redirect URI del cliente
-  OAuth en Google Cloud.
+  permitidos. Lo único que no se automatiza, la redirect URI del cliente
+  OAuth «Ok Computer Web» en Google Cloud, ya está puesta (2026-09-27).
 
 ## Los tres vecinos — LO MÁS IMPORTANTE
 

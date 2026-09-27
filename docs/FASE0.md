@@ -88,8 +88,9 @@ mayúsculas manda sobre el Vault si se pone.
    `https://okhub-tenerife.web.app`; Redirect URLs con esa y
    `http://localhost:5173`.
 2. Authentication → Providers → Google: Client ID y secret del proyecto GCP
-   **508620194342** (no crear otro); en Google Cloud añadir a ese cliente la
-   redirect `https://adomalsxsymxzuozksmt.supabase.co/auth/v1/callback`.
+   **508620194342** (no crear otro). ✅ La redirect
+   `https://adomalsxsymxzuozksmt.supabase.co/auth/v1/callback` ya está en el
+   cliente «Ok Computer Web» (añadida el 2026-09-27).
 3. Authentication → Users: invitar a cada persona con el MISMO correo que en
    la app actual (el hub la reconoce por el correo en `hub.usuarios`).
 
