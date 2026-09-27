@@ -37,6 +37,8 @@ siguen en la app; las OPORTUNIDADES son ya del hub. Detalle en `docs/FASE4.md`.
 **Fase 6 HECHA** (2026-09-27): Desk (`20261010_desk.sql`, `#/tickets`, funciones
 `desk-correo` y `ticket-valorar`, `valorar.html`). Los TICKETS son ya del hub.
 Detalle en `docs/FASE6.md`.
+**Fase 7 HECHA** (2026-09-27): portal de clientes (`20261011_portal.sql`,
+`portal.html`, función `portal`, `#/portal`). Detalle en `docs/FASE7.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -281,6 +283,14 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   info@). Nada sale solo hacia un cliente: lo manda una persona.
 - Páginas públicas sueltas (sin login): `public/<nombre>.html`, autorizadas por
   un token en la URL y una función SIN_JWT; el service worker no las toca.
+- Portal de clientes: los clientes NO son usuarios de Supabase ni tocan
+  PostgREST; todo va por la función `portal` con sesión propia
+  (`x-portal-token`) y filtrado por el cliente del acceso. Algo nuevo que vea
+  el cliente = una acción en `portal/index.ts` que filtre por
+  `s.cliente_id`, y nunca notas internas. `portal.html` es otra entrada de Vite
+  (`src/portal/`), sin supabase-js.
+- Avisos de fases nuevas: redefinir `hub.avisos_extra(p_para, p_admin)` (la
+  llama `panorama_direccion`), sin volver a copiar el motor entero.
 - El shell pinta cada navegación en un contenedor nuevo (`.vista`): un
   `pintar()` lento que acaba tarde escribe en el suyo, ya fuera del documento.
 - Leaflet se importa de forma diferida (`import('leaflet')`) solo en `#/mapa`.

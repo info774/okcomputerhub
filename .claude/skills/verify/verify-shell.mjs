@@ -134,7 +134,7 @@ try {
     ok(await page.isVisible('text=clientes (120)'), 'Datos enseña las filas por tabla');
     await page.click('[data-action="datosSincronizar"][data-p0="incremental"]');
     await page.waitForFunction(() => document.getElementById('toast')?.textContent?.includes('3 filas'));
-    const f = reg.funciones.at(-1);
+    const f = reg.funciones.filter(x => x.url.endsWith('/sync-app')).at(-1);
     ok(f?.url.endsWith('/sync-app') && f.body?.modo === 'incremental' && /^Bearer .+\..+\./.test(f.auth ?? ''),
       'Sincronizar ahora → sync-app con la sesión del usuario');
     await page.screenshot({ path: `${CAPTURAS}/datos.png`, fullPage: true });

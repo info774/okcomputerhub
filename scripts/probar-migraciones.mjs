@@ -471,6 +471,27 @@ try {
   psql(`insert into hub.correos_entrantes (gmail_id, de, asunto, recibido_at) values ('g1', 'x@y.z', 'Hola', now())`);
   ok(avisosDe('tito@ok.test').includes('correo_sin_revisar') && avisosDe('tito@ok.test').includes('sla_vencido'), 'avisos: SLA vencido y bandeja de correo');
 
+  // ── Portal de clientes (fase 7) ────────────────────────────────────────
+  const cliP = psql(`insert into hub.clientes (nombre) values ('Cliente portal') returning id`).split('\n')[0];
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.portal_accesos (email, cliente_id) values ('x@y.es', '${cliP}');`), { esperaError: true }).ok,
+    'portal: un técnico no da accesos');
+  const acc = idDe('ana@ok.test', `insert into hub.portal_accesos (email, cliente_id, nombre) values ('  Marta@Cliente.ES ', '${cliP}', 'Marta') returning id;`);
+  ok(psql(`select email || ':' || (creado_por = '${anaId}') from hub.portal_accesos where id = '${acc}'`) === 'marta@cliente.es:true', 'portal: un admin invita (correo normalizado, a su nombre)');
+  psql(`insert into hub.portal_sesiones (acceso_id, huella, caduca_at) values ('${acc}', 'h1', now() + interval '1 day');
+        insert into hub.portal_enlaces (acceso_id, huella, caduca_at) values ('${acc}', 'e1', now() + interval '1 hour');`);
+  ok(una('ana@ok.test', `select count(*) from hub.portal_enlaces;`) === '0', 'portal: los enlaces no los ve nadie del equipo (solo la función)');
+  ok(una('tito@ok.test', `select count(*) from hub.portal_traza;`) === '0', 'portal: la traza solo la ven los admins');
+  psql(como('authenticated', 'ana@ok.test', `update hub.portal_accesos set activo = false where id = '${acc}';`));
+  ok(psql(`select (select count(*) from hub.portal_sesiones where acceso_id = '${acc}' and cerrada_at is null) || ':' ||
+               (select count(*) from hub.portal_enlaces where acceso_id = '${acc}' and usado_at is null) || ':' ||
+               (select revocado_por = '${anaId}' from hub.portal_accesos where id = '${acc}') || ':' ||
+               (select count(*) from hub.portal_traza where acceso_id = '${acc}' and accion = 'revocado')`) === '0:0:true:1',
+    'portal: revocar cierra sesiones y enlaces y queda en la traza');
+  const pre = psql(`insert into hub.presupuestos (cliente_id, titulo, estado, total, numero_presupuesto) values ('${cliP}', 'Cámaras', 'Enviado', 900, 'P-9') returning id`).split('\n')[0];
+  psql(`insert into hub.portal_aceptaciones (presupuesto_id, acceso_id, nombre) values ('${pre}', '${acc}', 'Marta Díaz')`);
+  ok(avisosDe('tito@ok.test').includes('presupuesto_aceptado_portal'), 'avisos: presupuesto aceptado en el portal (gancho avisos_extra)');
+  ok(una('extrano@ok.test', `select count(*) from hub.avisos_extra(null, true);`) === '0', 'avisos_extra: quien no está en el hub no ve nada');
+
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
   ok(!sinRls, `todas las tablas de hub con RLS${sinRls ? ' (faltan: ' + sinRls + ')' : ''}`);

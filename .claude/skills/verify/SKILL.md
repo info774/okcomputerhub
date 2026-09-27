@@ -79,7 +79,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   sin borrar ni cambiar el SLA) y la página pública `valorar.html`.
   `window.open` se sustituye en la página para ver la URL de WhatsApp.
 
-`npm run verify` pasa los ocho.
+- `verify-portal.mjs`: `portal.html` con la función `portal` simulada (enlace,
+  entrar y quitar el código de la URL, tickets, aviso, mensaje, aceptar,
+  PDF, mantenimiento, equipos, sesión caducada, salir; comprueba que no toca
+  PostgREST) y `#/portal` del equipo (invitar, enlace, revocar, aceptaciones).
+
+`npm run verify` pasa los nueve.
 
 ## Pantalla nueva
 

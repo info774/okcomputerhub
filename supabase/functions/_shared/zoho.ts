@@ -88,3 +88,16 @@ export async function zohoTodo(db: Db, ruta: string, lista: string, params: Reco
 export function zohoDesde(d: Date): string {
   return d.toISOString().slice(0, 19) + '+0000'
 }
+
+// PDF de una factura o un presupuesto (portal de clientes). Lectura:
+// permisos ZohoBooks.invoices.READ / ZohoBooks.estimates.READ.
+export async function zohoPdf(db: Db, ruta: 'invoices' | 'estimates', id: string): Promise<ArrayBuffer> {
+  if (!/^\d{5,25}$/.test(id)) throw new Error('Documento no válido')
+  const q = new URLSearchParams({ organization_id: ORG(), accept: 'pdf' })
+  const res = await fetch(`${API}/${ruta}/${id}?${q}`, {
+    headers: { Authorization: `Zoho-oauthtoken ${await accessToken(db)}` },
+    signal: AbortSignal.timeout(30000),
+  })
+  if (!res.ok) throw new Error(`Zoho no dio el PDF (${res.status})`)
+  return await res.arrayBuffer()
+}
