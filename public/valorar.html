@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Valora nuestro servicio · Ok Computer Tenerife</title>
+<style>
+  :root { --fondo: #f5f6f8; --tarjeta: #fff; --texto: #1d2330; --suave: #5b6475; --acento: #2a78d6; --borde: #dde1e8; --bien: #1f8a4c; --mal: #c0392b; }
+  @media (prefers-color-scheme: dark) { :root { --fondo: #12151b; --tarjeta: #1b2029; --texto: #e7eaf0; --suave: #9aa3b5; --acento: #3987e5; --borde: #2c3340; --bien: #3fbf74; --mal: #e5675a; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--fondo); color: var(--texto); }
+  main { max-width: 32rem; margin: 0 auto; padding: 2rem 16px; }
+  .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 1.5rem; }
+  h1 { font-size: 1.3rem; margin: 0 0 .25rem; }
+  .suave { color: var(--suave); margin: 0 0 1.25rem; }
+  .estrellas { display: flex; gap: .4rem; justify-content: center; margin: 1rem 0; }
+  .estrellas button { font-size: 2.2rem; line-height: 1; background: none; border: 0; cursor: pointer; color: var(--borde); padding: .2rem; min-width: 44px; min-height: 44px; }
+  .estrellas button.on { color: #f2b01e; }
+  .estrellas button:focus-visible { outline: 2px solid var(--acento); border-radius: 6px; }
+  textarea { width: 100%; min-height: 6rem; font: inherit; color: inherit; background: var(--fondo); border: 1px solid var(--borde); border-radius: 8px; padding: .6rem; }
+  .enviar { margin-top: 1rem; width: 100%; min-height: 44px; font: inherit; font-weight: 600; color: #fff; background: var(--acento); border: 0; border-radius: 8px; cursor: pointer; }
+  .enviar:disabled { opacity: .5; cursor: default; }
+  .ok { color: var(--bien); } .mal { color: var(--mal); }
+  footer { text-align: center; color: var(--suave); font-size: .85rem; margin-top: 1.5rem; }
+</style>
+</head>
+<body>
+<main>
+  <div class="tarjeta" id="caja">
+    <h1>¿Qué tal lo hemos hecho?</h1>
+    <p class="suave" id="que">Cargando…</p>
+    <div class="estrellas" role="radiogroup" aria-label="Puntuación de 1 a 5" id="estrellas"></div>
+    <label for="comentario">¿Algo que quieras contarnos? (opcional)</label>
+    <textarea id="comentario" maxlength="2000"></textarea>
+    <button class="enviar" id="enviar" disabled>Enviar valoración</button>
+    <p id="aviso" role="status"></p>
+  </div>
+  <footer>Ok Computer Tenerife</footer>
+</main>
+<script type="module">
+  const FN = 'https://adomalsxsymxzuozksmt.supabase.co/functions/v1/ticket-valorar';
+  const token = new URLSearchParams(location.search).get('t') ?? '';
+  const nota0 = Number(new URLSearchParams(location.search).get('n')) || 0;
+  const $ = id => document.getElementById(id);
+  let nota = 0;
+  const pedir = cuerpo => fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...cuerpo }) })
+    .then(async r => ({ ok: r.ok, j: await r.json().catch(() => ({})) }));
+  function pintar() {
+    $('estrellas').innerHTML = [1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="${n === nota}" aria-label="${n} de 5" class="${n <= nota ? 'on' : ''}" data-n="${n}">★</button>`).join('');
+    $('enviar').disabled = !nota;
+  }
+  $('estrellas').addEventListener('click', e => { const n = Number(e.target.closest('button')?.dataset.n); if (n) { nota = n; pintar(); } });
+  $('enviar').addEventListener('click', async () => {
+    $('enviar').disabled = true;
+    const { ok, j } = await pedir({ nota, comentario: $('comentario').value });
+    if (ok) $('caja').innerHTML = `<h1 class="ok">¡Gracias!</h1><p class="suave">Hemos recibido tu valoración del ticket #${j.numero}. Nos ayuda a hacerlo mejor.</p>`;
+    else { $('aviso').className = 'mal'; $('aviso').textContent = j.error ?? 'No se pudo enviar. Prueba otra vez.'; $('enviar').disabled = false; }
+  });
+  (async () => {
+    if (!token) { $('que').textContent = 'Este enlace no está completo.'; return; }
+    const { ok, j } = await pedir({});
+    if (!ok) { $('que').textContent = j.error ?? 'Este enlace ya no vale.'; return; }
+    $('que').textContent = `Ticket #${j.numero}${j.titulo ? ' · ' + j.titulo : ''}`;
+    nota = nota0 >= 1 && nota0 <= 5 ? nota0 : 0;
+    pintar();
+  })();
+</script>
+</body>
+</html>

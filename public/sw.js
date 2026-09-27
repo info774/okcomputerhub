@@ -20,6 +20,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  // Páginas sueltas (valorar.html, el portal…): ni se tocan, no son la app.
+  if (e.request.mode === 'navigate' && url.pathname.endsWith('.html') && url.pathname !== '/index.html') return;
   if (e.request.mode === 'navigate') {
     e.respondWith(fetch(e.request)
       .then(r => { const copia = r.clone(); caches.open(CACHE).then(c => c.put('/', copia)); return r; })

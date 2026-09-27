@@ -34,6 +34,9 @@ siguen en la app; las OPORTUNIDADES son ya del hub. Detalle en `docs/FASE4.md`.
 `#/buscar`, funciones `documentos-indexar`, `documentos-preguntar`). Detalle en
 `docs/FASE5.md`. Las decisiones de Fran para las fases 5 a Final están en
 `docs/DECISIONES_FASES.md` y lo que tiene que hacer él, en `docs/PENDIENTE_FRAN.md`.
+**Fase 6 HECHA** (2026-09-27): Desk (`20261010_desk.sql`, `#/tickets`, funciones
+`desk-correo` y `ticket-valorar`, `valorar.html`). Los TICKETS son ya del hub.
+Detalle en `docs/FASE6.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -270,6 +273,16 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   nuevo que deba encontrarse: una fila en `hub.documentos` (`pendiente`) y la
   cola lo indexa; el extractor está en `documentos-indexar`. Claude, por
   `_shared/claude.ts` (sin clave, se degrada: fuentes sin redacción).
+- Desk: tickets y `ticket_comentarios` son del hub (área cortada con
+  `importar_altas`; numeración propia desde el 5000). El SLA lo calcula la base
+  (trigger + `hub.sumar_laborables`), no el front. Una respuesta al cliente es
+  un comentario `tipo = 'respuesta'` y el envío queda en `enviado_at`/`canal`;
+  por correo lo manda `desk-correo` (Gmail con delegación, actuando como
+  info@). Nada sale solo hacia un cliente: lo manda una persona.
+- Páginas públicas sueltas (sin login): `public/<nombre>.html`, autorizadas por
+  un token en la URL y una función SIN_JWT; el service worker no las toca.
+- El shell pinta cada navegación en un contenedor nuevo (`.vista`): un
+  `pintar()` lento que acaba tarde escribe en el suyo, ya fuera del documento.
 - Leaflet se importa de forma diferida (`import('leaflet')`) solo en `#/mapa`.
 - Al entrar se busca el correo de la sesión en `hub.usuarios` (activo): sin
   fila, se cierra la sesión y se avisa. La RLS usa la misma regla

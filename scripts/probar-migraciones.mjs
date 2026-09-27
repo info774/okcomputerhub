@@ -144,7 +144,7 @@ try {
     }
   }
   ok(huellaPublic() === antes, 'public (Breeze) queda igual');
-  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '8', 'ocho tareas de pg_cron, sin duplicar');
+  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '9', 'nueve tareas de pg_cron, sin duplicar');
 
   // ── Permisos y RLS ─────────────────────────────────────────────────────
   ok(!psql(como('anon', null, 'select count(*) from hub.clientes;'), { esperaError: true }).ok, 'anon no entra en hub');
@@ -436,6 +436,40 @@ try {
   ok(una('extrano@ok.test', `select count(*) from hub.buscar_fragmentos(${vec(0.1)}, 'clave', 5);`) === '0', 'buscador: quien no está en el hub no busca');
   ok(!psql(como('authenticated', 'ana@ok.test', `insert into hub.documentos (fuente, ref, titulo) values ('wiki', 'x', 'x');`), { esperaError: true }).ok,
     'buscador: el índice solo lo escribe la función');
+
+  // ── Desk (fase 6) ──────────────────────────────────────────────────────
+  // Lunes 5/10/2026 a las 13:00 (Canarias): 1 h de mañana + 2 h de tarde → 18:00.
+  ok(psql(`select to_char(hub.sumar_laborables('2026-10-05 13:00 Atlantic/Canary', 180) at time zone 'Atlantic/Canary', 'DD HH24:MI')`) === '05 18:00',
+    'SLA: suma minutos laborables saltando el mediodía');
+  ok(psql(`select to_char(hub.sumar_laborables('2026-10-09 18:00 Atlantic/Canary', 120) at time zone 'Atlantic/Canary', 'DD HH24:MI')`) === '13 10:00',
+    'SLA: salta el fin de semana y el festivo del 12 de octubre');
+  const tk = idDe('tito@ok.test', `insert into hub.tickets (titulo, prioridad, canal, created_at) values ('Sin internet', 'Urgente', 'email', '2026-10-05 09:00 Atlantic/Canary') returning id;`);
+  ok(!!tk, 'desk: un usuario crea tickets (área cortada)');
+  ok(psql(`select numero >= 5000 and to_char(sla_respuesta_at at time zone 'Atlantic/Canary', 'HH24:MI') = '11:00'
+           and to_char(sla_resolucion_at at time zone 'Atlantic/Canary', 'HH24:MI') = '13:00' from hub.tickets where id = '${tk}'`) === 't',
+    'desk: numeración propia y SLA de urgente (2 h / 4 h)');
+  psql(como('authenticated', 'tito@ok.test', `update hub.tickets set prioridad = 'Baja' where id = '${tk}';`));
+  ok(psql(`select to_char(sla_respuesta_at at time zone 'Atlantic/Canary', 'DD HH24:MI') from hub.tickets where id = '${tk}'`) === '07 19:00',
+    'desk: cambiar la prioridad recalcula el SLA (baja: 3 días laborables)');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.ticket_comentarios (ticket_id, texto, tipo) values ('${tk}', 'Nos conectamos', 'respuesta');`));
+  ok(psql(`select primera_respuesta_at is not null from hub.tickets where id = '${tk}'`) === 't', 'desk: la primera respuesta queda apuntada');
+  ok(psql(`select autor_id = '${titoId}' from hub.ticket_comentarios where ticket_id = '${tk}'`) === 't', 'desk: el comentario sale a nombre de quien lo escribe');
+  psql(como('authenticated', 'tito@ok.test', `update hub.tickets set estado = 'Cerrado' where id = '${tk}';`));
+  ok(psql(`select cerrado_at is not null from hub.tickets where id = '${tk}'`) === 't', 'desk: al cerrar se apunta la hora');
+  psql(como('service_role', null, `insert into hub.ticket_comentarios (ticket_id, autor_nombre, texto, created_at) values ('${tk}', 'WhatsApp · Marta', 'Sigue sin ir', now() + interval '1 minute');`, { 'x-hub-sync': '1' }));
+  ok(psql(`select t.estado || ':' || c.tipo from hub.tickets t join hub.ticket_comentarios c on c.ticket_id = t.id and c.autor_nombre like 'WhatsApp%' where t.id = '${tk}'`) === 'Abierto:cliente',
+    'desk: el WhatsApp del cliente (de la app) reabre el ticket cerrado en el hub');
+  psql(como('authenticated', 'tito@ok.test', `delete from hub.tickets where id = '${tk}';`));
+  ok(psql(`select count(*) from hub.tickets where id = '${tk}'`) === '1', 'desk: un técnico no borra tickets');
+  const tokVal = psql(`select valoracion_token from hub.tickets where id = '${tk}'`);
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.valorar_ticket('${tokVal}', 5, 'x');`), { esperaError: true }).ok, 'desk: la valoración solo la guarda la función');
+  psql(como('service_role', null, `select hub.valorar_ticket('${tokVal}', 4, 'Rápidos');`));
+  ok(psql(`select valoracion || valoracion_comentario from hub.tickets where id = '${tk}'`) === '4Rápidos', 'desk: valoración con el token del enlace');
+  ok(!psql(como('authenticated', 'tito@ok.test', `update hub.sla_politicas set respuesta_min = 1 where prioridad = 'urgente';`) +
+    `\nselect 1/(select count(*) from hub.sla_politicas where respuesta_min = 1);`, { esperaError: true }).ok, 'desk: un técnico no cambia el SLA');
+  psql(`insert into hub.tickets (titulo, prioridad, created_at) values ('Viejo', 'Urgente', now() - interval '10 days')`);
+  psql(`insert into hub.correos_entrantes (gmail_id, de, asunto, recibido_at) values ('g1', 'x@y.z', 'Hola', now())`);
+  ok(avisosDe('tito@ok.test').includes('correo_sin_revisar') && avisosDe('tito@ok.test').includes('sla_vencido'), 'avisos: SLA vencido y bandeja de correo');
 
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);

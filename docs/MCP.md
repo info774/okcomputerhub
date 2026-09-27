@@ -30,8 +30,10 @@ por HTTP sin estado. Nada de SQL libre: solo las herramientas de
 | `admin` | Todo lo anterior; reservado para lo que se añada de administración. |
 
 Una escritura sobre un área cuyo dueño sea la app (`hub.areas`) **ni se ofrece
-ni se ejecuta**: `ticket_crear` existe en el catálogo pero no aparece hasta que
-el área `tickets` se corte al hub (fase 6).
+ni se ejecuta**. Desde la fase 6 el área `tickets` es del hub: `ticket_crear`,
+`ticket_actualizar` y `ticket_comentar` (nota interna; al cliente se le
+contesta desde el Desk) están activas, con `ticket_detalle` para leer uno con
+su conversación.
 
 ## Wiki y buscador (fase 5)
 

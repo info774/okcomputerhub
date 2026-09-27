@@ -73,7 +73,13 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   (respuesta en markdown seguro con citas, fuentes, estado del índice,
   carpeta de Drive solo admin). Funciones simuladas en el propio arnés.
 
-`npm run verify` pasa los siete.
+- `verify-tickets.mjs`: Desk (vistas y SLA, nuevo con cliente/sede/contacto,
+  responder por correo y por WhatsApp, nota interna, plantillas, técnico,
+  vincular trabajo, cerrar con valoración, bandeja de correo, ajustes, técnico
+  sin borrar ni cambiar el SLA) y la página pública `valorar.html`.
+  `window.open` se sustituye en la página para ver la URL de WhatsApp.
+
+`npm run verify` pasa los ocho.
 
 ## Pantalla nueva
 

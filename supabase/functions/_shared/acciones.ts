@@ -26,6 +26,9 @@ export interface Herramienta {
 // ── Utilidades ──────────────────────────────────────────────────────────────
 const txt = (v: unknown, max = 500) => (v == null ? undefined : String(v).trim().slice(0, max) || undefined)
 const lim = (v: unknown, def = 20, max = 100) => Math.min(Math.max(Number(v) || def, 1), max)
+const ESTADOS_TICKET = ['Abierto', 'En curso', 'Pendiente', 'Cerrado']
+// Las prioridades de los tickets van con mayúscula, como en la app.
+const prioridadTicket = (v: unknown) => { const p = String(v ?? 'media').toLowerCase(); return ['baja', 'media', 'alta', 'urgente'].includes(p) ? p[0].toUpperCase() + p.slice(1) : 'Media' }
 const obj = (props: Record<string, unknown>, required: string[] = []) => ({ type: 'object', properties: props, required })
 const S = (description: string, extra: Record<string, unknown> = {}) => ({ type: 'string', description, ...extra })
 const N = (description: string) => ({ type: 'number', description })
@@ -481,13 +484,51 @@ const escritura: Herramienta[] = [
   // área se corte (hub.areas.dueno = 'hub'). Mismas columnas que la app.
   {
     name: 'ticket_crear', alcance: 'escritura', tabla: 'tickets',
-    description: 'Crea un ticket de soporte.',
-    inputSchema: obj({ titulo: S('Título'), descripcion: S('Detalle'), cliente_id: S('UUID del cliente'),
-      prioridad: S('baja | media | alta | urgente') }, ['titulo']),
+    description: 'Crea un ticket de soporte en el Desk del hub (el SLA se calcula solo por la prioridad).',
+    inputSchema: obj({ titulo: S('Título'), descripcion: S('Detalle'), cliente_id: S('UUID del cliente'), local_id: S('UUID de la sede'),
+      prioridad: S('Baja | Media | Alta | Urgente'), tecnico: S('Nombre del técnico asignado'), canal: S('email | whatsapp | telefono | portal | hub') }, ['titulo']),
     async ejecutar(a, { db }) {
       const [t] = await db.post('tickets', soloDefinidos({ titulo: txt(a.titulo, 200), descripcion: txt(a.descripcion, 5000),
-        cliente_id: esUuid(a.cliente_id) ? a.cliente_id : undefined, prioridad: a.prioridad, estado: 'Abierto' }))
-      return { id: t.id, numero: t.numero }
+        cliente_id: esUuid(a.cliente_id) ? a.cliente_id : undefined, local_id: esUuid(a.local_id) ? a.local_id : undefined,
+        prioridad: prioridadTicket(a.prioridad), tecnico_id: txt(a.tecnico, 80), canal: txt(a.canal, 20) ?? 'hub', estado: 'Abierto' }))
+      return { id: t.id, numero: t.numero, sla_respuesta: t.sla_respuesta_at, sla_resolucion: t.sla_resolucion_at }
+    },
+  },
+  {
+    name: 'ticket_detalle', alcance: 'lectura',
+    description: 'Un ticket por su número: datos, SLA, valoración y la conversación (notas internas, respuestas y mensajes del cliente).',
+    inputSchema: obj({ numero: N('Número del ticket') }, ['numero']),
+    async ejecutar(a, { db }) {
+      const [t] = await db.get(`tickets?select=*&numero=eq.${Number(a.numero) || 0}`)
+      if (!t) throw new Error('No existe ese ticket')
+      const comentarios = await db.get(`ticket_comentarios?select=created_at,tipo,canal,autor_nombre,texto,enviado_at&ticket_id=eq.${t.id}&order=created_at`)
+      delete t.valoracion_token
+      return { ...t, comentarios }
+    },
+  },
+  {
+    name: 'ticket_actualizar', alcance: 'escritura', tabla: 'tickets',
+    description: 'Cambia estado (Abierto | En curso | Pendiente | Cerrado), prioridad, técnico o resolución de un ticket.',
+    inputSchema: obj({ numero: N('Número del ticket'), estado: S('Abierto | En curso | Pendiente | Cerrado'), prioridad: S('Baja | Media | Alta | Urgente'),
+      tecnico: S('Nombre del técnico'), resolucion: S('Qué se hizo (al cerrar)') }, ['numero']),
+    async ejecutar(a, { db }) {
+      const estado = a.estado ? ESTADOS_TICKET.find(e => e.toLowerCase() === String(a.estado).toLowerCase()) : undefined
+      if (a.estado && !estado) throw new Error(`Estado no válido (${ESTADOS_TICKET.join(', ')})`)
+      const r = await db.patch(`tickets?numero=eq.${Number(a.numero) || 0}`, soloDefinidos({ estado, prioridad: a.prioridad ? prioridadTicket(a.prioridad) : undefined,
+        tecnico_id: txt(a.tecnico, 80), resolucion: txt(a.resolucion, 5000) }))
+      if (!r.length) throw new Error('No existe ese ticket')
+      return { numero: r[0].numero, estado: r[0].estado, prioridad: r[0].prioridad, tecnico: r[0].tecnico_id }
+    },
+  },
+  {
+    name: 'ticket_comentar', alcance: 'escritura', tabla: 'ticket_comentarios',
+    description: 'Apunta una NOTA INTERNA en un ticket (no le llega al cliente; las respuestas al cliente se mandan desde el Desk).',
+    inputSchema: obj({ numero: N('Número del ticket'), texto: S('La nota') }, ['numero', 'texto']),
+    async ejecutar(a, { db, usuarioId, nombre }) {
+      const [t] = await db.get(`tickets?select=id&numero=eq.${Number(a.numero) || 0}`)
+      if (!t) throw new Error('No existe ese ticket')
+      const [c] = await db.post('ticket_comentarios', { ticket_id: t.id, texto: txt(a.texto, 5000), tipo: 'nota', autor_id: usuarioId, autor_nombre: nombre })
+      return { id: c.id }
     },
   },
 ]
@@ -586,7 +627,7 @@ async function persona(ctx: Contexto) {
 const mando: Herramienta[] = [
   {
     name: 'avisos', alcance: 'lectura',
-    description: 'Avisos accionables del puesto de mando: presupuestos sin respuesta, trabajos por facturar, tickets sin asignar, alertas RMM, hitos vencidos y, si el dueño del token es admin, facturas vencidas, cobros de mantenimiento torcidos, clientes importantes sin comprar y cierre de mes.',
+    description: 'Avisos accionables del puesto de mando: presupuestos sin respuesta, trabajos por facturar, tickets sin asignar o con el SLA vencido, correos por revisar, alertas RMM, hitos vencidos y, si el dueño del token es admin, facturas vencidas, cobros de mantenimiento torcidos, clientes importantes sin comprar y cierre de mes.',
     inputSchema: obj({ tipo: S('Filtrar por tipo (p. ej. factura_vencida, alerta_rmm)') }),
     async ejecutar(a, ctx) {
       const filas = (await ctx.db.rpc('panorama_direccion', { p_para: ctx.usuarioId })) as Fila[] ?? []

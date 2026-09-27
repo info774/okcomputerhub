@@ -103,6 +103,8 @@ export function baseMemoria(inicial = {}, rpc = {}) {
         id: randomUUID(), created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         ...(tabla === 'proyectos' ? { numero: ++numero, estado: 'idea', prioridad: 'media', tipo: 'interno', orden: 0 } : {}),
         ...(tabla.startsWith('proyecto_') ? { orden: 0, fuentes: [], hecho: false, estado: 'pendiente' } : {}),
+        ...(tabla === 'tickets' ? { numero: ++numero + 5000, valoracion_token: randomUUID(), primera_respuesta_at: null, cerrado_at: null, valoracion: null } : {}),
+        ...(tabla === 'ticket_comentarios' ? { enviado_at: null, envio_error: null, canal: null } : {}),
         ...(tabla === 'paginas' ? { version: 1, archivada: false, orden: 0, icono: null, proyecto_id: null, creado_por: 'u-ana', actualizado_por: null } : {}),
         ...(tabla === 'claude_peticiones' ? { estado: 'pendiente', resultado: null, error: null } : {}),
         ...c,

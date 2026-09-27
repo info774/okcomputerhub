@@ -31,7 +31,6 @@ export const modulosAppActual: Modulo[] = [
     const fin = new Date(`${d}T23:59:59`).toISOString();
     return cuenta('agenda', { and: `(inicio.lte.${fin},fin.gte.${inicio})` }, 'bloques hoy');
   }),
-  enlace('tickets', 'Tickets', '🎫', () => cuenta('tickets', { estado: 'in.(Abierto,"En curso")' }, 'abiertos', 'aviso')),
   enlace('tareas', 'Tareas', '✅', () => cuenta('tareas', { estado: 'in.(pendiente,en_progreso)' }, 'pendientes')),
   enlace('presupuestos', 'Presupuestos', '📄', () => cuenta('presupuestos', { estado: 'eq.Borrador' }, 'en borrador')),
   enlace('facturacion', 'Facturación y cobros', '💶'),

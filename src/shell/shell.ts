@@ -54,8 +54,12 @@ export async function mostrarModulo(m: Modulo, params: string[]) {
   document.getElementById('pantalla-titulo')!.textContent = m.titulo;
   document.getElementById('pantalla-explicacion')!.textContent = m.explicacion;
   document.title = `${m.titulo} · Ok Computer Hub`;
-  const el = document.getElementById('pantalla')!;
-  el.innerHTML = '';
+  // Cada navegación pinta en un contenedor NUEVO: si la pantalla anterior aún
+  // estaba cargando, termina escribiendo en el suyo (ya fuera del documento) y
+  // no encima de esta.
+  const el = document.createElement('div');
+  el.className = 'vista';
+  document.getElementById('pantalla')!.replaceChildren(el);
   // El menú ya no enseña lo de admin, pero la URL se puede escribir a mano.
   // (Los datos los protege la RLS; esto evita una pantalla a medias.)
   if (m.soloAdmin && !esAdmin()) {
