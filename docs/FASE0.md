@@ -1,9 +1,12 @@
 # Fase 0 · Cimientos — qué hay y cómo se pone en marcha
 
-Estado a 2026-09-27: **migraciones (20261001 a e) APLICADAS y `sync-app`
-DESPLEGADA** en `okcomputer-hub`, por el conector de Supabase; `public`
-comprobado igual antes y después (1708 objetos, misma huella). Lo marcado ⏳
-abajo sigue pendiente y se hace a mano: toca el panel o cuentas externas.
+Estado a 2026-09-27 (tarde): **hecho** — migraciones 20261001 a e, `hub`
+expuesto en la API (junto a `public` y `graphql_public`, que siguen cerrados
+por permisos), `sync-app` desplegada con sus secretos en el Vault, Auth
+(Site URL, redirects, Google, registro cerrado), 6 usuarios en `hub.usuarios` y
+en Auth, sitio `okhub-tenerife` creado y el front publicado.
+**Pendiente**: la service key de la app para que `sync-app` copie los datos
+(carga inicial y cron). `public` comprobado igual antes y después.
 
 ## Qué hay en el repo
 
@@ -45,7 +48,7 @@ se repasan enteras cada noche.
    `20261001b_hub_tablas_app.sql`, `20261001c_hub_sync_app.sql`,
    `20261001d_hub_search_path.sql` y `20261001e_hub_secretos.sql`. Las
    siguientes, con Actions → **Aplicar migración**, una a una y en orden.
-5. ⏳ **Settings → API → Exposed schemas: AÑADIR `hub`.** Hoy están
+5. ✅ (2026-09-27, por la Management API) **Exposed schemas: `hub` añadido.** Hoy están
    `public` y `graphql_public`; se dejan como están (`public` está cerrado por
    permisos: `anon` y `authenticated` no tienen USAGE). Sin este paso ni el
    front ni `sync-app` llegan a nada: PostgREST contesta `PGRST106 Invalid

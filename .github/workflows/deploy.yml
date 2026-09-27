@@ -7,6 +7,7 @@ name: Deploy del hub a Firebase
 #
 # Secret: GOOGLE_CREDENTIALS_JSON (cuenta de servicio con permiso de Firebase
 # Hosting en el proyecto `okcomputerclaude`; el mismo que usa la app actual).
+# Si falta, el workflow comprueba lint y build y avisa, sin fallar.
 on:
   push:
     branches: [main]
@@ -28,12 +29,21 @@ jobs:
           HUB_BUILD: ${{ github.sha }}
         run: npm run build
       - name: Credenciales de Google
+        id: cred
+        env:
+          CRED: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         run: |
-          printf '%s' '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > /tmp/gcloud.json
-          if [ ! -s /tmp/gcloud.json ]; then
-            echo "❌ Falta el secret GOOGLE_CREDENTIALS_JSON (Settings → Secrets → Actions)"; exit 1
+          # Sin el secret no se falla: el despliegue lo hace entonces Claude
+          # desde su sesión (FIREBASE_SERVICE_ACCOUNT del entorno). El proxy de
+          # las sesiones cloud no deja escribir secrets de Actions.
+          if [ -z "$CRED" ]; then
+            echo "::warning::Falta el secret GOOGLE_CREDENTIALS_JSON: no se despliega desde Actions (build y lint sí se han comprobado)."
+            echo "ok=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
+          printf '%s' "$CRED" > /tmp/gcloud.json
+          echo "ok=true" >> "$GITHUB_OUTPUT"
       - name: Deploy a Firebase Hosting
+        if: steps.cred.outputs.ok == 'true'
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcloud.json
         run: |

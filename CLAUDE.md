@@ -12,10 +12,12 @@ web de Breeze. El plan completo, con las decisiones tomadas y las fases, está
 en `docs/PLAN_SISTEMA_UNIFICADO.md`; la referencia de producto (la demo de
 OKHUB, de otra empresa) en `docs/referencias/OKHUB_INVENTARIO.md`.
 
-**Estado**: fase 0 (cimientos) aplicada en `okcomputer-hub`: migraciones
-20261001 a 20261001e, `sync-app` desplegada y sus secretos en el Vault. Falta
-(a mano, `docs/FASE0.md`): exponer `hub` en la API, la service key de la app
-en el Vault, la carga inicial, Auth y Firebase. Siguiente: fase 1 (proyectos + MCP).
+**Estado**: fase 0 casi entera en marcha (2026-09-27): migraciones
+20261001 a e aplicadas, `hub` expuesto en la API, `sync-app` desplegada, Auth
+con Google y registro cerrado, los 6 usuarios de la app dados de alta y el
+front publicado en `https://okhub-tenerife.web.app`. Falta la clave de LECTURA
+de la app para que `sync-app` copie los datos (ver «Autonomía»). Siguiente:
+fase 1 (proyectos + MCP).
 
 ## Autonomía de Claude (acordado el 2026-09-27)
 
@@ -26,13 +28,26 @@ en el Vault, la carga inicial, Auth y Firebase. Siguiente: fase 1 (proyectos + M
   actual (`okcomputer`) y cualquier cosa que toque lo de Breeze (`public`,
   sus roles, su servidor).
 - Credenciales, como variables de entorno del entorno cloud (nunca en el chat
-  ni en el repo): `SUPABASE_ACCESS_TOKEN` (Management API: esquemas expuestos,
-  Auth, secrets, funciones), `FIREBASE_SERVICE_ACCOUNT` (JSON, Firebase
-  Hosting Admin en `okcomputerclaude`), `GOOGLE_OAUTH_CLIENT_SECRET` (cliente
-  OAuth del proyecto GCP 508620194342) y, opcional, `GITHUB_TOKEN` (secrets
-  de Actions de este repo). Red: `api.supabase.com` y `*.supabase.co`
-  permitidos. Lo único que no se automatiza, la redirect URI del cliente
-  OAuth «Ok Computer Web» en Google Cloud, ya está puesta (2026-09-27).
+  ni en el repo, y nunca impresas en la salida de un comando):
+  - `SUPABASE_ACCESS_TOKEN`: Management API, SOLO ve la organización del hub
+    (la app actual está en otra: 403). Esquemas expuestos, Auth, claves del
+    hub (`/api-keys?reveal=true`, sin imprimirlas), `database/query`.
+  - `FIREBASE_SERVICE_ACCOUNT`: la clave privada (PEM) de
+    `firebase-adminsdk-fbsvc@okcomputerclaude.iam.gserviceaccount.com`; el
+    JSON de credenciales se arma al vuelo en el scratchpad con ese correo.
+    Despliegue del front: `HUB_BUILD=$(git rev-parse HEAD) npm run build` y
+    `GOOGLE_APPLICATION_CREDENTIALS=<json> npx firebase-tools deploy --only
+    hosting:hub --project okcomputerclaude`.
+  - `GOOGLE_OAUTH_CLIENT_SECRET`: ya puesto en el proveedor Google del hub.
+  - `GITHUB_TOKEN`: push y PRs. El proxy de las sesiones NO deja escribir
+    secrets de Actions ni ajustes del repo: por eso `deploy.yml` sin su secret
+    solo comprueba y avisa, y el despliegue lo hace la sesión.
+  - Falta `APP_SERVICE_ROLE_KEY` (service key de `okcomputer`, solo para LEER):
+    se guarda en el Vault del hub como `app_service_role_key` sin imprimirla.
+- Red: `api.supabase.com` y `*.supabase.co` permitidos; `*.web.app` no (el
+  front publicado se comprueba por la API de Firebase Hosting).
+- La redirect URI del cliente OAuth «Ok Computer Web» en Google Cloud ya está
+  puesta (2026-09-27).
 
 ## Los tres vecinos — LO MÁS IMPORTANTE
 
