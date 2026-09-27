@@ -5,6 +5,7 @@
 //   · una escritura sobre una tabla cuya área tenga dueño 'app' (hub.areas) NO
 //     se ofrece ni se ejecuta: esa área la manda todavía la app actual.
 import { type Db, type Fila, limpio, esUuid, esFecha } from './hub-db.ts'
+import { ejecutarAccionRmm, COMANDOS, type AccionRmm } from './rmm-acciones.ts'
 
 export type Alcance = 'lectura' | 'escritura' | 'admin'
 export const NIVEL: Record<Alcance, number> = { lectura: 1, escritura: 2, admin: 3 }
@@ -87,11 +88,12 @@ const lectura: Herramienta[] = [
       const areas = await db.get('areas?select=area,dueno,tablas,notas&order=area')
       return {
         areas,
-        propias_del_hub: ['proyectos', 'proyecto_objetivos', 'proyecto_hitos', 'proyecto_paginas', 'proyecto_tareas', 'proyecto_vinculos', 'claude_peticiones'],
+        propias_del_hub: ['proyectos', 'proyecto_objetivos', 'proyecto_hitos', 'proyecto_paginas', 'proyecto_tareas', 'proyecto_vinculos', 'claude_peticiones', 'rmm_sitios', 'rmm_acciones'],
         notas: [
           'Las tablas de áreas con dueño "app" son una copia de la app actual (se refresca cada 15 min): se leen, no se escriben.',
           'Estados de trabajos: Pendiente, En progreso, Completado, Para facturar, Facturado, Cancelado. Tickets: Abierto, En curso, Cerrado. Tareas (app): pendiente, en_progreso, completada.',
           `Fases de proyecto: ${FASES.join(' → ')}.`,
+          'Monitorización (Breeze): herramientas rmm_*; se lee de Breeze y las acciones (acusar, comandos, scripts) van por su API.',
           'Fechas en AAAA-MM-DD, hora de Canarias.',
         ],
       }
@@ -488,7 +490,90 @@ const escritura: Herramienta[] = [
   },
 ]
 
-export const HERRAMIENTAS: Herramienta[] = [...lectura, ...escritura]
+// ── Monitorización (Breeze) ────────────────────────────────────────────────
+// Lecturas de las vistas hub.rmm_*; las acciones van por la API de Breeze
+// (_shared/rmm-acciones.ts, el mismo catálogo que la pantalla) y quedan en
+// hub.rmm_acciones a nombre del dueño del token.
+const rmm: Herramienta[] = [
+  {
+    name: 'rmm_resumen', alcance: 'lectura',
+    description: 'Monitorización: sedes con equipos Breeze y su semáforo (ok, alerta, parcial, caido), equipos sin conexión y alertas abiertas.',
+    inputSchema: obj({}),
+    async ejecutar(_a, { db }) {
+      const [estados, desconectados, alertas] = await Promise.all([
+        db.get('rmm_estado_local?select=*&order=estado'),
+        db.get('rmm_equipos?select=id,hostname,sitio,local_id,visto_ultimo&conectado=eq.false&order=visto_ultimo.desc'),
+        db.get('rmm_alertas?select=id,hostname,sitio,severidad,estado,titulo,disparada&estado=in.(active,acknowledged)&order=disparada.desc&limit=50'),
+      ])
+      const ids = [...new Set(estados.map(e => e.local_id))].join(',')
+      const locales = ids ? await db.get(`locales?select=id,nombre&id=in.(${ids})`) : []
+      return {
+        sedes: estados.map(e => ({ ...e, sede: locales.find(l => l.id === e.local_id)?.nombre ?? null })),
+        equipos_sin_conexion: desconectados, alertas_abiertas: alertas,
+      }
+    },
+  },
+  {
+    name: 'rmm_equipos', alcance: 'lectura',
+    description: 'Equipos monitorizados (Breeze): hardware, SO, antivirus, discos, parches pendientes, versión del TPV. Filtra por sede (local_id) o por nombre.',
+    inputSchema: obj({ local_id: S('UUID de la sede'), q: S('Parte del nombre del equipo o del Site') }),
+    async ejecutar(a, { db }) {
+      const f = esUuid(a.local_id) ? `&local_id=eq.${a.local_id}` : ''
+      const q = limpio(a.q)
+      const b = q ? `&or=${encodeURIComponent(`(hostname.ilike.*${q}*,nombre.ilike.*${q}*,sitio.ilike.*${q}*)`)}` : ''
+      return db.get(`rmm_equipos?select=*${f}${b}&order=sitio,hostname&limit=100`)
+    },
+  },
+  {
+    name: 'rmm_equipo_detalle', alcance: 'lectura',
+    description: 'Un equipo: ficha, parches pendientes, software, alertas y comandos/scripts recientes y su resultado.',
+    inputSchema: obj({ id: S('UUID del equipo (sale de rmm_equipos)') }, ['id']),
+    async ejecutar(a, { db }) {
+      if (!esUuid(a.id)) throw new Error('id no válido')
+      const [e] = await db.get(`rmm_equipos?select=*&id=eq.${a.id}`)
+      if (!e) throw new Error('No existe ese equipo')
+      const [parches, software, alertas, comandos, scripts] = await Promise.all([
+        db.get(`rmm_parches?select=titulo,severidad,estado,referencia&device_id=eq.${a.id}&estado=in.(pending,missing,failed)`),
+        db.get(`rmm_software?select=nombre,version,fabricante&device_id=eq.${a.id}&order=nombre&limit=300`),
+        db.get(`rmm_alertas?select=id,titulo,severidad,estado,disparada&device_id=eq.${a.id}&order=disparada.desc&limit=20`),
+        db.get(`rmm_comandos?select=tipo,estado,pedido,terminado&device_id=eq.${a.id}&order=pedido.desc&limit=10`),
+        db.get(`rmm_scripts_ejecuciones?select=id,script,estado,pedido,codigo_salida,salida,errores&device_id=eq.${a.id}&order=pedido.desc&limit=10`),
+      ])
+      return { equipo: e, parches_pendientes: parches, software, alertas, comandos, scripts }
+    },
+  },
+  {
+    name: 'rmm_scripts', alcance: 'lectura',
+    description: 'Catálogo de scripts de Breeze que se pueden lanzar en los equipos (sin su código).',
+    inputSchema: obj({ q: S('Parte del nombre') }),
+    async ejecutar(a, { db }) {
+      const q = limpio(a.q)
+      return db.get(`rmm_scripts?select=id,nombre,descripcion,categoria,sistemas,lenguaje,parametros${q ? `&nombre=ilike.*${encodeURIComponent(q)}*` : ''}&order=nombre&limit=100`)
+    },
+  },
+  {
+    name: 'rmm_acusar_alerta', alcance: 'escritura',
+    description: 'Acusa recibo de una alerta activa en Breeze (queda «acknowledged»). Resolverla se hace en el panel de Breeze.',
+    inputSchema: obj({ alerta_id: S('UUID de la alerta (sale de rmm_resumen)') }, ['alerta_id']),
+    ejecutar: (a, ctx) => ejecutarAccionRmm(ctx.db, { usuarioId: ctx.usuarioId, email: ctx.email }, { accion: 'acusar_alerta', alerta_id: a.alerta_id } as AccionRmm),
+  },
+  {
+    name: 'rmm_comando', alcance: 'escritura',
+    description: `Manda un comando a un equipo por Breeze. Tipos: ${Object.entries(COMANDOS).map(([k, v]) => `${k} (${v})`).join(', ')}. Reiniciar o apagar el PC de un cliente corta su trabajo: confírmalo antes con la persona.`,
+    inputSchema: obj({ device_id: S('UUID del equipo'), tipo: S('Tipo de comando', { enum: Object.keys(COMANDOS) }) }, ['device_id', 'tipo']),
+    ejecutar: (a, ctx) => ejecutarAccionRmm(ctx.db, { usuarioId: ctx.usuarioId, email: ctx.email }, { accion: 'comando', device_id: a.device_id, tipo: a.tipo } as AccionRmm),
+  },
+  {
+    name: 'rmm_script', alcance: 'escritura',
+    description: 'Lanza un script del catálogo de Breeze en uno o varios equipos. El resultado (salida y código) sale después en rmm_equipo_detalle.',
+    inputSchema: obj({ script_id: S('UUID del script (rmm_scripts)'), device_ids: { type: 'array', items: { type: 'string' }, description: 'UUIDs de los equipos (1-50)' },
+      parametros: { type: 'object', description: 'Parámetros del script, si los pide' } }, ['script_id', 'device_ids']),
+    ejecutar: (a, ctx) => ejecutarAccionRmm(ctx.db, { usuarioId: ctx.usuarioId, email: ctx.email },
+      { accion: 'script', script_id: a.script_id, device_ids: a.device_ids, parametros: a.parametros } as AccionRmm),
+  },
+]
+
+export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...escritura]
 
 // Tablas cuyo dueño es la app (no se escribe en ellas desde el hub).
 export async function tablasDeLaApp(db: Db): Promise<Set<string>> {
