@@ -12,9 +12,10 @@ web de Breeze. El plan completo, con las decisiones tomadas y las fases, está
 en `docs/PLAN_SISTEMA_UNIFICADO.md`; la referencia de producto (la demo de
 OKHUB, de otra empresa) en `docs/referencias/OKHUB_INVENTARIO.md`.
 
-**Estado**: fase 0 (cimientos) escrita y probada en local, SIN aplicar ni
-desplegar: los pasos a mano (migraciones, secrets, carga inicial, Auth,
-Firebase) están en `docs/FASE0.md`. Siguiente: fase 1 (proyectos + MCP).
+**Estado**: fase 0 (cimientos) escrita; sus migraciones (20261001 a
+20261001d) YA ESTÁN APLICADAS en `okcomputer-hub`. Falta lo de
+`docs/FASE0.md`: exponer `hub`, secrets, desplegar `sync-app`, carga inicial,
+Auth y Firebase. Siguiente: fase 1 (proyectos + MCP).
 
 ## Los tres vecinos — LO MÁS IMPORTANTE
 

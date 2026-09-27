@@ -1,7 +1,9 @@
 # Fase 0 · Cimientos — qué hay y cómo se pone en marcha
 
-Estado a 2026-09-27: **el código está hecho y probado en local; nada está
-aplicado ni desplegado todavía.** Los pasos de abajo tocan el proyecto real
+Estado a 2026-09-27: **migraciones APLICADAS** en `okcomputer-hub`
+(20261001, b, c y d, por el conector de Supabase; `public` comprobado igual
+antes y después: 1708 objetos, misma huella). Lo demás (exponer `hub`,
+secrets, funciones, carga inicial, Auth, Firebase) sigue pendiente. Los pasos de abajo tocan el proyecto real
 (`okcomputer-hub`, compartido con Breeze) o cuentas externas y se hacen a mano,
 en este orden.
 
@@ -41,9 +43,10 @@ se repasan enteras cada noche.
 3. Comprobar el host del pooler en Settings → Database → Connection pooling
    (sesión, IPv4) y, si no es `aws-1-eu-west-1.pooler.supabase.com`,
    corregirlo en `.github/workflows/aplicar-migracion.yml`.
-4. Actions → **Aplicar migración**, uno a uno y en orden:
-   `20261001_hub_cimientos.sql`, `20261001b_hub_tablas_app.sql`,
-   `20261001c_hub_sync_app.sql`.
+4. ✅ Hecho el 2026-09-27: `20261001_hub_cimientos.sql`,
+   `20261001b_hub_tablas_app.sql`, `20261001c_hub_sync_app.sql` y
+   `20261001d_hub_search_path.sql`. Las siguientes, con Actions →
+   **Aplicar migración**, una a una y en orden.
    - `create extension pg_cron` / `pg_net` pueden pedir que se habiliten antes
      en Database → Extensions; si la primera falla por eso, se habilitan ahí y
      se relanza (va en transacción: no queda nada a medias).
