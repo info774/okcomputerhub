@@ -11,9 +11,13 @@ export interface Db {
   patch(ruta: string, cuerpo: unknown): Promise<Fila[]>
   del(ruta: string): Promise<void>
   rpc(funcion: string, args: unknown): Promise<unknown>
+  // Insertar o actualizar por `clave` (on_conflict), sin devolver las filas.
+  upsert(tabla: string, clave: string, filas: unknown[]): Promise<void>
 }
 
-export function hubDb(opciones: { origen: string; email?: string }): Db {
+// `sync`: lo que se escribe es copia de otro sistema (app actual, Zoho) y ya
+// quedó auditado allí: la cabecera x-hub-sync lo deja fuera de hub.auditoria.
+export function hubDb(opciones: { origen: string; email?: string; sync?: boolean }): Db {
   const url = Deno.env.get('SUPABASE_URL') ?? ''
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
   const cab = (extra: Record<string, string> = {}) => ({
@@ -21,6 +25,7 @@ export function hubDb(opciones: { origen: string; email?: string }): Db {
     'Accept-Profile': 'hub', 'Content-Profile': 'hub', 'Content-Type': 'application/json',
     'x-hub-origen': opciones.origen,
     ...(opciones.email ? { 'x-hub-usuario': opciones.email } : {}),
+    ...(opciones.sync ? { 'x-hub-sync': '1' } : {}),
     ...extra,
   })
   async function pedir(method: string, ruta: string, cuerpo?: unknown, prefer?: string) {
@@ -43,6 +48,11 @@ export function hubDb(opciones: { origen: string; email?: string }): Db {
     patch: (ruta, cuerpo) => pedir('PATCH', ruta, cuerpo, 'return=representation'),
     del: async ruta => { await pedir('DELETE', ruta) },
     rpc: (funcion, args) => pedir('POST', `rpc/${funcion}`, args),
+    upsert: async (tabla, clave, filas) => {
+      for (let i = 0; i < filas.length; i += 500) {
+        await pedir('POST', `${tabla}?on_conflict=${clave}`, filas.slice(i, i + 500), 'resolution=merge-duplicates,return=minimal')
+      }
+    },
   }
 }
 

@@ -6,6 +6,7 @@
 //     se ofrece ni se ejecuta: esa área la manda todavía la app actual.
 import { type Db, type Fila, limpio, esUuid, esFecha } from './hub-db.ts'
 import { ejecutarAccionRmm, COMANDOS, type AccionRmm } from './rmm-acciones.ts'
+import { construirInforme, TIPOS } from './informes.ts'
 
 export type Alcance = 'lectura' | 'escritura' | 'admin'
 export const NIVEL: Record<Alcance, number> = { lectura: 1, escritura: 2, admin: 3 }
@@ -573,7 +574,33 @@ const rmm: Herramienta[] = [
   },
 ]
 
-export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...escritura]
+// ── Puesto de mando ─────────────────────────────────────────────────────────
+// El mismo motor de avisos y los mismos informes que el panel y el bot; lo de
+// dinero solo si el dueño del token es admin.
+async function persona(ctx: Contexto) {
+  const [u] = await ctx.db.get(`usuarios?select=id,nombre,email,rol&id=eq.${ctx.usuarioId}`)
+  if (!u) throw new Error('El dueño del token ya no está en el hub')
+  return u as unknown as { id: string; nombre: string; email: string; rol: string }
+}
+const mando: Herramienta[] = [
+  {
+    name: 'avisos', alcance: 'lectura',
+    description: 'Avisos accionables del puesto de mando: presupuestos sin respuesta, trabajos por facturar, tickets sin asignar, alertas RMM, hitos vencidos y, si el dueño del token es admin, facturas vencidas, cobros de mantenimiento torcidos, clientes importantes sin comprar y cierre de mes.',
+    inputSchema: obj({ tipo: S('Filtrar por tipo (p. ej. factura_vencida, alerta_rmm)') }),
+    async ejecutar(a, ctx) {
+      const filas = (await ctx.db.rpc('panorama_direccion', { p_para: ctx.usuarioId })) as Fila[] ?? []
+      return a.tipo ? filas.filter(f => f.tipo === a.tipo) : filas
+    },
+  },
+  {
+    name: 'informe', alcance: 'lectura',
+    description: `Genera un informe del hub (el mismo texto que llega por Telegram, en HTML sencillo). Tipos: ${Object.entries(TIPOS).map(([k, t]) => `${k} (${t.nombre}${t.dinero ? ', solo admins' : ''})`).join(', ')}.`,
+    inputSchema: obj({ tipo: S('Tipo de informe', { enum: Object.keys(TIPOS) }) }, ['tipo']),
+    async ejecutar(a, ctx) { return { texto: await construirInforme(ctx.db, String(a.tipo), await persona(ctx)) } },
+  },
+]
+
+export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...mando, ...escritura]
 
 // Tablas cuyo dueño es la app (no se escribe en ellas desde el hub).
 export async function tablasDeLaApp(db: Db): Promise<Set<string>> {
