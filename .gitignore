@@ -9,3 +9,4 @@ dist/
 supabase/.temp/
 .claude/settings.local.json
 verify-capturas/
+.firebase/
