@@ -1,25 +1,26 @@
 # Plan del sistema unificado de Ok Computer («el hub»)
 
 > Mapa y hoja de ruta para que UNA sola app haga lo que hoy se reparte entre
-> la PWA actual (`okcomputerclaude`), **Notion** y **Zoho One**, y tome las
-> ideas de **OKHUB** (`app.okcomputer.es`, demo de otra empresa: ver
-> `docs/referencias/OKHUB_INVENTARIO.md`). Escrito el 2026-09-27. Es un
-> documento de decisión: en este repo no hay código de ninguna fase todavía.
+> la PWA actual (`okcomputerclaude`), **Notion**, **Zoho One** y la web de
+> **Breeze** (RMM), y tome las ideas de **OKHUB** (`app.okcomputer.es`, demo
+> de otra empresa: ver `docs/referencias/OKHUB_INVENTARIO.md`). Escrito el
+> 2026-09-27. Es un documento de decisión: en este repo no hay código de
+> ninguna fase todavía.
 
 ## 0. Decisiones tomadas
 
 | Decisión | Detalle |
 |---|---|
 | **El hub nace en este repo (`okcomputerhub`)** | `okcomputerclaude` **no se toca**: sigue desplegándose y usándose igual mientras el hub crece. Nada de lo que se haga aquí abre PRs allí. |
-| **Mismo Supabase** | El hub es un frontend nuevo y edge functions nuevas contra el MISMO proyecto Supabase (`okcomputer`, ref `gaksrtxgnuuuvhvgwxue`): comparte clientes, sedes, trabajos, tickets, inventario, usuarios y Auth. Solo **añade** (tablas, columnas nullable, vistas, funciones); nunca altera lo que la app actual lee. Reglas en `CLAUDE.md`. |
-| **Stack: Vite + TypeScript sin framework** | Módulos ES por pantalla, hash-routing `#/ruta`, PWA instalable con service worker. Mismo espíritu que la app actual (JS vanilla) y que OKHUB, para poder **portar** módulos de `okcomputerclaude` cuando toque. |
-| **El hub absorbe módulos poco a poco** | La fase 1 nace solo con lo nuevo (proyectos, MCP, después dirección, bot…) y enlaza a la app actual para el resto. Cada fase porta un módulo más. Al final la app actual redirige al hub y se apaga. |
-| **Sustituir, no integrar** | Notion y las apps de Zoho One (CRM, Desk, Projects, People, Sign, Mail…) se reemplazan por funciones propias. |
-| **Zoho Books también, pero al final** | La facturación fiscal sigue en Books hasta la fase 10. |
-| **Notion hoy** | Pocas páginas sueltas (manuales, procedimientos): basta un editor de páginas con jerarquía y búsqueda. |
-| **Dos piezas imprescindibles, primero** | (1) **Organizador de proyectos y tareas** con el ciclo entero: idea → creación → objetivos → búsqueda de información → roadmap → desarrollo; proyectos internos y de cliente en la misma entidad; la investigación la hace Claude (web + wiki/Drive) y queda en el proyecto con sus fuentes. (2) **MCP para Claude Code** que lea y escriba TODO el sistema con tokens con alcance, y que el sistema pueda **lanzar a Claude Code** y recoger el resultado. |
-| **De OKHUB, todo lo preguntado** | Panel de dirección «qué decidir, ordenado por dinero», comandas, informes programados, bot que consulta el sistema, cobros con recordatorios, portal de clientes, ficha de cliente 360, web conectada + mapa por cobro, MRP + ficha maestra, jornada RD 8/2019 + ausencias + export, gastos con OCR + portal del asesor, RAG + envíos. |
-| **Canal** | **Telegram** para el equipo (bot, informes, botones) y **WhatsApp** para lo que va al cliente (la app actual ya tiene Cloud API; el hub la reutiliza por sus propias funciones `hub-*`). |
+| **Supabase PROPIO, separado del de producción** | El proyecto `okcomputer` (`gaksrtxgnuuuvhvgwxue`) ya va justo de carga y se cae; el desarrollo del hub no puede sumarle nada. El hub usa el proyecto **`okcomputer-hub`** (antes `breeze-rmm`, ref `adomalsxsymxzuozksmt`, eu-west-1, organización en plan Pro), que ya existe y es la base de datos de **Breeze**, el motor RMM. |
+| **El hub se encarga también del RMM** | Consola RMM propia dentro del hub, con Breeze solo como motor (agente + servidor) y leído en la misma base. **OKRMM** (`rmm.oksistemas.online`, el primer motor) **se retira**: los equipos que queden pasan al agente de Breeze. |
+| **Datos de negocio: copia inicial + sync de solo lectura hasta el corte por área** | Clientes, sedes, trabajos, tickets… se cargan desde el backup nocturno de `okcomputer` y se refrescan con una sincronización incremental ligera; cuando un área pasa al hub, se corta y el hub manda. |
+| **Stack: Vite + TypeScript sin framework** | Módulos ES por pantalla, hash-routing `#/ruta`, PWA instalable. Mismo espíritu que la app actual y que OKHUB, para poder **portar** módulos de `okcomputerclaude` cuando toque. |
+| **El hub absorbe módulos poco a poco** | Nace con lo nuevo (proyectos, MCP, monitorización, dirección…) y enlaza a la app actual para el resto. Al final la app actual redirige al hub y se apaga. |
+| **Sustituir, no integrar** | Notion y las apps de Zoho One (CRM, Desk, Projects, People, Sign, Mail…) se reemplazan por funciones propias. **Zoho Books al final** (fase 11). Notion hoy: pocas páginas sueltas. |
+| **Dos piezas imprescindibles, primero** | (1) **Organizador de proyectos y tareas** con el ciclo entero: idea → creación → objetivos → búsqueda de información → roadmap → desarrollo; internos y de cliente; la investigación la hace Claude y queda en el proyecto con fuentes. (2) **MCP para Claude Code** que lea y escriba TODO con tokens con alcance y que el sistema pueda **lanzar a Claude Code** y recoger el resultado. |
+| **De OKHUB, todo lo preguntado** | Panel de dirección «qué decidir, ordenado por dinero», comandas, informes programados, bot, cobros con recordatorios, portal de clientes, cliente 360, web conectada + mapa por cobro, MRP + ficha maestra, jornada RD 8/2019 + ausencias + export, gastos OCR + portal del asesor, RAG + envíos. |
+| **Canal** | **Telegram** para el equipo y **WhatsApp** para el cliente (Cloud API, con secrets propios en este proyecto). |
 
 ## 1. Arquitectura del hub
 
@@ -29,379 +30,356 @@
 okcomputerhub/
 ├─ src/                    Vite + TypeScript, sin framework
 │  ├─ main.ts              arranque, router por hash, registro de módulos
-│  ├─ core/                auth (Supabase Auth compartida), api (PostgREST), estado, mensajería
+│  ├─ core/                auth, api (PostgREST sobre el esquema hub), estado, mensajería
 │  ├─ shell/               menú por grupos, baldosas con número en vivo, buscador, tema, tour
-│  ├─ modulos/<nombre>/    una carpeta por pantalla (proyectos, direccion, clientes…)
+│  ├─ modulos/<nombre>/    una carpeta por pantalla (proyectos, monitorizacion, direccion…)
 │  └─ ui/                  piezas comunes (modal, kanban, vistas, dictado, editor markdown)
 ├─ public/                 manifest, iconos, service worker
 ├─ supabase/
-│  ├─ migrations/          SOLO aditivas, sufijo _hub
-│  └─ functions/           Deno, todas con prefijo hub-, con su propio _shared/
+│  ├─ migrations/          fecha_descripcion.sql, SOLO sobre el esquema hub
+│  └─ functions/           Deno, con _shared/ propio
+├─ scripts/                importar-app.mjs (carga inicial desde el dump), utilidades
 ├─ .github/workflows/      deploy front (Firebase), deploy funciones, aplicar migración
 ├─ .claude/                settings.json, skills (verify), commands
-├─ .mcp.json               conector hub-mcp para Claude Code
+├─ .mcp.json               conector MCP del hub para Claude Code
 └─ docs/
 ```
 
-### 1.2 Backend compartido (las cinco reglas)
+### 1.2 El proyecto Supabase, compartido con Breeze
 
-1. **Aditivo.** Tablas nuevas, columnas nuevas **nullable** y sin default
-   que cambie comportamiento, vistas y funciones nuevas. Nunca renombrar,
-   borrar ni cambiar el significado de una columna o tabla que lea la app
-   actual (`okcomputerclaude`).
-2. **Migraciones con fecha y sufijo `_hub`** (`20261001_proyectos_hub.sql`),
-   para distinguirlas en la base de las del otro repo. Se aplican con el
-   workflow de este repo (mismo secret `SUPABASE_DB_PASSWORD`), en
-   transacción con `ON_ERROR_STOP`. No se editan las ya aplicadas.
-3. **Edge functions con prefijo `hub-`** (`hub-mcp`, `hub-telegram`,
-   `hub-informes`, `hub-lanzar-claude`…). El deploy de `okcomputerclaude`
-   despliega «todas las de su rama» y el de aquí «todas las de la suya»;
-   sin colisión de nombres ninguno pisa al otro. Las funciones viejas
-   (`mcp-server`, `whatsapp-api`, `asistente`…) no se tocan: si el hub
-   necesita algo parecido, lo duplica con prefijo `hub-` y su propio
-   `_shared/`.
-4. **Toda tabla nueva entra en `audit_log`** (el trigger genérico ya
-   existe) y lleva sus políticas RLS. En la lista `SIN_JWT` del workflow del
-   hub solo entra una función si la autoriza otra cosa (firma, secret,
-   código de un solo uso).
-5. **Lo que falte se crea aquí.** Si el hub necesita una vista, una función
-   SQL o un índice que no existe, se crea nuevo en este repo; no se abre PR
-   contra `okcomputerclaude`.
+Lo que hay hoy en `adomalsxsymxzuozksmt` (comprobado el 2026-09-27):
 
-Comprobación automática (fase 0): el arnés del hub falla si una migración
-contiene `ALTER TABLE … DROP | RENAME | ALTER COLUMN` sobre una tabla que no
-haya creado el propio hub.
+- **Breeze** (lanternops/breeze, Docker en el VPS; repo `okcomputer-rmm` =
+  `/opt/breeze`) usa esta base por **Postgres directo**, no por Supabase:
+  394 tablas en `public`, 560 MB, métricas cada 5 min (`device_metrics`,
+  `metric_rollups_*`), 5 equipos, 119 sites, 107 organizaciones. Roles
+  `breeze` (migrador, BYPASSRLS), `breeze_app` (sirve peticiones, con RLS) y
+  `breeze_search`; definidos en `okcomputer-rmm/scripts/db-supabase.sql`.
+- La **capa Supabase está sin usar**: `auth.users` vacío, ninguna edge
+  function, sin `pg_cron`, y la **API REST cerrada sobre `public`** (`anon` y
+  `authenticated` no tienen USAGE; migraciones «neutralizar_api_rest…»).
+  Extensiones ya instaladas: `vector`, `pg_trgm`, `pgcrypto`, `uuid-ossp`,
+  `supabase_vault`.
+- Supabase avisa de **16 tablas de Breeze sin RLS** (`breeze_migrations`,
+  `device_commands`, `patches`, `permissions`…). No están expuestas porque la
+  REST está cerrada sobre `public`, y así tiene que seguir.
 
-### 1.3 Frontend, dominio y convivencia
+**Las seis reglas del proyecto compartido** (también en `CLAUDE.md`):
 
-- **Firebase Hosting**: sitio nuevo en el mismo proyecto de Firebase (el
-  id `okcomputerhub` ya lo usa el redirect del dominio antiguo, así que
-  otro, p. ej. `okhub-tenerife`) y dominio propio, p. ej.
-  `hub.okcomputertenerife.com`. `app.okcomputer.es` es de otra empresa.
-- **Misma Auth**: los mismos usuarios entran con la misma cuenta;
-  `usuarios.rol` manda; la RLS existente cubre las tablas viejas.
-- **Convivencia**: cada pantalla que el hub aún no tiene es un **enlace a la
-  app actual** (`https://okcomputertenerife.web.app`). Son dos orígenes, así
-  que hasta tener SSO (pasar la sesión de Supabase por URL al saltar) se
-  entra dos veces. Cada fase porta un módulo más; la app actual se apaga
-  cuando no quede nada.
+1. **`public` es de Breeze.** El hub no crea, altera ni concede nada en
+   `public`, no expone `public` en la API REST y no toca los roles `breeze`,
+   `breeze_app`, `breeze_search` ni `db-supabase.sql`.
+2. **Todo lo del hub vive en el esquema `hub`** (`hub.proyectos`,
+   `hub.clientes`…): se expone `hub` en PostgREST (Settings → API → schemas
+   expuestos), con grants a `authenticated` y `service_role` solo en ese
+   esquema, RLS en todas sus tablas y auditoría propia (`hub.auditoria`, con
+   un trigger genérico portado de `audit_log` de la app actual).
+3. **Leer Breeze, no escribirle.** Vistas `hub.rmm_*` (propiedad de
+   `postgres`, que salta la FORCE RLS de Breeze) sobre `public.devices`,
+   `sites`, `organizations`, `alerts`, `device_metrics`/`metric_rollups`,
+   `device_patches`, `software_inventory`, `remote_sessions`,
+   `device_commands`… Cualquier acción sobre un equipo (comando, script,
+   sesión remota, acuse de alerta) va por la **API REST de Breeze** desde
+   una edge function con usuario de servicio (como hacía `breeze-sync`),
+   nunca por UPDATE en `public`.
+4. **Migraciones con fecha** (`supabase/migrations/20261001_proyectos.sql`),
+   aplicadas a mano con el workflow «Aplicar migración» de este repo (secret
+   `HUB_DB_PASSWORD`, transacción con `ON_ERROR_STOP`). Ninguna contiene
+   `public.`; el arnés lo comprueba.
+5. **Edge functions** en `supabase/functions/<nombre>/index.ts` (sin prefijo:
+   el proyecto no tenía ninguna) con `_shared/` propio (`http.ts` CORS + JWT
+   de sesión, `mensajeria.ts`, `acciones.ts`). Lista `SIN_JWT` en el workflow
+   solo para las que autoriza otra cosa (firma, secret, código de un uso).
+6. **Se habilita `pg_cron`** en el proyecto (sincronización, informes).
+
+### 1.3 Auth y usuarios
+
+Supabase Auth del proyecto (hoy vacía): se dan de alta los empleados con el
+mismo correo que en la app actual (email/contraseña y Google, con el Client
+ID existente del proyecto GCP 508620194342 añadiendo la redirect URL del
+hub). `hub.usuarios` (portada de `usuarios`) guarda rol y nombre.
+
+### 1.4 Datos de negocio: copia inicial + sincronización hasta el corte
+
+- Las tablas de negocio se recrean en `hub` por migraciones del hub con
+  **los mismos nombres de columnas** que en `okcomputer`: así el sync es
+  columna a columna y el porte de cada módulo no cambia consultas.
+- **Carga inicial**: `scripts/importar-app.mjs` toma el backup nocturno de
+  `okcomputer` (`pg_dump -Fc --schema=public`, workflow `backup.yml`), lo
+  pasa a SQL plano (`pg_restore -f`), renombra `public.` → `app_import.`,
+  lo carga en el esquema temporal `app_import` del hub, vuelca a `hub.*` y
+  borra `app_import`. Repetible; no toca la base viva de producción.
+- **Sync**: edge function `sync-app` lanzada por `pg_cron` cada 15 min:
+  lectura incremental del PostgREST de `okcomputer` (service key guardada en
+  el Vault, filtro `updated_at > último corte` por tabla; las tablas sin
+  `updated_at`, una pasada nocturna), escritura en `hub.*`. Solo deltas: la
+  carga sobre producción es mínima. Un sync que falla no mueve el corte.
+- **Corte por área**: tabla `hub.areas` (área, dueño `app` | `hub`, fecha).
+  Mientras el dueño sea `app`, el hub enseña esa área en solo lectura y el
+  sync la refresca; al cortar, el hub manda, el sync la salta y en la app
+  actual deja de usarse esa pantalla (regla de equipo, sin tocar su código).
+  Ninguna escritura del hub sobre un área cuyo dueño sea `app`.
+
+### 1.5 Frontend, dominio y convivencia
+
+- **Firebase Hosting**: sitio nuevo en el mismo proyecto de Firebase (el id
+  `okcomputerhub` ya lo usa el redirect del dominio antiguo; otro id, p. ej.
+  `okhub-tenerife`) y dominio propio (p. ej. `hub.okcomputertenerife.com`).
+  `app.okcomputer.es` es de otra empresa.
+- Cada pantalla que el hub aún no tiene es un **enlace a la app actual**
+  (`https://okcomputertenerife.web.app`). Son dos orígenes y dos Auth: se
+  entra dos veces mientras convivan.
 - **Portar, no reescribir a ciegas**: los módulos de `okcomputerclaude`
-  (`public/js/modules/*.js`) y su código compartido de funciones
-  (`supabase/functions/_shared/*.ts`) se copian al hub cuando les toque,
-  pasándolos a TypeScript y a la estructura nueva; se conserva lo que ya
-  funciona (reglas de fichaje, de inventario, de mantenimiento…).
+  (`public/js/modules/*.js`) y su `_shared/*.ts` se copian aquí cuando les
+  toque, pasándolos a TypeScript y conservando sus reglas de negocio.
 
 ## 2. Mapa de cobertura
 
-Inventario de la app actual hecho el 2026-09-27 (páginas de `app.js`,
-tablas de `supabase/migrations`, funciones Zoho). **Fase** = en cuál se cierra
-el hueco; **Vive en** = en qué fase el hub pasa a ser el dueño de esa área
-(hasta entonces, enlace a la app actual).
+**Fase** = en cuál se cierra el hueco; **Vive en el hub desde** = cuándo el hub
+pasa a ser el dueño del área (corte en `hub.areas`).
 
 | Área | Ya en la app actual | Referencia | Hueco | Fase | Vive en el hub desde |
 |---|---|---|---|---|---|
-| **Proyectos (ciclo completo)** | `tareas` (lista/kanban, recurrentes), `lista_dia`, `trabajos`, `agenda`, `tablero_notas` | Notion (tableros), Zoho Projects | Entidad `proyectos` con fases idea → objetivos → investigación → roadmap → desarrollo, objetivos, páginas de investigación con fuentes, hitos, tablero de tareas por proyecto, coste real | **1** | 1 (nuevo) |
-| **MCP completo** | `mcp-server` (10 herramientas, un token, escrituras solo ticket/tarea) | — | Escritura sobre todo el sistema con tokens con alcance y auditoría; lanzar Claude Code desde la app y recoger resultados | **1** | 1 (`hub-mcp`) |
-| Panel de dirección | `dashboard`, `informes` (resumen mensual fijo), `os/avisos.js` | OKHUB Panel de dirección | Tarjetas de dinero, avisos accionables por importe, ventas 12 meses, margen por familia, cuentas grandes, «lo último» | 2 | 2 |
-| Bot + informes programados | `asistente` (apagado), repaso matinal (Routine), push cada 15 min | OKHUB Asistente + Informes por Telegram | Bot Telegram interno, informes con hora/días/destinatarios/regla y «Enviar ahora», pedir informes en lenguaje natural | 2 | 2 |
-| Cliente 360 + CRM | `clientes`, `contactos`, `oportunidades` (kanban), `captar-lead`, `captacion.html` | Zoho CRM, OKHUB Clientes | `actividades` con línea de tiempo, clase A/B/C, «lo siguiente», pipelines configurables, previsión | 3 | 3 (se portan clientes, contactos, oportunidades, mapa) |
-| Cobros | `facturas.js` (Zoho en vivo), `mant_facturas`, Cobros de mantenimiento | OKHUB Cobros | Deuda por cliente, recordatorios automáticos al cliente y aviso interno, Recordar/Cobrada | 3 | 3 (la parte Stripe sigue en la app actual hasta la 10) |
-| Web conectada + mapa | `captacion.html`, `whatsapp-webhook`, `mapa.js` | OKHUB Tu web + Mapa | Bandeja de leads con dueño, catálogo publicado con stock real, capa de mapa por cobro | 3 | 3 |
-| Wiki + RAG | `conocimiento` (lista plana), `tablero_notas` | Notion, OKHUB Buscador de documentos | Páginas jerárquicas con versiones y búsqueda; índice Drive + wiki con respuestas citando fuente | 4 | 4 (se portan conocimiento y tablero) |
-| Desk | `tickets` (+ comentarios, adjuntos, kanban), WhatsApp → ticket, RMM → ticket | Zoho Desk | SLA, respuestas predefinidas, correo → ticket, satisfacción | 5 | 5 (se portan tickets y bandeja WhatsApp) |
-| Portal de clientes | portal de Stripe (solo pago), `firma.html` | OKHUB Portal de tus clientes | Tickets, presupuestos, facturas, contratos, «lo de siempre», seguimiento; accesos invitables | 6 | 6 (nuevo) |
-| Comandas | la voz crea tareas de una en una, `ui/dictado.js` | OKHUB Comandas | Audio → N tareas asignadas, tablero por persona | 7 | 7 (se portan tareas y lista del día) |
-| Almacén / MRP / envíos | `furgoneta_*` (todo movimiento deja registro), `catalogo`, `proveedores`, `pedidos_compra`, `lista_pedidos` | OKHUB Maestro, Inventario, MRP, Envíos | Mínimo/cobertura, consumo semanal, «se agota en N días», sugerencias por proveedor, en camino, ubicaciones; envíos | 8 | 8 (se portan inventario, catálogo, proveedores, compras) |
-| People / Admin / Sign | `usuarios`, `sesiones` (fichaje por trabajo), `gastos`, `firma-contrato` | Zoho People / Sign, OKHUB Fichajes, Gastos, Portal del asesor | Jornada RD 8/2019, ausencias, OCR de tickets, cierre mensual y accesos de la gestoría, firma de cualquier documento | 9 | 9 (se portan usuarios, fichaje, gastos, contratos/firma) |
-| Facturación | Todo en Zoho Books (15 funciones, sin tabla local de facturas de venta) | Zoho Books | Facturas propias, series, IGIC, Verifactu, PDF, cobros, export contable | 10 | 10 (se portan presupuestos, facturas, mantenimiento Stripe) |
-| Trabajos, calendario, RMM, chat, modo calle, APK | Completo en la app actual | — | Nada que sustituir: es lo más grande y lo que más usan los técnicos | Final | Al final, y entonces la app actual redirige al hub |
-| Fuera (por ahora) | RMM cubre «Sistemas» | OKHUB Cámaras/NVR, Flota GPS, Conexiones ERP, alarma/tornos | No se copia | — | — |
+| **Proyectos (ciclo completo)** | `tareas`, `lista_dia`, `trabajos`, `agenda`, `tablero_notas` | Notion, Zoho Projects | Entidad `proyectos` con fases idea → objetivos → investigación → roadmap → desarrollo, objetivos, páginas de investigación con fuentes, hitos, tablero de tareas, coste real | **1** | 1 (nuevo) |
+| **MCP completo** | `mcp-server` (10 herramientas, un token, escrituras solo ticket/tarea) | — | Escritura sobre todo el sistema con tokens con alcance y auditoría; lanzar Claude Code y recoger resultados | **1** | 1 (nuevo) |
+| **Monitorización (RMM)** | Pestaña Monitor. sobre `rmm_*` rellenadas por `breeze-sync`/`breeze-hook` (Breeze) y `rmm-agente` (OKRMM); color RMM en Sitios y Mapa | Breeze (motor), OKHUB Sistemas | Consola propia sobre las tablas de Breeze en la misma base: sedes con estado, equipos, alertas → tickets, parches, software (versión TPV), comandos/scripts, remoto; OKRMM se retira | **2** | 2 (se porta Monitor.; `breeze-sync`, `breeze-hook`, `rmm_*` y `rmm-agente` quedan sin uso) |
+| Panel de dirección | `dashboard`, `informes`, `os/avisos.js` | OKHUB Panel de dirección | Tarjetas de dinero, avisos accionables por importe, ventas 12 meses, margen por familia, cuentas grandes, «lo último» | 3 | 3 |
+| Bot + informes programados | `asistente` (apagado), repaso matinal (Routine), push | OKHUB Asistente + Informes | Bot Telegram, informes con hora/días/destinatarios/regla y «Enviar ahora», alta en lenguaje natural | 3 | 3 |
+| Cliente 360 + CRM | `clientes`, `contactos`, `oportunidades`, `captar-lead` | Zoho CRM, OKHUB Clientes | `actividades` con línea de tiempo, clase A/B/C, «lo siguiente», pipelines configurables, previsión | 4 | 4 (clientes, contactos, sitios, oportunidades, mapa) |
+| Cobros | `facturas.js` (Zoho en vivo), `mant_facturas` | OKHUB Cobros | Deuda por cliente, recordatorios automáticos, Recordar/Cobrada | 4 | 4 (la parte Stripe sigue en la app hasta la 11) |
+| Web conectada + mapa | `captacion.html`, `whatsapp-webhook`, `mapa.js` | OKHUB Tu web + Mapa | Leads con dueño, catálogo con stock real, capa de mapa por cobro | 4 | 4 |
+| Wiki + RAG | `conocimiento`, `tablero_notas` | Notion, OKHUB Buscador | Páginas jerárquicas con versiones; índice Drive + wiki con respuestas citando fuente (`vector` ya instalado) | 5 | 5 (conocimiento, tablero) |
+| Desk | `tickets`, WhatsApp → ticket, RMM → ticket | Zoho Desk | SLA, respuestas predefinidas, correo → ticket, satisfacción | 6 | 6 (tickets, bandeja WhatsApp) |
+| Portal de clientes | portal Stripe, `firma.html` | OKHUB Portal | Tickets, presupuestos, facturas, contratos, «lo de siempre», seguimiento | 7 | 7 (nuevo) |
+| Comandas | voz crea tareas de una en una | OKHUB Comandas | Audio → N tareas asignadas, tablero por persona | 8 | 8 (tareas, lista del día) |
+| Almacén / MRP / envíos | `furgoneta_*`, `catalogo`, `proveedores`, `pedidos_compra` | OKHUB Maestro, Inventario, MRP, Envíos | Mínimo/cobertura, consumo semanal, «se agota en N días», sugerencias por proveedor, en camino; envíos | 9 | 9 (inventario, catálogo, proveedores, compras) |
+| People / Admin / Sign | `usuarios`, `sesiones`, `gastos`, `firma-contrato` | Zoho People / Sign, OKHUB Fichajes, Gastos, Portal asesor | Jornada RD 8/2019, ausencias, OCR, cierre mensual y accesos de la gestoría, firma de documentos | 10 | 10 (usuarios, fichaje, gastos, contratos/firma) |
+| Facturación | Todo en Zoho Books (15 funciones) | Zoho Books | Facturas propias, series, IGIC, Verifactu, PDF, cobros, export contable | 11 | 11 (presupuestos, facturas, mantenimiento Stripe) |
+| Trabajos, calendario, chat, modo calle, APK | Completo en la app actual | — | Nada que sustituir; lo más grande y lo que más usan los técnicos | Final | Final; entonces la app actual redirige al hub |
+| Fuera (por ahora) | — | OKHUB Cámaras/NVR, Flota GPS, Conexiones ERP | No se copia | — | — |
 
 ## 3. Fases
 
-Cada fase es desplegable sola, con su migración `_hub`, sus funciones
-`hub-*`, su arnés de verificación y su nota en `CLAUDE.md`. Estimaciones
-orientativas (semanas de una persona con Claude Code).
+Cada fase es desplegable sola, con su migración sobre `hub`, sus funciones,
+su arnés y su nota en `CLAUDE.md`. Estimaciones orientativas (semanas de una
+persona con Claude Code). «Se porta» = migración de sus tablas a `hub` (ya
+cargadas por el sync), corte del área en `hub.areas` y pantalla en el hub.
 
-### Fase 0 · Cimientos del repo (1-2 semanas)
+### Fase 0 · Cimientos (2 semanas)
 
-- Scaffold Vite + TypeScript + PWA (manifest, service worker, instalable,
-  «sin red» visible). Sin framework; módulos ES por pantalla; hash-routing.
-- **Login** con la Auth compartida de Supabase (email/contraseña y Google,
-  los mismos que la app actual); lectura de `usuarios` para rol y nombre.
-- **Shell** como OKHUB: menú por grupos, inicio de baldosas con su número
-  en vivo (cada módulo expone `contador()` → valor, subtítulo, tono),
-  buscador de módulos, párrafo explicativo por pantalla, tema claro/oscuro,
-  tour de primeras veces.
-- **Capa de datos**: cliente PostgREST con timeout (10 s lectura, 30 s
-  escritura), reintento al caducar el JWT y paginación más allá de 1000
-  filas (portado de `public/js/api.js` de la app actual, en TS).
-- **Enlaces a la app actual** para todo lo que el hub aún no tiene (grupo
-  «App actual» en el menú).
-- **Workflows**: deploy del front a un sitio nuevo de Firebase Hosting;
-  deploy de funciones `hub-*` (con lista `SIN_JWT`); aplicar migración por
-  nombre. Mismos secrets que el otro repo.
-- `.claude/settings.json` (permisos para sesiones desatendidas, deniega lo
-  destructivo), `.mcp.json` apuntando a `hub-mcp` (fase 1) y skill `verify`
-  (Playwright + Chromium con la red de Supabase interceptada y fixtures,
-  portado de `.claude/skills/verify/` de la app actual) + la comprobación
-  de migraciones aditivas.
-- Fuera del código: exportar Notion (zip) y Zoho CRM/Desk/Projects (CSV);
-  crear el bot de Telegram (BotFather); decidir dominio.
+- Proyecto Supabase: renombrar a `okcomputer-hub` (panel), habilitar
+  `pg_cron`, crear el esquema `hub` y exponerlo en la API, grants solo sobre
+  `hub`, `hub.usuarios`, `hub.areas`, `hub.auditoria` + trigger genérico.
+  Alta de usuarios en Auth y Google OAuth.
+- **Carga inicial** con `scripts/importar-app.mjs` desde el último dump y
+  **`sync-app`** con `pg_cron` cada 15 min. Tablas de negocio en `hub` con las
+  mismas columnas que en `okcomputer`.
+- Scaffold Vite + TS + PWA; login; **shell** (menú por grupos, baldosas con
+  número en vivo vía `contador()`, buscador de módulos, párrafo explicativo
+  por pantalla, tema, tour); capa de datos (`src/core/api.ts`, portada de
+  `public/js/api.js`: timeout, reintento de JWT, paginación) apuntando al
+  esquema `hub` (cabecera `Accept-Profile`/`Content-Profile`).
+- Enlaces a la app actual para todo lo que aún no existe.
+- Workflows: Firebase Hosting (sitio nuevo), deploy de funciones con
+  `SIN_JWT`, aplicar migración. Secrets nuevos del proyecto.
+- `.claude/settings.json`, `.mcp.json`, skill `verify` (Playwright + Chromium
+  con la red interceptada; portado de la app actual) y la comprobación
+  «ninguna migración toca `public` ni los roles de Breeze».
+- Fuera del código: exportar Notion y Zoho; bot de Telegram; dominio.
 
 ### Fase 1 · Organizador de proyectos + MCP completo (3-4 semanas) — LA BASE
 
 **Proyectos.**
 
-- Migración `…_proyectos_hub.sql`:
-  - `proyectos`: `tipo` (`interno` / `cliente`), `cliente_id` y `local_id`
-    opcionales, `responsable`, `estado` = fase del ciclo (`idea` →
-    `definicion` → `investigacion` → `roadmap` → `desarrollo` → `cerrado`),
-    `fecha_inicio`, `fecha_objetivo`, `presupuesto`, `presupuesto_id`,
-    `descripcion`.
-  - `proyecto_objetivos` (texto, métrica, `hecho`, `orden`),
-    `proyecto_hitos` (roadmap: nombre, fecha objetivo, estado, `orden`),
-    `proyecto_paginas` (investigación, decisiones, notas en markdown con
-    `fuentes` jsonb y `autor` persona/Claude; en la fase 4 se funden con la
-    wiki).
-  - `proyecto_id` (FK **nullable**) en `tareas`, `trabajos`, `agenda`,
-    `gastos`, `presupuestos`, `tickets`: columnas aditivas, permitidas por
-    la regla 1; la app actual las ignora.
-  - RLS, `audit_log` para las cuatro tablas.
-- Pantalla `proyectos` (`src/modulos/proyectos/`): lista y **kanban por
-  fase** (aquí nace el motor de vistas compartido lista/kanban/calendario),
-  ficha con pestañas **Idea · Objetivos · Investigación · Roadmap · Tareas
-  · Trabajos/Presupuestos/Gastos · Coste** (hitos + Gantt simple sobre
-  `agenda`; coste real = horas de `sesiones` × tarifa + `documento_lineas` +
-  `gastos` frente a `presupuesto`), botones **«Investigar»** y
-  **«Desarrollar esta fase»**, bandeja de ideas con alta rápida (voz y, en
-  la fase 2, Telegram) y tablero de tareas por persona **Pendiente / En
-  curso / Hecho** (el mismo de las comandas de la fase 7).
+- Migración `…_proyectos.sql` en `hub`: `proyectos` (`tipo` interno/cliente,
+  `cliente_id`/`local_id` opcionales, `responsable`, `estado` = `idea` →
+  `definicion` → `investigacion` → `roadmap` → `desarrollo` → `cerrado`,
+  fechas, `presupuesto`, `presupuesto_id`, `descripcion`),
+  `proyecto_objetivos` (texto, métrica, `hecho`, `orden`), `proyecto_hitos`
+  (nombre, fecha objetivo, estado, `orden`), `proyecto_paginas` (markdown +
+  `fuentes` jsonb + `autor` persona/Claude; en la fase 5 se funden con la
+  wiki), y `proyecto_id` nullable en `hub.tareas`, `hub.trabajos`,
+  `hub.agenda`, `hub.gastos`, `hub.presupuestos`, `hub.tickets`. RLS y
+  auditoría.
+- Pantalla `proyectos`: lista y **kanban por fase** (aquí nace el motor de
+  vistas lista/kanban/calendario), ficha con pestañas **Idea · Objetivos ·
+  Investigación · Roadmap (hitos + Gantt simple) · Tareas · Trabajos /
+  Presupuestos / Gastos · Coste** (horas de `sesiones` × tarifa +
+  `documento_lineas` + `gastos` frente a `presupuesto`), botones
+  **«Investigar»** y **«Desarrollar esta fase»**, bandeja de ideas con alta
+  rápida, tablero de tareas por persona Pendiente / En curso / Hecho.
 
-**MCP completo (`hub-mcp`).**
+**MCP completo (`mcp`).**
 
-- Función nueva `hub-mcp` (servidor MCP streamable HTTP sin estado, como
-  `mcp-server`, que no se toca). `.mcp.json` de este repo apunta a ella.
-- **Tokens con alcance**: tabla `mcp_tokens` (hash, nombre, alcance
-  `lectura` / `escritura` / `admin`, `usuario_id` al que se atribuyen las
-  escrituras, `expira`, `ultimo_uso`). Toda escritura queda en `audit_log`
+- Edge function `mcp` (servidor MCP streamable HTTP sin estado; patrón de
+  `mcp-server` de la app actual, portado). `.mcp.json` apunta a ella.
+- `hub.mcp_tokens` (hash, nombre, alcance `lectura` / `escritura` / `admin`,
+  `usuario_id`, `expira`, `ultimo_uso`); toda escritura en `hub.auditoria`
   con ese usuario.
-- **Herramientas de dominio, no SQL libre**: `proyecto_*` (crear, listar,
-  detalle, objetivos, hitos, página, cambiar fase, registrar resultado),
-  `tarea_*`, `ticket_*`, `trabajo_*`, `cliente_*`, `presupuesto_*`,
-  `wiki_*` (fase 4), `informe_*` (fase 2), `agenda_*`, `buscar` global y
-  `esquema` (tablas, campos y valores permitidos, para que Claude Code se
-  oriente solo). Lista blanca de campos por tabla en un único catálogo de
-  acciones (`supabase/functions/_shared/acciones.ts`) que después
-  comparten voz, bot y MCP.
-- **Lanzar Claude Code desde la app**: tabla `claude_peticiones`
-  (`proyecto_id`, `tipo` = `investigar` / `desarrollar` / `revisar`, prompt
-  generado con el contexto del proyecto, `estado`, `resultado`, `enlace`).
-  Función `hub-lanzar-claude`: crea un issue en **este repo** con etiqueta
-  `claude-proyecto` y el id (token de GitHub en secret, nunca en el
-  navegador) y, si existe `CLAUDE_CODE_API_KEY`, abre además una sesión
-  por la API de Claude Code Remote. Una **Routine** de la cuenta de Claude
-  recoge los issues, trabaja y **devuelve el resultado por el MCP**
-  (`proyecto_registrar_resultado`: página de investigación con fuentes,
-  enlace a la PR, hitos actualizados) y cierra el issue.
-- `docs/MCP.md`: alcances, catálogo de herramientas y el ciclo petición →
-  issue → resultado.
+- Herramientas de dominio (`proyecto_*`, `tarea_*`, `ticket_*`, `trabajo_*`,
+  `cliente_*`, `presupuesto_*`, `wiki_*`, `informe_*`, `agenda_*`, `rmm_*`
+  en la fase 2, `buscar`, `esquema`), nunca SQL libre; lista blanca de
+  campos en `_shared/acciones.ts`, compartida por voz, bot y MCP. Las
+  escrituras respetan `hub.areas` (rechazan un área cuyo dueño sea `app`).
+- `hub.claude_peticiones` (`proyecto_id`, `tipo` investigar / desarrollar /
+  revisar, prompt, estado, resultado, enlace) + función `lanzar-claude`
+  (issue en este repo con etiqueta `claude-proyecto`; opcionalmente sesión
+  por la API de Claude Code Remote). Una Routine de Claude recoge, trabaja y
+  devuelve por el MCP (`proyecto_registrar_resultado`).
+- `docs/MCP.md`.
 
-**Verificación**: `verify-proyectos.mjs` (ficha, kanban por fase, objetivos,
-hitos, coste) y prueba de `hub-mcp` con `curl` (listar herramientas, crear
-proyecto con token de escritura, rechazo con token de lectura, fila en
-`audit_log`).
+### Fase 2 · Monitorización: consola RMM sobre Breeze (2-3 semanas)
 
-### Fase 2 · Puesto de mando y canal (3 semanas) — se porta el dashboard
+- Vistas `hub.rmm_equipos`, `hub.rmm_sites`, `hub.rmm_alertas`,
+  `hub.rmm_metricas` (con ventana de tiempo), `hub.rmm_parches`,
+  `hub.rmm_software`, `hub.rmm_sesiones_remotas`, `hub.rmm_comandos` sobre
+  `public` de Breeze (propiedad de `postgres`, SELECT a `authenticated`,
+  sin tocar `public`). Se revisan en cada salto de versión de Breeze
+  (`okcomputer-rmm/VERSIONES.md`).
+- `hub.rmm_sitios` (Site de Breeze ⇆ `hub.locales`, portado de
+  `rmm_breeze_sitios`: emparejado por nombre, `local_id` a mano no se pisa) y
+  `hub.rmm_estado_local` (misma regla que hoy: conectado si checkin en el
+  último cuarto de hora).
+- Pantalla `monitorizacion`: sedes con estado, equipos (hardware, discos,
+  SO, antivirus, parches pendientes, software con versión del TPV cruzada
+  con `programa_tpv`), alertas con «Crear ticket» y acuse, sesiones remotas
+  (RustDesk), comandos y scripts. Pestaña Monitor. en la ficha del sitio;
+  color RMM en Sitios y Mapa.
+- Función `breeze-api`: login de servicio contra `breeze.oksistemas.online`
+  para lo que escribe (comandos, scripts, acuse); secrets en este proyecto.
+- Alertas como fuente del panel de dirección y del bot (fase 3).
+- **Retirada de OKRMM**: inventario de equipos que sigan en OKRMM, alta en
+  Breeze con el procedimiento de `okcomputer-rmm/agente/`, y `rmm-agente`,
+  `rmm_altas`, `rmm_sondas` no se portan. `breeze-sync`/`breeze-hook` de la
+  app actual siguen hasta que Monitor. deje de usarse allí.
 
-- **Motor de avisos accionables** (`hub-panorama` o vista SQL): cada aviso
-  con tipo, importe, texto en lenguaje natural, detalle y acción.
-  Fuentes: presupuesto enviado sin respuesta, factura vencida (Zoho
-  `overdue`), cliente A sin comprar N días, stock bajo mínimo, ticket sin
-  asignar o urgente, cobro de mantenimiento torcido (`mant_cobros_estado`),
-  lead web sin contestar (fase 3), **hito de proyecto vencido**, cierre del
-  mes pendiente (fase 9). La MISMA lista para el panel, el bot y los
-  informes.
-- **Pantalla `direccion`** (solo admin): 4 tarjetas de dinero (ventas del
-  mes vs mismo mes del año anterior y «hoy llevas»; margen frente a
-  objetivo; dinero en la calle con lo vencido; en juego), lista de avisos
-  por importe con botón que abre la ficha, ventas 12 meses con rayita del
-  año anterior, margen por familia del `catalogo`, cuentas grandes con cómo
-  pagan, «lo último que ha pasado» desde `audit_log`. Hasta la fase 10 las
-  cifras de facturación salen de Zoho (función `hub-zoho-lectura`, solo
-  lectura, duplicada de `_shared/zoho.ts`).
-- **Canal**: `hub-telegram` (webhook, `SIN_JWT`, autorizado por el secret
-  de webhook de Telegram; usuario emparejado con código de un solo uso
-  guardado en una tabla nueva `telegram_vinculos`, no en `usuarios`).
-  Consultas en lenguaje natural sobre los mismos datos del panel y botones
-  inline para fichar, marcar hecho, aprobar, «en 1 hora». Lo que va al
-  **cliente** por WhatsApp: `hub-whatsapp` (envío por Cloud API con los
-  mismos secrets de Meta). Capa común `_shared/mensajeria.ts`:
-  `enviar(destino, texto, botones)` elige Telegram / WhatsApp / push.
-- **Informes programados**: tabla `informes_programados` (nombre, tipo,
-  hora, días, destinatarios, regla «solo si hay algo», activo) +
-  `hub-informes` lanzada por pg_cron cada 15 min. Tipos iniciales: ventas
-  de ayer, cierre del día, qué comprar, recordatorio de fichaje, cobros
-  vencidos, **estado de proyectos**, repaso matinal por persona. Pantalla
-  con «Enviar ahora» y «Pedir uno nuevo» en lenguaje natural.
-- Se porta: dashboard («Hoy») y centro de avisos.
+### Fase 3 · Puesto de mando y canal (3 semanas) — se porta el dashboard
 
-### Fase 3 · Ventas: cliente 360, cobros y web (3-4 semanas) — sustituye Zoho CRM
+- Motor de avisos accionables (`panorama_direccion`): presupuesto sin
+  respuesta, factura vencida (Zoho `overdue`, leído por `zoho-lectura`),
+  cliente A sin comprar, stock bajo mínimo, ticket sin asignar, cobro de
+  mantenimiento torcido, lead web sin contestar, **alerta RMM crítica**,
+  **hito de proyecto vencido**, cierre del mes pendiente. Misma lista para
+  panel, bot e informes.
+- Pantalla `direccion`: 4 tarjetas de dinero, avisos por importe con botón,
+  ventas 12 meses vs año anterior, margen por familia, cuentas grandes, «lo
+  último» desde `hub.auditoria`.
+- Canal: `telegram-bot` (webhook, `SIN_JWT`, secret de Telegram;
+  `hub.telegram_vinculos`), `whatsapp` (Cloud API), `_shared/mensajeria.ts`.
+- Informes programados: `hub.informes_programados` + `informes-enviar` por
+  `pg_cron`; tipos: ventas de ayer, cierre del día, qué comprar, recordatorio
+  de fichaje, cobros vencidos, estado de proyectos, **resumen RMM**, repaso
+  matinal por persona; «Enviar ahora» y «Pedir uno nuevo».
 
-- **`actividades`** (tipo llamada / WhatsApp / email / reunión / nota /
-  sistema, `cliente_id`, `contacto_id`, `oportunidad_id`, `ticket_id`,
-  `proyecto_id`, fecha, texto, resultado, próxima acción, origen). Línea
-  de tiempo que además proyecta `wa_mensajes`, trabajos y tickets.
-- **Ficha 360**: clase A/B/C por facturación del año, saldo y vencido
-  (Zoho), «lo siguiente que hay que hacer», pestañas al estilo OKHUB (qué
-  compra, presupuestos/trabajos, cobros, tickets, envíos, comandas de hoy,
-  dónde está, histórico) y «Apuntar lo de hoy» + Llamar / Escribir.
-- **Pipelines configurables** (`crm_config`) para `oportunidades`;
-  previsión ponderada en `direccion`; importación CSV de Zoho CRM por NIF.
-- **Cobros**: pantalla `cobros` (facturas de Zoho + `mant_facturas`),
-  estados al día / vence pronto / vencida con nº de avisos; recordatorio
-  automático 3 días antes y al vencer (`cobros_recordatorios`, pg_cron):
-  WhatsApp con **plantilla aprobada** o email; aviso interno por Telegram;
-  botones Recordar / Cobrada.
-- **Web conectada**: bandeja `leads_web` (formulario de captación,
-  formularios de la web, WhatsApp de la web); Convertir en cliente / Pasar
-  a un comercial / Descartar. Capa «estado de cobro» en el Mapa.
-- Se portan: clientes, contactos, sitios (ficha), oportunidades, mapa.
+### Fase 4 · Ventas: cliente 360, cobros y web (3-4 semanas) — sustituye Zoho CRM
 
-### Fase 4 · Wiki y buscador de documentos (2-3 semanas) — sustituye Notion
+- `hub.actividades` con línea de tiempo; ficha 360 (clase A/B/C, saldo y
+  vencido de Zoho, «lo siguiente», pestañas al estilo OKHUB, «apuntar lo de
+  hoy»); pipelines configurables; importación CSV de Zoho CRM.
+- `cobros` (facturas de Zoho + `mant_facturas`), recordatorios automáticos
+  (`hub.cobros_recordatorios`, WhatsApp con plantilla o email), aviso interno.
+- `hub.leads_web` desde el formulario de captación, la web y el WhatsApp de
+  la web; capa «estado de cobro» en el Mapa.
+- Se portan: clientes, contactos, sitios, oportunidades, mapa.
 
-- `paginas` (jerarquía, markdown, `proyecto_id` opcional, autor) +
-  `paginas_versiones` + búsqueda `tsvector`; adjuntos en Storage. Las
-  `proyecto_paginas` pasan a ser páginas con `proyecto_id`.
-- Editor markdown ligero con vista previa, árbol lateral, enlaces
-  `[[página]]`, dictado. Importador del zip de Notion.
-- **RAG**: `hub-documentos-indexar` (carpeta de Drive por la cuenta de
-  servicio existente + wiki) → `documentos_fragmentos` con `pgvector`;
-  `hub-documentos-preguntar` responde citando fragmento y documento.
-  Herramienta del bot, del asistente y del MCP; la investigación de
-  proyectos la usa junto a la búsqueda web.
+### Fase 5 · Wiki y buscador de documentos (2-3 semanas) — sustituye Notion
+
+- `hub.paginas` (jerarquía, markdown, `proyecto_id`, versiones, `tsvector`),
+  editor ligero, importador del zip de Notion.
+- RAG con `vector` (ya instalado): `documentos-indexar` (Drive + wiki) →
+  `hub.documentos_fragmentos`; `documentos-preguntar` cita fragmento y
+  documento; herramienta del bot, del asistente y del MCP.
 - Se portan: conocimiento (migrado a páginas) y tablero de notas.
 
-### Fase 5 · Desk (2-3 semanas) — sustituye Zoho Desk
+### Fase 6 · Desk (2-3 semanas) — sustituye Zoho Desk
 
-- `sla_config` por prioridad, `primera_respuesta_at` y `vence_at` en
-  `tickets` (columnas aditivas), cronómetro, aviso en `direccion` y bot.
-- `ticket_plantillas`, `ticket_valoraciones`, `hub-mail-to-ticket` (Gmail
-  push o sondeo) con un clasificador propio (portado de
-  `_shared/whatsapp-clasificar.ts`).
-- Se portan: tickets y bandeja de WhatsApp (`hub-whatsapp-webhook` con la
-  misma firma de Meta; el webhook de Meta se apunta al hub cuando esté
-  listo y la función vieja deja de recibir).
-- Migración: tickets abiertos de Desk por CSV.
+SLA, plantillas de respuesta, valoraciones, `mail-to-ticket`; se portan
+tickets y bandeja de WhatsApp (el webhook de Meta se apunta al hub).
 
-### Fase 6 · Portal de clientes (3 semanas)
+### Fase 7 · Portal de clientes (3 semanas)
 
-- Página pública del hub (`/portal/`) con acceso por enlace mágico o
-  usuario con rol `cliente` (políticas RLS nuevas que solo ven su
-  `cliente_id`).
-- Tickets (abrir y seguir), presupuestos (aceptar), facturas y contratos
-  (PDF de Zoho), «lo de siempre» (catálogo con su precio pactado → pedido),
-  seguimiento de envíos (fase 8). Accesos invitables/revocables desde la
-  ficha del cliente, con traza.
+`/portal/` con enlace mágico o rol `cliente` (RLS sobre `hub`): tickets,
+presupuestos, facturas y contratos, «lo de siempre», seguimiento; accesos
+invitables/revocables con traza.
 
-### Fase 7 · Comandas (1-2 semanas) — se portan tareas y lista del día
+### Fase 8 · Comandas (1-2 semanas) — se portan tareas y lista del día
 
-- Audio por Telegram, WhatsApp o dictado → transcripción (`hub-transcribir`,
-  Groq Whisper) → el agente lo trocea en N tareas con responsable → tablero
-  por persona de la fase 1, con origen y notificación al asignado.
+Audio (Telegram, WhatsApp, dictado) → `transcribir` → N tareas asignadas →
+tablero por persona de la fase 1.
 
-### Fase 8 · Almacén: ficha maestra, MRP y envíos (3 semanas) — se porta inventario
+### Fase 9 · Almacén: ficha maestra, MRP y envíos (3 semanas) — se porta inventario
 
-- En `catalogo` / `furgoneta_inventario` (columnas aditivas): mínimo,
-  cobertura en semanas, múltiplo; tabla `catalogo_proveedores` (precio,
-  plazo, referencia, principal/alternativo); en camino desde
-  `pedidos_compra`; consumo semanal de `furgoneta_movimientos`; «se agota
-  en N días», «pedir antes de».
-- Pantalla `compras-mrp`: sugerencias agrupadas por proveedor que crean
-  `pedidos_compra`; el informe «qué comprar» la lee. Ficha de material con
-  las secciones de OKHUB.
-- `envios` (agencia, seguimiento, bultos, estado, incidencia) con aviso al
-  cliente.
-- Se portan: inventario por furgoneta (con la regla «todo movimiento deja
-  registro»), catálogo, proveedores, pedidos y facturas de compra.
+Mínimo, cobertura, múltiplo, `catalogo_proveedores`, en camino, consumo
+semanal de `furgoneta_movimientos`, «se agota en N días»; `compras-mrp`;
+`envios`. Se portan inventario (con «todo movimiento deja registro»),
+catálogo, proveedores, compras.
 
-### Fase 9 · Personas y administración (3-4 semanas) — sustituye Zoho People / Sign
+### Fase 10 · Personas y administración (3-4 semanas) — sustituye Zoho People / Sign
 
-- `jornadas` RD 8/2019 (entrada/salida, vía app / Telegram), distinta de
-  `sesiones` (por trabajo); aviso a las 10 h sin salida; PDF de inspección;
-  export a la gestoría. `ausencias` con aprobación → bloque en `agenda`.
-  Ficha de empleado sobre `usuarios`. Roles finos por RLS.
-- Gastos con OCR (Groq visión): importe, IGIC/IVA, CIF, categoría; estados.
-- Portal del asesor: rol `gestoria`, permisos por bloque, paquete de cierre
-  mensual, «lo que falta para cerrar», traza de accesos.
-- Sign: `documentos_firma` generalizando la firma de contratos.
-- Se portan: usuarios/configuración, fichaje y Mis horas, gastos, contratos
-  y firma.
+`jornadas` RD 8/2019, `ausencias` → `agenda`, gastos con OCR, portal del
+asesor (rol `gestoria`, permisos por bloque, cierre mensual, traza),
+`documentos_firma`. Se portan usuarios, fichaje, gastos, contratos y firma.
 
-### Fase 10 · Facturación propia (6-8 semanas) — sustituye Zoho Books
+### Fase 11 · Facturación propia (6-8 semanas) — sustituye Zoho Books
 
-- Antes de diseñar: **verificar los requisitos legales vigentes**
-  (Verifactu, factura electrónica B2B).
-- `facturas` + `factura_lineas` + `cobros` + series por tipo (patrón de
-  `mant_serie`), PDF propio, export contable, histórico de Zoho importado
-  en solo lectura.
-- Se portan presupuestos, facturas y todo el mantenimiento (contratos,
-  Stripe, cuotas, abonos): `hub-stripe-webhook` escribe en `facturas`; la
-  URL del webhook de Stripe se cambia al hub; se apagan las funciones Zoho
-  de la app actual y la sincronización de clientes y catálogo.
+Verificar Verifactu antes; `facturas` + líneas + `cobros` + series; PDF;
+export contable; histórico de Zoho en solo lectura; se portan presupuestos,
+facturas y el mantenimiento con Stripe (`stripe-webhook` propio, URL del
+webhook cambiada al hub); se apagan las funciones Zoho de la app actual.
 
 ### Final · Lo que más usan los técnicos
 
-Trabajos, calendario/agenda, RMM/Breeze, chat, modo calle y APK se portan
-al final, cuando el hub ya es la casa de todo lo demás. Entonces
-`okcomputertenerife.web.app` redirige al hub, la APK cambia de URL y el
-repo `okcomputerclaude` se archiva.
+Trabajos, calendario/agenda, chat, modo calle y APK se portan al final.
+Entonces `okcomputertenerife.web.app` redirige al hub, la APK cambia de
+URL, `sync-app` se apaga y el proyecto `okcomputer` queda como copia
+(pausado) hasta archivarlo.
 
 ### Transversal
 
-- Motor de vistas (lista / kanban / calendario sobre una fuente + mapeo de
-  campos); baldosas con número en vivo; párrafo explicativo por pantalla;
-  reglas del backend compartido en cada migración y función.
+Motor de vistas; baldosas con número en vivo; párrafo explicativo por
+pantalla; reglas del proyecto compartido en cada migración y función;
+comprobación automática de migraciones.
 
 ## 4. Orden y dependencias
 
-`0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → final`
+`0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → final`
 
-- La **fase 1** va primero porque es lo marcado como imprescindible y
-  porque `hub-mcp` es lo que permite que Claude Code construya las fases
-  siguientes **desde dentro del sistema**: cada fase de este plan nace como
-  proyecto en el hub, con sus objetivos e hitos, y se lanza a Claude Code
-  desde ahí.
-- Las fases 3, 4 y 5 quitan Zoho CRM, Notion y Zoho Desk (las
-  suscripciones). 6-9 son mejora propia. 10 es la única con riesgo fiscal.
+- La **fase 1** va primero porque es lo marcado como imprescindible y porque
+  el MCP permite que Claude Code construya las siguientes fases desde dentro
+  del sistema (cada fase nace como proyecto en el hub).
+- La **fase 2** va justo después porque la infraestructura ya está en este
+  proyecto (Breeze en la misma base) y arregla el punto flaco actual: el
+  espejo `rmm_*` por sync de 5 minutos.
+- Las fases 4, 5 y 6 quitan Zoho CRM, Notion y Zoho Desk; 7-10 son mejora
+  propia; 11 es la única con riesgo fiscal.
 
 ## 5. Riesgos y qué NO hacer
 
-- **Dos repos sobre una base**: solo lo mitigan las cinco reglas de 1.2 y
-  la comprobación automática de migraciones. Ninguna migración del hub
-  cambia lo que la app actual lee.
-- No tocar `okcomputerclaude` desde este repo (ni PRs ni despliegues de
-  sus funciones).
-- No reutilizar AppFlowy ni otro proyecto AGPL; no copiar de OKHUB lo que
-  depende de un ERP externo o de hardware.
-- No quitar Zoho Books antes de la fase 10.
-- No fusionar tablas de dominio (`trabajos`/`tareas`, `clientes`/leads).
-- MCP: nunca SQL libre ni el service role expuesto; lista blanca de tablas
-  y campos, tokens con alcance y caducidad, todo en `audit_log`.
-- WhatsApp iniciado por la empresa exige plantilla aprobada por Meta;
-  Telegram solo para lo interno; datos sensibles (NSS, IBAN) nunca por bot.
-- Cada migración de datos con script repetible, y el origen en solo lectura
-  un tiempo antes de cancelar la suscripción.
+- **Breeze y el hub en la misma base.** Una migración que toque `public` o
+  los roles de Breeze puede tumbar el RMM; solo lo evitan las reglas de 1.2 y
+  la comprobación automática. Las vistas `hub.rmm_*` son la única dependencia
+  del esquema de Breeze y se revisan en cada actualización.
+- **Carga del proyecto**: Breeze ya escribe métricas cada 5 min; el hub añade
+  poco (usuarios internos), pero las vistas sobre métricas van con ventana de
+  tiempo y las pantallas no hacen `count(*)` a pelo.
+- **Dos copias de los datos de negocio** durante la convivencia: el sync es
+  de solo lectura, por área y solo deltas; ninguna escritura del hub sobre un
+  área con dueño `app`; un sync que falla no mueve el corte.
+- No tocar `okcomputerclaude` desde este repo; no exponer `public`; no
+  reutilizar AppFlowy ni otro proyecto AGPL; no copiar de OKHUB lo que depende
+  de ERP externo o hardware; no quitar Zoho Books antes de la fase 11; no
+  fusionar `trabajos`/`tareas`; MCP sin SQL libre; WhatsApp iniciado por la
+  empresa con plantilla aprobada; datos sensibles nunca por bot.
+- Las 16 tablas de Breeze sin RLS: no es cosa del hub (la REST está cerrada
+  sobre `public`), pero hay que saberlo antes de tocar la exposición de la API.
 
 ## 6. Preguntas abiertas
 
-- SSO entre los dos orígenes (pasar la sesión de Supabase por URL al saltar
-  del hub a la app actual) o entrar dos veces mientras convivan.
-- Qué apps de Zoho One exactas se usan además de CRM / Desk / Projects y
-  cuántos registros hay.
+- Compute del proyecto Supabase (plan Pro) para absorber hub + Breeze;
+  revisar tras la fase 2.
 - Dominio definitivo del hub e id del sitio de Firebase.
-- Si el correo de empresa vive en Zoho Mail o en Gmail (afecta a
-  `hub-mail-to-ticket` y a los recordatorios por email).
-- Si se quiere la API de Claude Code Remote para abrir sesiones desde la
-  app (necesita clave) o basta el camino issue + Routine.
-- Qué agencias de transporte se usan y qué programa usa la gestoría.
+- Correo de empresa en Zoho Mail o Gmail (afecta a `mail-to-ticket`).
+- API de Claude Code Remote para abrir sesiones desde la app, o solo issue +
+  Routine.
+- Agencias de transporte y programa de la gestoría.
+- Apps de Zoho One exactas además de CRM / Desk / Projects y volumen de datos.

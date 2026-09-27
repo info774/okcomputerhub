@@ -6,96 +6,115 @@ Guía para Claude Code en este repositorio.
 
 **Ok Computer Hub**: la app nueva de Ok Computer Tenerife (empresa de
 servicios informáticos) que va a reunir gestión, proyectos, dirección,
-comunicación con clientes y equipo, y a sustituir con el tiempo a la PWA
-actual (`okcomputerclaude`), a Notion y a Zoho One. El plan completo, con
-las decisiones tomadas y las fases, está en
-`docs/PLAN_SISTEMA_UNIFICADO.md`; la referencia de producto (la demo de
+monitorización (RMM), comunicación con clientes y equipo, y a sustituir con
+el tiempo a la PWA actual (`okcomputerclaude`), a Notion, a Zoho One y a la
+web de Breeze. El plan completo, con las decisiones tomadas y las fases, está
+en `docs/PLAN_SISTEMA_UNIFICADO.md`; la referencia de producto (la demo de
 OKHUB, de otra empresa) en `docs/referencias/OKHUB_INVENTARIO.md`.
 
 **Estado**: solo documentación. No hay código todavía; la fase 0 del plan es
 el scaffold.
 
-## Relación con `okcomputerclaude` — LO MÁS IMPORTANTE
+## Los tres vecinos — LO MÁS IMPORTANTE
 
-- **`okcomputerclaude` no se toca desde aquí.** Ni PRs, ni despliegues de sus
-  funciones, ni cambios en sus tablas. Sigue en producción tal cual mientras
-  el hub crece.
-- **Mismo Supabase.** El hub usa el MISMO proyecto (`okcomputer`, ref
-  `gaksrtxgnuuuvhvgwxue`, región eu-west-1) y la misma Auth: comparte
-  clientes, sedes (`locales`), trabajos, tickets, tareas, agenda, inventario,
-  usuarios y todo lo demás. Para saber qué hay, el snapshot y las migraciones
-  viven en `okcomputerclaude/supabase/migrations/`; el `CLAUDE.md` de ese
-  repo explica cada área (calendario por bloques, inventario con
-  movimientos, mantenimiento con Stripe y Zoho, RMM, WhatsApp…). Léelo antes
-  de escribir sobre una tabla que no haya creado el hub.
-- **Portar, no reescribir a ciegas.** Cuando una fase traiga un módulo de la
-  app actual (`public/js/modules/*.js`) o código compartido de sus funciones
-  (`supabase/functions/_shared/*.ts`), se copia aquí y se pasa a TypeScript
-  conservando sus reglas de negocio.
+1. **`okcomputerclaude` (la app actual) no se toca desde aquí.** Ni PRs, ni
+   despliegues de sus funciones, ni cambios en su Supabase (`okcomputer`,
+   `gaksrtxgnuuuvhvgwxue`), que ya va justo de carga. Sigue en producción tal
+   cual mientras el hub crece. Para entender sus áreas (calendario por
+   bloques, inventario con movimientos, mantenimiento con Stripe y Zoho,
+   WhatsApp…) léase su `CLAUDE.md`; sus migraciones están en
+   `okcomputerclaude/supabase/migrations/`.
+2. **El hub tiene Supabase PROPIO: `okcomputer-hub`** (antes `breeze-rmm`, ref
+   `adomalsxsymxzuozksmt`, eu-west-1). Lo comparte con **Breeze**, el motor
+   RMM (lanternops/breeze, Docker en el VPS; repo `okcomputer-rmm`), que usa
+   el esquema `public` por Postgres directo con los roles `breeze`,
+   `breeze_app` y `breeze_search` (`okcomputer-rmm/scripts/db-supabase.sql`).
+3. **Los datos de negocio llegan de la app actual por copia inicial +
+   sincronización de solo lectura**, área a área, hasta que cada área se
+   corta y pasa a mandar el hub (§1.4 del plan).
 
-### Las cinco reglas del backend compartido
+### Las seis reglas del proyecto Supabase compartido con Breeze
 
-1. **Aditivo.** Tablas nuevas, columnas nuevas **nullable** y sin default
-   que cambie comportamiento, vistas y funciones nuevas. Nunca renombrar,
-   borrar ni cambiar el significado de una columna o tabla que lea la app
-   actual.
-2. **Migraciones con fecha y sufijo `_hub`**
-   (`supabase/migrations/20261001_proyectos_hub.sql`). Se aplican A MANO con
-   el workflow «Aplicar migración» de este repo (secret
-   `SUPABASE_DB_PASSWORD`, transacción con `ON_ERROR_STOP`). No se editan las
-   ya aplicadas: se añade otra.
-3. **Edge functions con prefijo `hub-`** (`hub-mcp`, `hub-telegram`,
-   `hub-informes`…), en `supabase/functions/hub-<nombre>/index.ts`, con su
-   propio `supabase/functions/_shared/`. El deploy de cada repo despliega
-   «todas las funciones de su rama»: sin colisión de nombres ninguno pisa al
-   otro. Si el hub necesita algo parecido a una función vieja, la duplica
-   con prefijo; la vieja sigue sirviendo a la app vieja.
-4. **Toda tabla nueva lleva RLS y entra en `audit_log`** (el trigger
-   genérico ya existe en la base; ver `docs/AUDITORIA.md` del otro repo). Una
-   función va en la lista `SIN_JWT` del workflow de deploy solo si la
-   autoriza otra cosa (firma, secret, código de un solo uso).
-5. **Lo que falte se crea aquí.** Vistas, funciones SQL, índices: nuevos en
-   este repo. Nada de PRs contra `okcomputerclaude`.
+1. **`public` es de Breeze.** No se crea, altera ni concede nada en `public`;
+   no se expone `public` en la API REST (hoy está cerrada: `anon` y
+   `authenticated` sin USAGE, y así se queda); no se tocan los roles de
+   Breeze ni su script. Hay 16 tablas de Breeze sin RLS: por eso `public`
+   no se expone nunca.
+2. **Todo lo del hub vive en el esquema `hub`** (`hub.proyectos`,
+   `hub.clientes`…). `hub` es el esquema expuesto en PostgREST; grants a
+   `authenticated` y `service_role` solo ahí; RLS en todas sus tablas;
+   auditoría propia en `hub.auditoria` (trigger genérico). El cliente de
+   datos manda `Accept-Profile: hub` / `Content-Profile: hub`.
+3. **Leer Breeze, no escribirle.** Vistas `hub.rmm_*` (propiedad de
+   `postgres`, que salta la FORCE RLS de Breeze) sobre sus tablas. Toda
+   acción sobre un equipo (comando, script, sesión remota, acuse) va por la
+   **API REST de Breeze** desde una edge function con usuario de servicio,
+   nunca por UPDATE en `public`. Las vistas se revisan en cada salto de
+   versión de Breeze (`okcomputer-rmm/VERSIONES.md`).
+4. **Migraciones con fecha** (`supabase/migrations/20261001_proyectos.sql`),
+   aplicadas A MANO con el workflow «Aplicar migración» (secret
+   `HUB_DB_PASSWORD`, transacción con `ON_ERROR_STOP`). No se editan las ya
+   aplicadas. Ninguna contiene `public.` ni `alter role breeze`; el arnés lo
+   comprueba y falla.
+5. **Edge functions** en `supabase/functions/<nombre>/index.ts` (Deno) con
+   `_shared/` propio: `http.ts` (CORS con lista blanca + JWT de sesión real),
+   `mensajeria.ts` (Telegram / WhatsApp / push), `acciones.ts` (catálogo
+   único de escrituras permitidas, compartido por voz, bot y MCP, que respeta
+   `hub.areas`). Una función va en la lista `SIN_JWT` del workflow solo si la
+   autoriza otra cosa (firma, secret, código de un solo uso). Se despliegan a
+   mano, en el mismo rato que el front que las llama.
+6. **`pg_cron` habilitado** en el proyecto: sincronización (`sync-app`, cada
+   15 min), informes programados, recordatorios.
 
-El arnés de verificación (fase 0) falla si una migración contiene
-`ALTER TABLE … DROP | RENAME | ALTER COLUMN` sobre una tabla que no haya
-creado el propio hub.
+### Sincronización con la app actual (`sync-app`)
+
+- Las tablas de negocio de `hub` llevan **los mismos nombres de columnas**
+  que las de `okcomputer`; así el sync es columna a columna y portar un
+  módulo no cambia consultas.
+- Carga inicial: `scripts/importar-app.mjs` desde el dump nocturno de la app
+  (`pg_dump -Fc --schema=public`) pasando por el esquema temporal
+  `app_import`. Repetible; no toca la base viva.
+- `sync-app`: lectura incremental del PostgREST de `okcomputer` (service key
+  en el Vault; `updated_at > último corte`; las tablas sin `updated_at`, una
+  pasada nocturna). Solo deltas. **Un sync que falla no mueve el corte.**
+- `hub.areas` (área, dueño `app` | `hub`): con dueño `app` el hub enseña el
+  área en solo lectura y el sync la refresca; al cortar, el hub manda y el
+  sync la salta. **Ninguna escritura del hub sobre un área con dueño `app`**
+  (lo comprueban `acciones.ts` y la RLS).
 
 ## Stack y estructura prevista (fase 0)
 
 - **Frontend**: Vite + TypeScript **sin framework**. Módulos ES, una carpeta
   por pantalla en `src/modulos/<nombre>/`, hash-routing `#/ruta`, PWA
-  (manifest + service worker). Sin `on*=` inline: los manejadores van por
-  `data-action` / `data-on-<evento>` con un dispatcher central, como en la
-  app actual (`public/js/dispatcher.js` de `okcomputerclaude`).
-- **Datos**: cliente PostgREST propio (`src/core/api.ts`) con timeout (10 s
-  lectura, 30 s escritura), reintento al caducar el JWT y paginación más
-  allá de 1000 filas. Auth con `@supabase/supabase-js` (solo Auth). La anon
-  key de producción va en el código (no es secreta); las de desarrollo, no.
+  (manifest + service worker). Sin `on*=` inline: `data-action` /
+  `data-on-<evento>` con un dispatcher central (patrón de
+  `public/js/dispatcher.js` de la app actual).
+- **Datos**: cliente PostgREST propio (`src/core/api.ts`, portado de
+  `public/js/api.js`) con timeout (10 s lectura, 30 s escritura), reintento
+  al caducar el JWT y paginación más allá de 1000 filas, sobre el esquema
+  `hub`. Auth con `@supabase/supabase-js` (solo Auth). La anon key del
+  proyecto va en el código (no es secreta).
 - **Shell**: menú por grupos, inicio con baldosas (cada módulo expone
   `contador()` → valor, subtítulo, tono), buscador de módulos, párrafo
-  explicativo por pantalla, tema claro/oscuro, enlaces a la app actual para
-  lo que el hub aún no tiene.
-- **Backend**: `supabase/migrations/` (solo aditivas, `_hub`) y
-  `supabase/functions/hub-*/` (Deno) con `_shared/` propio: `http.ts` (CORS
-  con lista blanca + JWT de sesión real), `mensajeria.ts` (Telegram /
-  WhatsApp / push), `acciones.ts` (catálogo único de escrituras permitidas,
-  compartido por voz, bot y MCP).
-- **Despliegue** (`.github/workflows/`, mismos secrets que el otro repo):
-  push a la rama por defecto → build → Firebase Hosting (sitio nuevo del
-  mismo proyecto; el id `okcomputerhub` ya lo usa el redirect legado, así
-  que otro id); «Deploy funciones hub» y «Aplicar migración» a mano.
+  explicativo por pantalla, tema claro/oscuro, tour; enlaces a la app actual
+  para lo que el hub aún no tiene.
+- **Despliegue** (`.github/workflows/`): push a la rama por defecto → build →
+  Firebase Hosting (sitio nuevo del mismo proyecto de Firebase; el id
+  `okcomputerhub` ya lo usa el redirect legado, así que otro id); «Deploy
+  funciones» y «Aplicar migración» a mano. Secrets propios del proyecto
+  `okcomputer-hub` (`HUB_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`…).
 - **Claude Code**: `.claude/settings.json` (permisos para sesiones
-  desatendidas, deniega `rm -rf`, `sudo`, force-push, `reset --hard`),
-  `.mcp.json` apuntando a `hub-mcp`, skill `verify` (Playwright + Chromium
-  con la red de Supabase interceptada y fixtures; nunca contra producción).
+  desatendidas; deniega `rm -rf`, `sudo`, force-push, `reset --hard`),
+  `.mcp.json` apuntando a la función `mcp` del hub, skill `verify` (Playwright
+  + Chromium con la red de Supabase interceptada y fixtures; nunca contra
+  datos reales) y la comprobación de migraciones.
 
 ## Comandos (cuando exista el scaffold)
 
 - `npm run dev` — Vite en local.
 - `npm run build` — `dist/`.
 - `npm run lint` — ESLint + `tsc --noEmit`.
-- `npm run verify` — arnés de verificación sin tocar producción.
+- `npm run verify` — arnés de verificación sin tocar datos reales.
 
 ## Convenciones
 
@@ -104,6 +123,8 @@ creado el propio hub.
 - Cada pantalla nueva: registro en el router, entrada en el menú,
   `contador()`, párrafo explicativo, arnés `verify-<modulo>.mjs`, y una nota
   aquí si introduce una regla que el siguiente tenga que saber.
-- Cada función nueva: `hub-` delante, `_shared/http.ts`, y desplegarla a
-  mano en el mismo rato que el front que la llama (el front sale con el
-  push; las funciones no).
+- Cada tabla nueva: en `hub`, con RLS, en `hub.auditoria`, y si viene de la
+  app actual, con sus mismas columnas y su área en `hub.areas`.
+- Portar, no reescribir a ciegas: los módulos de `okcomputerclaude`
+  (`public/js/modules/*.js`) y su `_shared/*.ts` se copian aquí cuando les
+  toque, pasándolos a TypeScript y conservando sus reglas de negocio.
