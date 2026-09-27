@@ -4,6 +4,7 @@
 //   · `alcance`: lectura < escritura < admin (el del token tiene que llegar);
 //   · una escritura sobre una tabla cuya área tenga dueño 'app' (hub.areas) NO
 //     se ofrece ni se ejecuta: esa área la manda todavía la app actual.
+import { crearComanda } from './comandas.ts'
 import { type Db, type Fila, limpio, esUuid, esFecha } from './hub-db.ts'
 import { ejecutarAccionRmm, COMANDOS, type AccionRmm } from './rmm-acciones.ts'
 import { construirInforme, TIPOS } from './informes.ts'
@@ -780,7 +781,44 @@ const wiki: Herramienta[] = [
   },
 ]
 
-export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...mando, ...ventas, ...wiki, ...escritura]
+// ── Comandas (fase 8) ───────────────────────────────────────────────────────
+const comandas: Herramienta[] = [
+  {
+    name: 'comanda_crear', alcance: 'escritura', tabla: 'comanda_tareas',
+    description: 'Reparte una comanda: un texto con cosas por hacer («Tito, cambia el router del Bar Pepe; Ana, llama al Hotel por la factura») se trocea en tareas del tablero de comandas, cada una a su persona, y se les avisa por Telegram.',
+    inputSchema: obj({ texto: S('Lo que hay que hacer, como se diría en voz alta') }, ['texto']),
+    async ejecutar(a, { db, usuarioId, nombre }) {
+      const r = await crearComanda(db, { texto: String(a.texto ?? ''), origen: 'mcp', autorId: usuarioId, autorNombre: nombre })
+      return { comanda_id: r.comanda_id, con_claude: r.con_claude, tareas: r.tareas.map(t => ({ id: t.id, texto: t.texto, persona_id: t.persona_id, prioridad: t.prioridad })) }
+    },
+  },
+  {
+    name: 'comandas_listar', alcance: 'lectura',
+    description: 'Tablero de comandas: tareas pendientes y en curso (o las hechas), de todos o de una persona.',
+    inputSchema: obj({ persona_email: S('Correo de la persona (vacío = todas)'), estado: S('pendiente | en_curso | hecha (vacío = las no hechas)') }),
+    async ejecutar(a, { db }) {
+      const f = [`estado=${a.estado ? `eq.${encodeURIComponent(limpio(a.estado))}` : 'neq.hecha'}`]
+      if (a.persona_email) f.push(`persona_id=eq.${await usuarioPorEmail(db, a.persona_email)}`)
+      const [ts, gente] = await Promise.all([db.get(`comanda_tareas?select=id,texto,estado,prioridad,fecha_limite,persona_id,created_at&${f.join('&')}&order=prioridad.desc,created_at&limit=200`),
+        db.get('usuarios?select=id,nombre')])
+      return ts.map(t => ({ ...t, persona: gente.find(g => g.id === t.persona_id)?.nombre ?? null }))
+    },
+  },
+  {
+    name: 'comanda_tarea_actualizar', alcance: 'escritura', tabla: 'comanda_tareas',
+    description: 'Mueve una tarea del tablero de comandas (pendiente, en_curso, hecha) o se la pasa a otra persona.',
+    inputSchema: obj({ id: S('UUID de la tarea'), estado: S('pendiente | en_curso | hecha'), persona_email: S('Correo de la nueva persona') }, ['id']),
+    async ejecutar(a, { db }) {
+      if (!esUuid(a.id)) throw new Error('id no válido')
+      if (a.estado && !['pendiente', 'en_curso', 'hecha'].includes(String(a.estado))) throw new Error('Estado no válido')
+      const r = await db.patch(`comanda_tareas?id=eq.${a.id}`, soloDefinidos({ estado: a.estado, persona_id: a.persona_email ? await usuarioPorEmail(db, a.persona_email) : undefined }))
+      if (!r.length) throw new Error('No existe esa tarea')
+      return { id: r[0].id, estado: r[0].estado, persona_id: r[0].persona_id }
+    },
+  },
+]
+
+export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...mando, ...ventas, ...wiki, ...comandas, ...escritura]
 
 // Tablas cuyo dueño es la app (no se escribe en ellas desde el hub).
 export async function tablasDeLaApp(db: Db): Promise<Set<string>> {

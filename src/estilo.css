@@ -477,3 +477,13 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .tk-correo details summary { cursor: pointer; overflow-wrap: anywhere; }
 .tk-festivos { list-style: none; padding: 0; display: grid; gap: .3rem; }
 @media (max-width: 767px) { .tk-burbuja { max-width: 100%; } .tk-tabla td:nth-child(3), .tk-tabla th:nth-child(3) { display: none; } }
+
+/* ── Comandas (fase 8) ──────────────────────────────────────────────────── */
+.co-dictar textarea { width: 100%; }
+.co-manual input { flex: 1; min-width: 12rem; }
+.co-chips { flex-wrap: wrap; }
+.co-tarjeta { cursor: grab; }
+.co-tarjeta.co-prioridad { border-left: 4px solid var(--mal); }
+.co-texto { margin: .35rem 0; overflow-wrap: anywhere; }
+.co-tarjeta select { max-width: 100%; }
+#co-grabar[aria-pressed="true"] { background: var(--mal-fondo); color: var(--mal); border-color: var(--mal); }

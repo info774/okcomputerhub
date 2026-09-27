@@ -39,6 +39,8 @@ siguen en la app; las OPORTUNIDADES son ya del hub. Detalle en `docs/FASE4.md`.
 Detalle en `docs/FASE6.md`.
 **Fase 7 HECHA** (2026-09-27): portal de clientes (`20261011_portal.sql`,
 `portal.html`, función `portal`, `#/portal`). Detalle en `docs/FASE7.md`.
+**Fase 8 HECHA** (2026-09-27): comandas (`20261012_comandas.sql`, `#/comandas`,
+función `comandas`, notas de voz al bot). Detalle en `docs/FASE8.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -289,6 +291,9 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   el cliente = una acción en `portal/index.ts` que filtre por
   `s.cliente_id`, y nunca notas internas. `portal.html` es otra entrada de Vite
   (`src/portal/`), sin supabase-js.
+- Comandas: tareas DEL HUB (`hub.comanda_tareas`), no las de la app (que no se
+  cortan). Todo lo que crea comandas pasa por `crearComanda()` de
+  `_shared/comandas.ts` (pantalla, bot y MCP), que también avisa por Telegram.
 - Avisos de fases nuevas: redefinir `hub.avisos_extra(p_para, p_admin)` (la
   llama `panorama_direccion`), sin volver a copiar el motor entero.
 - El shell pinta cada navegación en un contenedor nuevo (`.vista`): un

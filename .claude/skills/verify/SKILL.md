@@ -84,7 +84,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   PDF, mantenimiento, equipos, sesión caducada, salir; comprueba que no toca
   PostgREST) y `#/portal` del equipo (invitar, enlace, revocar, aceptaciones).
 
-`npm run verify` pasa los nueve.
+- `verify-comandas.mjs`: escribir y GRABAR una comanda (Chromium con
+  `--use-fake-device-for-media-stream`: `navegador(args)` de `comun.mjs`),
+  tablero (botones y arrastre; ventana alta para que arrastrar no desplace la
+  página), repartir, tarea suelta, filtro por persona, borrar solo lo propio.
+
+`npm run verify` pasa los diez.
 
 ## Pantalla nueva
 

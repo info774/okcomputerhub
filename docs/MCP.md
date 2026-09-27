@@ -43,6 +43,12 @@ su conversación.
 - `wiki_crear`, `wiki_editar` (escritura): se reindexan solas en la siguiente
   pasada de la cola; el historial lo guarda la base.
 
+## Comandas (fase 8)
+
+- `comanda_crear`: un texto con cosas por hacer se trocea en tareas repartidas
+  por persona (y se les avisa por Telegram).
+- `comandas_listar`, `comanda_tarea_actualizar` (estado o persona).
+
 ## Seguridad y rastro
 
 - En la base solo queda la huella sha256 del token (`hub.mcp_tokens`), su

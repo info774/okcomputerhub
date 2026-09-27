@@ -492,6 +492,20 @@ try {
   ok(avisosDe('tito@ok.test').includes('presupuesto_aceptado_portal'), 'avisos: presupuesto aceptado en el portal (gancho avisos_extra)');
   ok(una('extrano@ok.test', `select count(*) from hub.avisos_extra(null, true);`) === '0', 'avisos_extra: quien no está en el hub no ve nada');
 
+  // ── Comandas (fase 8) ──────────────────────────────────────────────────
+  const com = idDe('ana@ok.test', `insert into hub.comandas (transcripcion, origen) values ('Tito, cambia el router del bar', 'app') returning id;`);
+  ok(psql(`select creada_por = '${anaId}' from hub.comandas where id = '${com}'`) === 't', 'comandas: la comanda sale a nombre de quien la dicta');
+  const ct = idDe('ana@ok.test', `insert into hub.comanda_tareas (comanda_id, texto, persona_id, prioridad, origen, created_at) values ('${com}', 'Cambiar el router del bar', '${titoId}', true, 'voz', now() - interval '5 hours') returning id;`);
+  ok(avisosDe('tito@ok.test').includes('comanda_parada'), 'avisos: comanda prioritaria sin empezar');
+  psql(como('authenticated', 'tito@ok.test', `update hub.comanda_tareas set estado = 'en_curso' where id = '${ct}';`));
+  ok(psql(`select empezada_at is not null from hub.comanda_tareas where id = '${ct}'`) === 't', 'comandas: empezar apunta la hora');
+  psql(como('authenticated', 'tito@ok.test', `update hub.comanda_tareas set estado = 'hecha' where id = '${ct}';`));
+  ok(psql(`select hecha_at is not null from hub.comanda_tareas where id = '${ct}'`) === 't' && !avisosDe('tito@ok.test').includes('comanda_parada'), 'comandas: hecha apunta la hora y quita el aviso');
+  psql(como('authenticated', 'tito@ok.test', `delete from hub.comanda_tareas where id = '${ct}';`));
+  ok(psql(`select count(*) from hub.comanda_tareas where id = '${ct}'`) === '1', 'comandas: un técnico no borra la tarea que le mandaron');
+  psql(como('authenticated', 'ana@ok.test', `delete from hub.comanda_tareas where id = '${ct}';`));
+  ok(psql(`select count(*) from hub.comanda_tareas where id = '${ct}'`) === '0', 'comandas: quien la creó sí la borra');
+
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
   ok(!sinRls, `todas las tablas de hub con RLS${sinRls ? ' (faltan: ' + sinRls + ')' : ''}`);

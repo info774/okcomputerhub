@@ -27,9 +27,9 @@ export async function servidor(puerto) {
   return { base: `http://127.0.0.1:${puerto}`, parar: () => srv.kill() };
 }
 
-export async function navegador() {
+export async function navegador(args = []) {
   const CHROMIUM = '/opt/pw-browsers/chromium';
-  return chromium.launch({ executablePath: existsSync(CHROMIUM) ? CHROMIUM : undefined });
+  return chromium.launch({ executablePath: existsSync(CHROMIUM) ? CHROMIUM : undefined, args });
 }
 
 const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');

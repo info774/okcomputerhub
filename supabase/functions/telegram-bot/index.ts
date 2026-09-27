@@ -6,7 +6,8 @@
 // persona del hub (hub.telegram_vinculos): el bot no enseña nada a un extraño.
 //
 // Comandos: /start <código> (vincular), /avisos, /repaso, /cierre, /rmm,
-// /proyectos, /cobros y /ventas (solo admins), /baja (desvincular), /ayuda.
+// /proyectos, /cobros y /ventas (solo admins), /pregunta, /comanda y /comandas
+// (y las notas de voz: se reparten como comanda), /baja (desvincular), /ayuda.
 //
 // Desde el hub, con sesión: { accion: 'estado' } (cualquiera: el nombre del bot
 // para el enlace de vincular) y { accion: 'configurar' } (admin: webhook y
@@ -17,6 +18,7 @@ import { construirInforme, TIPOS } from '../_shared/informes.ts'
 import { telegram, enviarTelegram, telegramConfigurado, h } from '../_shared/mensajeria.ts'
 import { personaPorEmail, personaPorId } from '../_shared/personas.ts'
 import { preguntar } from '../_shared/rag.ts'
+import { crearComanda, transcribir } from '../_shared/comandas.ts'
 
 const secreto = () => Deno.env.get('TELEGRAM_WEBHOOK_SECRET') ?? ''
 const URL_WEBHOOK = `${Deno.env.get('SUPABASE_URL')}/functions/v1/telegram-bot`
@@ -25,13 +27,15 @@ const HUB = 'https://okhub-tenerife.web.app/#/informes'
 const COMANDOS = Object.fromEntries(Object.entries(TIPOS).map(([tipo, t]) => [t.comando, tipo]))
 const AYUDA = (admin: boolean) => ['<b>Ok Computer Hub</b> — lo que te puedo mandar:',
   ...Object.values(TIPOS).filter(t => admin || !t.dinero).map(t => `/${t.comando} — ${h(t.nombre)}`),
-  '/pregunta <lo que quieras saber> — busca en la wiki y los documentos', '/baja — desvincular este chat', '', `Los informes automáticos se programan en <a href="${HUB}">Informes</a>.`].join('\n')
+  '/pregunta <lo que quieras saber> — busca en la wiki y los documentos',
+  '/comanda <texto> — reparte tareas al equipo (o mándame una nota de voz)', '/comandas — lo que tienes pendiente', '/baja — desvincular este chat', '', `Los informes automáticos se programan en <a href="${HUB}">Informes</a>.`].join('\n')
 
 // deno-lint-ignore no-explicit-any
 async function atender(db: Db, msg: any) {
   const chat = msg?.chat?.id
   const texto: string = (msg?.text ?? '').trim()
-  if (!chat || !texto || msg.chat.type !== 'private') return
+  const voz = msg?.voice ?? msg?.audio
+  if (!chat || (!texto && !voz) || msg.chat.type !== 'private') return
   const [cmd, arg] = texto.split(/\s+/, 2)
   const comando = cmd.replace(/^\//, '').replace(/@.*$/, '').toLowerCase()
 
@@ -53,6 +57,27 @@ async function atender(db: Db, msg: any) {
   const p = v ? await personaPorId(db, v.usuario_id as string) : null
   if (!p) return enviarTelegram(chat, `No te conozco todavía. Entra en <a href="${HUB}">el hub → Informes</a> y pulsa «Vincular mi Telegram».`)
 
+  // Nota de voz → comanda (fase 8).
+  if (voz) {
+    try {
+      const f = await telegram('getFile', { file_id: voz.file_id })
+      const res = await fetch(`https://api.telegram.org/file/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/${f.file_path}`, { signal: AbortSignal.timeout(60000) })
+      if (!res.ok) throw new Error('No pude descargar el audio')
+      const dicho = await transcribir(new Uint8Array(await res.arrayBuffer()), voz.mime_type ?? 'audio/ogg', 'nota.ogg')
+      if (!dicho) return enviarTelegram(chat, 'No he entendido nada en el audio. ¿Lo repites?')
+      return responderComanda(chat, await crearComanda(hubDb({ origen: 'telegram', email: p.email }), { texto: dicho, origen: 'telegram', autorId: p.id, autorNombre: p.nombre }))
+    } catch (e) { return enviarTelegram(chat, `⚠️ ${h((e as Error).message)}`) }
+  }
+  if (comando === 'comanda') {
+    const q = texto.replace(/^\/\S+\s*/, '')
+    if (!q) return enviarTelegram(chat, 'Escribe la comanda detrás, o mándame una nota de voz: /comanda Tito, cambia el router del Bar Pepe mañana')
+    try { return responderComanda(chat, await crearComanda(hubDb({ origen: 'telegram', email: p.email }), { texto: q, origen: 'telegram', autorId: p.id, autorNombre: p.nombre })) }
+    catch (e) { return enviarTelegram(chat, `⚠️ ${h((e as Error).message)}`) }
+  }
+  if (comando === 'comandas') {
+    const ts = await db.get(`comanda_tareas?select=texto,estado,prioridad,fecha_limite&persona_id=eq.${p.id}&estado=neq.hecha&order=prioridad.desc,created_at`)
+    return enviarTelegram(chat, ts.length ? `🧾 <b>Tus comandas</b>\n${ts.map(t => `• ${t.estado === 'en_curso' ? '▶️ ' : ''}${t.prioridad ? '🔴 ' : ''}${h(t.texto)}${t.fecha_limite ? ` <i>(${h(t.fecha_limite)})</i>` : ''}`).join('\n')}\n\n<a href="https://okhub-tenerife.web.app/#/comandas">Tablero</a>` : 'No tienes comandas pendientes. 🎉')
+  }
   if (comando === 'baja') {
     await db.patch(`telegram_vinculos?usuario_id=eq.${p.id}`, { chat_id: null, vinculado_at: null })
     return enviarTelegram(chat, 'Hecho: este chat ya no está vinculado. Puedes volver a vincularlo desde el hub.')
@@ -74,6 +99,11 @@ async function atender(db: Db, msg: any) {
   await enviarTelegram(chat, salida)
   await db.post('informes_envios', { tipo, usuario_id: p.id, origen: 'bot', ok: !error, error, texto: salida.slice(0, 8000) })
     .catch(e => console.error('[telegram-bot] no se pudo apuntar:', e))
+}
+
+// deno-lint-ignore no-explicit-any
+function responderComanda(chat: number, r: { tareas: any[]; transcripcion: string }) {
+  return enviarTelegram(chat, `🧾 <b>Comanda repartida</b> (${r.tareas.length} ${r.tareas.length === 1 ? 'tarea' : 'tareas'})\n<i>«${h(r.transcripcion.slice(0, 600))}»</i>\n\n${r.tareas.map(t => `• ${t.prioridad ? '🔴 ' : ''}${h(t.texto)}${t.persona_id ? '' : ' <i>(sin repartir)</i>'}`).join('\n')}\n\n<a href="https://okhub-tenerife.web.app/#/comandas">Revisar en el tablero</a>`)
 }
 
 Deno.serve(async req => {
@@ -114,6 +144,8 @@ Deno.serve(async req => {
       await telegram('setMyCommands', { commands: [
         ...Object.values(TIPOS).map(t => ({ command: t.comando, description: t.nombre + (t.dinero ? ' (admins)' : '') })),
         { command: 'pregunta', description: 'Preguntar a la wiki y los documentos' },
+        { command: 'comanda', description: 'Repartir tareas (o manda una nota de voz)' },
+        { command: 'comandas', description: 'Lo que tienes pendiente' },
         { command: 'baja', description: 'Desvincular este chat' }, { command: 'ayuda', description: 'Qué te puedo mandar' }] })
       return json({ ok: true }, 200, cors)
     }
