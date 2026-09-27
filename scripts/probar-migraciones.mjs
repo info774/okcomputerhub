@@ -82,7 +82,11 @@ try {
     create schema extensions;
     create extension if not exists pgcrypto with schema extensions;
     create schema vault;
-    create table vault.decrypted_secrets (name text, decrypted_secret text);
+    create table vault.decrypted_secrets (name text, decrypted_secret text, id uuid default gen_random_uuid());
+    create function vault.create_secret(v text, n text) returns uuid language sql as
+      $$ insert into vault.decrypted_secrets (name, decrypted_secret) values (n, v) returning id $$;
+    create function vault.update_secret(i uuid, v text) returns void language sql as
+      $$ update vault.decrypted_secrets set decrypted_secret = v where id = i $$;
   `);
   // «Breeze»: sus tablas en public (las que leen las vistas hub.rmm_*), que
   // nada del hub puede tocar.
@@ -136,7 +140,7 @@ try {
     }
   }
   ok(huellaPublic() === antes, 'public (Breeze) queda igual');
-  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '3', 'tres tareas de pg_cron, sin duplicar');
+  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '6', 'seis tareas de pg_cron, sin duplicar');
 
   // ── Permisos y RLS ─────────────────────────────────────────────────────
   ok(!psql(como('anon', null, 'select count(*) from hub.clientes;'), { esperaError: true }).ok, 'anon no entra en hub');
@@ -308,6 +312,49 @@ try {
     if (!sql.startsWith('insert')) ok(!psql(como('service_role', null, sql), { esperaError: true }).ok, `RMM: ni el service_role por ${v}`);
   }
   ok(huellaBreeze() === breezeAntes, 'RMM: los datos de Breeze siguen igual');
+
+  // ── Puesto de mando (fase 3) ───────────────────────────────────────────
+  psql(`insert into hub.zoho_facturas (invoice_id, numero, cliente_zoho_id, cliente_nombre, fecha, vence, estado, total, saldo) values
+          ('f1', 'F26-1', 'z1', 'Bar Grande', current_date - 200, current_date - 170, 'overdue', 5000, 800),
+          ('f2', 'F26-2', 'z1', 'Bar Grande', current_date - 150, current_date - 150, 'paid', 1200, 0),
+          ('f3', 'F26-3', 'z2', 'Tienda', current_date, current_date + 30, 'sent', 100, 100);
+        insert into hub.zoho_cobros (payment_id, cliente_zoho_id, fecha, importe) values ('c1', 'z1', current_date, 50);
+        insert into hub.tickets (id, numero, titulo, estado, prioridad) values (gen_random_uuid(), 9, 'Impresora', 'Abierto', 'alta');`);
+  const tipos = email => psql(como('authenticated', email, `select coalesce(string_agg(distinct tipo, ',' order by tipo), 'nada') from hub.panorama_direccion();`)).split('\n').pop();
+  const deTito = tipos('tito@ok.test'), deAna = tipos('ana@ok.test');
+  ok(deTito.includes('ticket_sin_asignar') && deTito.includes('alerta_rmm') && !deTito.includes('factura_vencida'),
+    `mando: un técnico ve sus avisos pero no los de dinero (${deTito})`);
+  ok(deAna.includes('factura_vencida') && deAna.includes('cliente_sin_comprar'), `mando: un admin ve también el dinero (${deAna})`);
+  ok(tipos('extrano@ok.test') === 'nada', 'mando: quien no está en el hub no ve avisos');
+  ok(psql(como('service_role', null, `select count(*) filter (where dinero) from hub.panorama_direccion('${titoId}');`)).split('\n').pop() === '0',
+    'mando: el bot, en nombre de un técnico, tampoco le da dinero');
+  ok(psql(como('authenticated', 'tito@ok.test', `select hub.direccion_resumen() is null;`)).split('\n').pop() === 't', 'mando: un técnico no recibe el resumen de dinero');
+  ok(psql(como('authenticated', 'ana@ok.test', `select (hub.direccion_resumen()->>'vencido')::numeric || '/' || (hub.direccion_resumen()->>'cobrado_mes')::numeric;`)).split('\n').pop() === '800.00/50.00',
+    'mando: resumen con vencido y cobrado del mes');
+  ok(psql(como('authenticated', 'tito@ok.test', `select count(*) from hub.zoho_facturas;`)).split('\n').pop() === '0', 'mando: un técnico no lee las facturas de Zoho');
+  ok(!psql(como('authenticated', 'ana@ok.test', `insert into hub.zoho_facturas (invoice_id) values ('x');`), { esperaError: true }).ok, 'mando: nadie escribe en el espejo de Zoho');
+
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.informes_programados (tipo, usuario_id) values ('cobros_vencidos', '${titoId}');`), { esperaError: true }).ok,
+    'informes: un técnico no se programa uno de dinero');
+  const anaId = psql(`select id from hub.usuarios where email = 'ana@ok.test'`);
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.informes_programados (tipo, usuario_id) values ('avisos', '${anaId}');`), { esperaError: true }).ok,
+    'informes: un técnico no programa informes a otro');
+  ok(psql(como('authenticated', 'tito@ok.test', `insert into hub.informes_programados (tipo, usuario_id) values ('repaso_matinal', '${titoId}');`), { esperaError: true }).ok,
+    'informes: un técnico se programa su repaso');
+  ok(psql(`select creado_por = '${titoId}' from hub.informes_programados where tipo = 'repaso_matinal'`) === 't', 'informes: apunta quién lo creó');
+  ok(psql(como('authenticated', 'ana@ok.test', `insert into hub.informes_programados (tipo, usuario_id) values ('cobros_vencidos', '${anaId}');`), { esperaError: true }).ok,
+    'informes: un admin sí se programa uno de dinero');
+  ok(psql(como('authenticated', 'tito@ok.test', `select count(*) from hub.informes_programados;`)).split('\n').pop() === '1', 'informes: cada uno ve los suyos');
+
+  const cod = psql(como('authenticated', 'tito@ok.test', `select hub.telegram_codigo();`)).split('\n').find(l => /^[0-9a-f]{12}$/.test(l));
+  ok(!!cod && psql(`select count(*) from hub.telegram_vinculos where codigo = '${cod}' and codigo_caduca > now()`) === '1', 'telegram: código de un uso con caducidad');
+  ok(!psql(como('authenticated', 'tito@ok.test', `update hub.telegram_vinculos set chat_id = 1;`) + '\nselect 1/(select count(*) from hub.telegram_vinculos where chat_id = 1);', { esperaError: true }).ok,
+    'telegram: nadie se vincula un chat a mano');
+  ok(!psql(como('service_role', null, `select hub.guardar_secreto('app_service_role_key', 'x');`), { esperaError: true }).ok, 'secretos: guardar_secreto solo admite el de Zoho');
+  psql(como('service_role', null, `select hub.guardar_secreto('zoho_hub_refresh_token', 'r1'); select hub.guardar_secreto('zoho_hub_refresh_token', 'r2');`));
+  ok(psql(`select string_agg(decrypted_secret, ',') from vault.decrypted_secrets where name = 'zoho_hub_refresh_token'`) === 'r2', 'secretos: guarda y actualiza sin duplicar');
+  ok(!psql(como('authenticated', 'ana@ok.test', `select hub.guardar_secreto('zoho_hub_refresh_token', 'x');`), { esperaError: true }).ok, 'secretos: un usuario no puede guardar');
+  ok(psql(`select hub.lanzar_funcion('zoho-lectura')`) === '1', 'lanzar_funcion llama a net.http_post');
 
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
