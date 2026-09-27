@@ -4,6 +4,8 @@ dist/
 .env.*
 !.env.example
 *.log
+*.dump
 .DS_Store
 supabase/.temp/
 .claude/settings.local.json
+verify-capturas/

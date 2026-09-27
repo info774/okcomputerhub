@@ -1,0 +1,44 @@
+name: Aplicar migración
+
+# Aplica UN fichero de supabase/migrations/ al proyecto `okcomputer-hub`
+# (adomalsxsymxzuozksmt), el que comparte con Breeze. Se lanza A MANO con el
+# nombre del fichero. Antes comprueba que ninguna migración toque `public` ni
+# los roles de Breeze, y va en una transacción con ON_ERROR_STOP: si algo
+# falla, no se aplica nada a medias.
+#
+# Secret: HUB_DB_PASSWORD (Supabase → okcomputer-hub → Settings → Database).
+on:
+  workflow_dispatch:
+    inputs:
+      fichero:
+        description: 'Fichero de supabase/migrations/ (p. ej. 20261001_hub_cimientos.sql)'
+        required: true
+        type: string
+
+env:
+  PGHOST: aws-1-eu-west-1.pooler.supabase.com
+  PGPORT: '5432'
+  PGUSER: postgres.adomalsxsymxzuozksmt
+  PGDATABASE: postgres
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comprobar el fichero y las reglas de Breeze
+        run: |
+          set -euo pipefail
+          case "${{ inputs.fichero }}" in */*|*..*) echo "❌ Solo el nombre del fichero"; exit 1;; esac
+          [ -f "supabase/migrations/${{ inputs.fichero }}" ] || { echo "❌ No existe"; exit 1; }
+          node scripts/comprobar-migraciones.mjs
+      - name: Aplicar con psql (una transacción)
+        env:
+          PGPASSWORD: ${{ secrets.HUB_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [ -n "${PGPASSWORD:-}" ] || { echo "❌ Falta el secret HUB_DB_PASSWORD"; exit 1; }
+          PGPASSWORD="$(printf '%s' "$PGPASSWORD" | tr -d '\r\n\t')"
+          export PGPASSWORD
+          psql -v ON_ERROR_STOP=1 --single-transaction -f "supabase/migrations/${{ inputs.fichero }}"
+          echo "✅ Aplicada: ${{ inputs.fichero }}"

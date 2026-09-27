@@ -110,9 +110,9 @@ hub). `hub.usuarios` (portada de `usuarios`) guarda rol y nombre.
   lo carga en el esquema temporal `app_import` del hub, vuelca a `hub.*` y
   borra `app_import`. Repetible; no toca la base viva de producción.
 - **Sync**: edge function `sync-app` lanzada por `pg_cron` cada 15 min:
-  lectura incremental del PostgREST de `okcomputer` (service key guardada en
-  el Vault, filtro `updated_at > último corte` por tabla; las tablas sin
-  `updated_at`, una pasada nocturna), escritura en `hub.*`. Solo deltas: la
+  lectura incremental del PostgREST de `okcomputer` por su `audit_log` (casi
+  ninguna tabla tiene `updated_at`; ver `docs/FASE0.md`), estado actual de
+  lo tocado → `hub.*`; las tablas sin auditoría, una pasada nocturna. Solo deltas: la
   carga sobre producción es mínima. Un sync que falla no mueve el corte.
 - **Corte por área**: tabla `hub.areas` (área, dueño `app` | `hub`, fecha).
   Mientras el dueño sea `app`, el hub enseña esa área en solo lectura y el

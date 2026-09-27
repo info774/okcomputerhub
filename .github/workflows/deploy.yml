@@ -1,0 +1,46 @@
+name: Deploy del hub a Firebase
+
+# Push a main → lint + build → Firebase Hosting (sitio `okhub-tenerife` del
+# proyecto de Firebase de la app actual; el id `okcomputerhub` ya lo usa el
+# redirect del dominio antiguo). Las edge functions y las migraciones NO salen
+# de aquí: se lanzan a mano (deploy-funciones.yml, aplicar-migracion.yml).
+#
+# Secret: GOOGLE_CREDENTIALS_JSON (cuenta de servicio con permiso de Firebase
+# Hosting en el proyecto `okcomputerclaude`; el mismo que usa la app actual).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - name: Build (sella el service worker con el SHA)
+        env:
+          HUB_BUILD: ${{ github.sha }}
+        run: npm run build
+      - name: Credenciales de Google
+        run: |
+          printf '%s' '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > /tmp/gcloud.json
+          if [ ! -s /tmp/gcloud.json ]; then
+            echo "❌ Falta el secret GOOGLE_CREDENTIALS_JSON (Settings → Secrets → Actions)"; exit 1
+          fi
+      - name: Deploy a Firebase Hosting
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcloud.json
+        run: |
+          set +e
+          OUT=$(npx -y firebase-tools deploy --only hosting:hub --project okcomputerclaude 2>&1)
+          CODE=$?
+          echo "$OUT"
+          # Contenido idéntico a la versión activa: no es un fallo.
+          if [ $CODE -ne 0 ] && echo "$OUT" | grep -q "is the current active version"; then exit 0; fi
+          exit $CODE

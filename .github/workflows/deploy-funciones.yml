@@ -1,0 +1,50 @@
+name: Deploy funciones
+
+# Despliega las edge functions del hub al proyecto `okcomputer-hub`. A mano,
+# y en el mismo rato que el front que las llama. Cada función se despliega con
+# el _shared/ de ESTA rama: lanzarlo desde una rama al día.
+#
+# Secrets de GitHub: SUPABASE_ACCESS_TOKEN (token personal de Supabase).
+# Los de las funciones (APP_SUPABASE_URL, APP_SERVICE_ROLE_KEY, HUB_SYNC_TOKEN…)
+# van en el panel de Supabase: docs/FASE0.md.
+on:
+  workflow_dispatch:
+    inputs:
+      funcion:
+        description: 'Función concreta (vacío = todas)'
+        required: false
+        default: ''
+
+env:
+  REF: adomalsxsymxzuozksmt
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          FN: ${{ inputs.funcion }}
+        run: |
+          set -e
+          # SIN verificación de JWT, porque las autoriza otra cosa:
+          #   · sync-app — la llama pg_cron (cabecera x-sync-token contra
+          #     HUB_SYNC_TOKEN) o un admin con su sesión (lo comprueba ella).
+          # Quitar una de aquí NO da error al desplegar: la deja con JWT y su
+          # llamador se come 401 en silencio.
+          SIN_JWT="sync-app"
+          todas=$(ls -d supabase/functions/*/ | xargs -n1 basename | grep -v '^_')
+          lista="${FN:-$todas}"
+          for f in $lista; do
+            [ -d "supabase/functions/$f" ] || { echo "❌ No existe la función $f"; exit 1; }
+            if echo " $SIN_JWT " | grep -q " $f "; then
+              supabase functions deploy "$f" --no-verify-jwt --project-ref "$REF"
+            else
+              supabase functions deploy "$f" --project-ref "$REF"
+            fi
+          done
