@@ -239,6 +239,25 @@ try {
   psql(como('authenticated', 'ana@ok.test', `select hub.mcp_revocar_token('${tid}');`));
   ok(psql(como('service_role', null, `select count(*) from hub.mcp_validar('${tok}');`)).split('\n').pop() === '0', 'MCP: un token revocado deja de valer');
 
+  // ── Peticiones a Claude ────────────────────────────────────────────────
+  const pp = psql(como('authenticated', 'tito@ok.test', `insert into hub.proyectos (titulo) values ('Para Claude') returning id;`))
+    .split('\n').find(l => /^[0-9a-f-]{36}$/.test(l));
+  const titoId = psql(`select id from hub.usuarios where email = 'tito@ok.test'`);
+  const pet = psql(como('authenticated', 'tito@ok.test',
+    `insert into hub.claude_peticiones (proyecto_id, tipo, pedido_por) values ('${pp}', 'investigar', '${titoId}') returning id;`))
+    .split('\n').find(l => /^[0-9a-f-]{36}$/.test(l));
+  ok(!!pet, 'Claude: un usuario pide una investigación');
+  ok(!psql(como('authenticated', 'tito@ok.test',
+    `insert into hub.claude_peticiones (proyecto_id, tipo, pedido_por, estado) values ('${pp}', 'investigar', '${titoId}', 'hecha');`), { esperaError: true }).ok,
+    'Claude: no se crea una petición ya «hecha»');
+  ok(!psql(como('authenticated', 'tito@ok.test',
+    `insert into hub.claude_peticiones (proyecto_id, tipo, pedido_por) values ('${pp}', 'investigar', gen_random_uuid());`), { esperaError: true }).ok,
+    'Claude: no se pide en nombre de otro');
+  psql(como('authenticated', 'tito@ok.test', `update hub.claude_peticiones set estado = 'hecha', resultado = 'trampa' where id = '${pet}';`), { esperaError: true });
+  ok(psql(`select estado from hub.claude_peticiones where id = '${pet}'`) === 'pendiente', 'Claude: desde el navegador no se marca como hecha');
+  psql(como('authenticated', 'tito@ok.test', `update hub.claude_peticiones set estado = 'cancelada' where id = '${pet}';`));
+  ok(psql(`select estado from hub.claude_peticiones where id = '${pet}'`) === 'cancelada', 'Claude: quien la pidió la cancela');
+
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
   ok(!sinRls, `todas las tablas de hub con RLS${sinRls ? ' (faltan: ' + sinRls + ')' : ''}`);

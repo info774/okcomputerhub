@@ -15,9 +15,11 @@ OKHUB, de otra empresa) en `docs/referencias/OKHUB_INVENTARIO.md`.
 **Estado**: fase 0 en marcha (sync cada 15 min por el `audit_log` de la app,
 Auth con Google, 6 usuarios, front en `https://okhub-tenerife.web.app`).
 **Fase 1 en curso**: organizador de proyectos HECHO (`20261002_proyectos.sql`,
-`#/proyectos`) y conector MCP HECHO (`20261003_mcp.sql`, función `mcp`,
-pantalla «Conector MCP», `docs/MCP.md`). Falta «lanzar a Claude»
-(`claude_peticiones` + `lanzar-claude`). Plan de la fase en `docs/FASE1.md`.
+`#/proyectos`), conector MCP HECHO (`20261003_mcp.sql`, función `mcp`,
+pantalla «Conector MCP», `docs/MCP.md`) y «lanzar a Claude» HECHO en el hub
+(`20261004_claude_peticiones.sql`, pestaña Claude de la ficha, herramientas
+`claude_peticion_*`); falta poner en marcha el trabajador (token + Routine,
+`docs/CLAUDE_TRABAJADOR.md`). Plan de la fase en `docs/FASE1.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 

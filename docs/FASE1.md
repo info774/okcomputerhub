@@ -35,9 +35,18 @@ desplegable sola.
   probada en vivo, 25 herramientas, pantalla `#/conector`. Detalle en
   `docs/MCP.md`.
 
-## 3. Lanzar a Claude — siguiente
+## 3. Lanzar a Claude — ✅ hecho en el hub (2026-09-27); falta arrancar el trabajador
 
 - `hub.claude_peticiones` + función `lanzar-claude` (issue con etiqueta
   `claude-proyecto`; opcionalmente sesión remota). Botones «Investigar con
   Claude» y «Desarrollar esta fase» (hoy desactivados en la ficha). El
   resultado vuelve por el MCP (`proyecto_registrar_resultado`).
+
+Hecho: `20261004_claude_peticiones.sql` (peticiones con RLS: el equipo pide y
+cancela; solo el trabajador toma y cierra), herramientas del conector
+`claude_peticiones_pendientes` / `claude_peticion_tomar` /
+`claude_peticion_terminar` (probadas en vivo), pestaña **Claude** en la ficha
+y botones «Investigar con Claude» y «Desarrollar esta fase con Claude».
+**Cambio respecto al plan**: sin issue de GitHub ni función `lanzar-claude`;
+el trabajador lee las peticiones del hub por el conector. Puesta en marcha en
+`docs/CLAUDE_TRABAJADOR.md`.

@@ -9,13 +9,14 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { esc, toast, fechaHora } from '../../ui/dom';
 import { markdown } from '../../ui/markdown';
 import {
+  type Peticion,
   FASES, nombreFase, siguienteFase, proyectoPorNumero, actualizarProyecto, piezas, ENLAZABLES, limpiarBusqueda,
   type Proyecto, type Hito, type Pagina, type TareaP,
 } from './datos';
 
 const PESTANAS = [
   ['idea', 'Idea'], ['objetivos', 'Objetivos'], ['investigacion', 'Investigación'], ['roadmap', 'Roadmap'],
-  ['tareas', 'Tareas'], ['vinculado', 'Vinculado'], ['coste', 'Coste'],
+  ['tareas', 'Tareas'], ['vinculado', 'Vinculado'], ['coste', 'Coste'], ['claude', 'Claude'],
 ] as const;
 
 let _el: HTMLElement | null = null;
@@ -75,6 +76,7 @@ async function tabIdea(p: Proyecto): Promise<string> {
       <div class="acciones">
         <button class="btn" data-action="pfGuardar">Guardar</button>
         ${sig ? `<button class="btn secundario" data-action="pfAvanzar">Pasar a ${esc(nombreFase(sig))} →</button>` : ''}
+        ${p.estado !== 'cerrado' ? '<button class="btn secundario" data-action="pfPedirClaude" data-p0="desarrollar">🚀 Desarrollar esta fase con Claude</button>' : ''}
         ${esAdmin() ? '<button class="btn peligro" data-action="pfBorrarProyecto">Borrar proyecto</button>' : ''}
       </div>
     </section>
@@ -131,7 +133,7 @@ function tabInvestigacion(): string {
   if (_paginaAbierta) return editorPagina(_paginaAbierta === 'nueva' ? null : pags.find(p => p.id === _paginaAbierta) ?? null);
   return `<div class="acciones pr-barra">
       <button class="btn" data-action="pfAbrirPagina" data-p0="nueva">+ Página</button>
-      <button class="btn secundario" disabled title="Llega con el conector MCP (siguiente paso de la fase 1)">🔎 Investigar con Claude</button>
+      <button class="btn secundario" data-action="pfPedirClaude" data-p0="investigar">🔎 Investigar con Claude</button>
     </div>
     ${pags.map(pg => `<article class="tarjeta pr-pagina">
       <div class="tarjeta-cab"><h3>${esc(pg.titulo)}</h3>
@@ -298,6 +300,54 @@ async function tabCoste(p: Proyecto): Promise<string> {
     <p class="nota">Las horas se muestran en horas y no en euros: la tarifa por hora aún no está decidida. El coste sale de lo enlazado en «Vinculado».</p>`;
 }
 
+// ── Claude: peticiones de trabajo ──────────────────────────────────────────
+const QUE_HACE: Record<string, string> = {
+  investigar: 'Busca información sobre el proyecto (opciones, precios, proveedores, riesgos) y la deja como páginas de investigación con sus fuentes.',
+  desarrollar: 'Hace avanzar la fase actual: en Definición propone objetivos con su métrica; en Investigación, páginas con fuentes; en Roadmap, hitos con fechas y tareas; en Desarrollo, tareas concretas y una página de seguimiento.',
+  revisar: 'Revisa el proyecto entero y deja una página con lo que falta, riesgos y siguientes pasos.',
+};
+const ESTADO_PET: Record<string, [string, string]> = {
+  pendiente: ['neutro', 'Pendiente'], en_curso: ['aviso', 'Claude trabajando'], hecha: ['bien', 'Hecha'],
+  error: ['mal', 'Error'], cancelada: ['neutro', 'Cancelada'],
+};
+let _pidiendo: string | null = null;
+
+function formularioPeticion(tipo: string): string {
+  return `<section class="tarjeta pc-form">
+    <h3>${tipo === 'investigar' ? '🔎 Investigar con Claude' : tipo === 'desarrollar' ? `🚀 Desarrollar «${esc(nombreFase(_p!.estado))}» con Claude` : '🧐 Revisar con Claude'}</h3>
+    <p class="nota">${esc(QUE_HACE[tipo])} Claude lo recoge en menos de una hora y deja el resultado en el proyecto; aquí verás el resumen.</p>
+    <label>¿Algo concreto? (opcional) <textarea id="pc-instrucciones" rows="4" maxlength="4000"
+      placeholder="p. ej. Compara al menos 3 proveedores con precio por TB y soporte en español"></textarea></label>
+    <div class="acciones">
+      <button class="btn" data-action="pfEnviarClaude" data-p0="${tipo}">Pedírselo a Claude</button>
+      <button class="btn secundario" data-action="pfCancelarForm">Cancelar</button>
+    </div>
+  </section>`;
+}
+
+function tabClaude(): string {
+  const ps = _pz!.peticiones;
+  return `${_pidiendo ? formularioPeticion(_pidiendo) : `<div class="acciones pr-barra">
+      <div class="acciones">
+        <button class="btn" data-action="pfPedirClaude" data-p0="investigar">🔎 Investigar</button>
+        ${_p!.estado !== 'cerrado' ? `<button class="btn" data-action="pfPedirClaude" data-p0="desarrollar">🚀 Desarrollar «${esc(nombreFase(_p!.estado))}»</button>` : ''}
+        <button class="btn secundario" data-action="pfPedirClaude" data-p0="revisar">🧐 Revisar el proyecto</button>
+      </div></div>`}
+    ${ps.map((x: Peticion) => {
+      const [tono, texto] = ESTADO_PET[x.estado] ?? ['neutro', x.estado];
+      return `<article class="tarjeta">
+        <div class="tarjeta-cab"><h3>${esc({ investigar: 'Investigar', desarrollar: 'Desarrollar', revisar: 'Revisar' }[x.tipo] ?? x.tipo)}
+          ${x.fase ? `<small>· fase ${esc(nombreFase(x.fase))}</small>` : ''}</h3>
+          <div class="acciones"><span class="chip ${tono}">${texto}</span>
+          ${x.estado === 'pendiente' ? `<button class="btn secundario" data-action="pfCancelarPeticion" data-p0="${x.id}">Cancelar</button>` : ''}</div></div>
+        <p class="nota">Pedido por ${esc(nombreDe(x.pedido_por) || '—')} · ${esc(fechaHora(x.created_at))}${x.terminada_at ? ` · terminado ${esc(fechaHora(x.terminada_at))}` : ''}</p>
+        ${x.instrucciones ? `<blockquote class="md">${esc(x.instrucciones)}</blockquote>` : ''}
+        ${x.resultado ? `<div class="md">${markdown(x.resultado)}</div>` : ''}
+        ${x.error ? `<p class="aviso mal">${esc(x.error)}</p>` : ''}
+      </article>`;
+    }).join('') || '<p class="vacio">Todavía no se le ha pedido nada a Claude en este proyecto.</p>'}`;
+}
+
 async function pintarCuerpo() {
   const cuerpo = document.getElementById('pf-cuerpo');
   if (!cuerpo || !_p || !_pz) return;
@@ -310,6 +360,7 @@ async function pintarCuerpo() {
   const html = {
     idea: () => tabIdea(_p!), objetivos: async () => tabObjetivos(), investigacion: async () => tabInvestigacion(),
     roadmap: async () => tabRoadmap(), tareas: () => tabTareas(), vinculado: () => tabVinculado(), coste: () => tabCoste(_p!),
+    claude: async () => tabClaude(),
   }[_pestana] ?? (() => tabIdea(_p!));
   cuerpo.innerHTML = await html();
 }
@@ -351,9 +402,29 @@ function leerFuentes(texto: string) {
 let _busqClienteT: number | undefined;
 
 registrarAcciones({
+  pfPedirClaude(tipo: string) {
+    _pidiendo = tipo;
+    if (_p && _pestana !== 'claude') ir('proyectos', String(_p.numero), 'claude');
+    else void pintarCuerpo();
+  },
+  pfCancelarForm() { _pidiendo = null; void pintarCuerpo(); },
+  async pfEnviarClaude(tipo: string) {
+    if (!_p) return;
+    const instr = (document.getElementById('pc-instrucciones') as HTMLTextAreaElement | null)?.value.trim() || null;
+    if (await falla(await API.post('claude_peticiones', { proyecto_id: _p.id, tipo, fase: _p.estado, instrucciones: instr,
+      pedido_por: usuario()?.id }), 'enviar la petición')) return;
+    _pidiendo = null;
+    toast('Pedido a Claude: lo recoge en menos de una hora');
+    await recargar();
+  },
+  async pfCancelarPeticion(id: string) {
+    if (!confirm('¿Cancelar esta petición a Claude?')) return;
+    if (await falla(await API.patch('claude_peticiones', { id: `eq.${id}` }, { estado: 'cancelada' }), 'cancelar')) return;
+    await recargar();
+  },
   // El buscador de cliente solo tiene sentido en un proyecto de cliente.
   pfTipo(tipo: string) { document.getElementById('pf-cliente-bloque')?.toggleAttribute('hidden', tipo !== 'cliente'); },
-  pfPestana(numero: string, pestana: string) { _paginaAbierta = null; ir('proyectos', numero, pestana); },
+  pfPestana(numero: string, pestana: string) { _paginaAbierta = null; _pidiendo = null; ir('proyectos', numero, pestana); },
 
   async pfGuardar() {
     if (!_p) return;

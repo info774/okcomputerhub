@@ -39,6 +39,11 @@ export interface TareaP {
   estado: 'pendiente' | 'en_curso' | 'hecho'; responsable_id: string | null; fecha_limite: string | null;
   horas_previstas: number | null; hecha_at: string | null; orden: number;
 }
+export interface Peticion {
+  id: string; created_at: string; proyecto_id: string; tipo: 'investigar' | 'desarrollar' | 'revisar'; fase: string | null;
+  instrucciones: string | null; estado: 'pendiente' | 'en_curso' | 'hecha' | 'error' | 'cancelada'; pedido_por: string | null;
+  tomada_at: string | null; terminada_at: string | null; resultado: string | null; error: string | null;
+}
 export interface Vinculo { id: string; proyecto_id: string; tabla: string; registro_id: string; nota: string | null }
 
 export const CAMPOS_PROYECTO = 'id,numero,created_at,updated_at,titulo,tipo,estado,prioridad,cliente_id,local_id,responsable_id,descripcion,fecha_inicio,fecha_objetivo,presupuesto,presupuesto_id,orden,cerrado_at,resultado';
@@ -62,18 +67,19 @@ export const actualizarProyecto = (id: string, cambios: Partial<Proyecto>) => AP
 // Piezas de un proyecto, de una vez.
 export async function piezas(proyectoId: string) {
   const f = { proyecto_id: `eq.${proyectoId}` };
-  const [objetivos, hitos, paginas, tareas, vinculos] = await Promise.all([
+  const [objetivos, hitos, paginas, tareas, vinculos, peticiones] = await Promise.all([
     API.get<Objetivo[]>('proyecto_objetivos', { ...f, select: '*', order: 'orden,created_at' }),
     API.get<Hito[]>('proyecto_hitos', { ...f, select: '*', order: 'orden,fecha_objetivo.nullslast,created_at' }),
     API.get<Pagina[]>('proyecto_paginas', { ...f, select: '*', order: 'orden,created_at' }),
     API.get<TareaP[]>('proyecto_tareas', { ...f, select: '*', order: 'orden,created_at' }),
     API.get<Vinculo[]>('proyecto_vinculos', { ...f, select: '*', order: 'created_at' }),
+    API.get<Peticion[]>('claude_peticiones', { ...f, select: '*', order: 'created_at.desc', limit: '30' }),
   ]);
-  const error = objetivos.error ?? hitos.error ?? paginas.error ?? tareas.error ?? vinculos.error;
+  const error = objetivos.error ?? hitos.error ?? paginas.error ?? tareas.error ?? vinculos.error ?? peticiones.error;
   return {
     error,
     objetivos: objetivos.data ?? [], hitos: hitos.data ?? [], paginas: paginas.data ?? [],
-    tareas: tareas.data ?? [], vinculos: vinculos.data ?? [],
+    tareas: tareas.data ?? [], vinculos: vinculos.data ?? [], peticiones: peticiones.data ?? [],
   };
 }
 

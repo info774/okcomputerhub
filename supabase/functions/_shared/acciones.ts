@@ -87,7 +87,7 @@ const lectura: Herramienta[] = [
       const areas = await db.get('areas?select=area,dueno,tablas,notas&order=area')
       return {
         areas,
-        propias_del_hub: ['proyectos', 'proyecto_objetivos', 'proyecto_hitos', 'proyecto_paginas', 'proyecto_tareas', 'proyecto_vinculos'],
+        propias_del_hub: ['proyectos', 'proyecto_objetivos', 'proyecto_hitos', 'proyecto_paginas', 'proyecto_tareas', 'proyecto_vinculos', 'claude_peticiones'],
         notas: [
           'Las tablas de áreas con dueño "app" son una copia de la app actual (se refresca cada 15 min): se leen, no se escriben.',
           'Estados de trabajos: Pendiente, En progreso, Completado, Para facturar, Facturado, Cancelado. Tickets: Abierto, En curso, Cerrado. Tareas (app): pendiente, en_progreso, completada.',
@@ -213,7 +213,8 @@ const lectura: Herramienta[] = [
         db.get(`proyecto_paginas?select=id,titulo,tipo,autor,updated_at&${f}&order=orden`),
         db.get(`proyecto_vinculos?select=id,tabla,registro_id,nota&${f}`),
       ])
-      return { proyecto: proyecto[0], objetivos, hitos, tareas, paginas, vinculos }
+      const peticiones = await db.get(`claude_peticiones?select=id,created_at,tipo,fase,instrucciones,estado,resultado&${f}&order=created_at.desc&limit=10`)
+      return { proyecto: proyecto[0], objetivos, hitos, tareas, paginas, vinculos, peticiones_a_claude: peticiones }
     },
   },
   {
@@ -422,6 +423,54 @@ const escritura: Herramienta[] = [
       uno(await db.get(`${tabla}?select=id&id=eq.${a.registro_id}`), 'ese registro en la copia')
       const [v] = await db.post('proyecto_vinculos', { proyecto_id: p.id, tabla, registro_id: a.registro_id, nota: txt(a.nota, 300) ?? null })
       return { id: v.id }
+    },
+  },
+  // ── Trabajador de Claude: peticiones hechas desde la ficha del proyecto ──
+  {
+    name: 'claude_peticiones_pendientes', alcance: 'escritura', tabla: 'claude_peticiones',
+    description: 'Peticiones de trabajo que el equipo ha dejado para Claude desde las fichas de proyecto (Investigar / Desarrollar esta fase), las más antiguas primero. Incluye las «en curso» atascadas más de 2 horas.',
+    inputSchema: obj({ limite: N('Máximo (5 por defecto)') }),
+    async ejecutar(a, { db }) {
+      const atascada = new Date(Date.now() - 2 * 3600_000).toISOString()
+      const filas = await db.get(`claude_peticiones?select=id,created_at,tipo,fase,instrucciones,estado,tomada_at,pedido_por,proyecto_id` +
+        `&or=${encodeURIComponent(`(estado.eq.pendiente,and(estado.eq.en_curso,tomada_at.lt.${atascada}))`)}&order=created_at&limit=${lim(a.limite, 5, 20)}`)
+      if (!filas.length) return { pendientes: [], nota: 'No hay nada pendiente.' }
+      const ids = [...new Set(filas.map(f => f.proyecto_id))].join(',')
+      const pers = [...new Set(filas.map(f => f.pedido_por).filter(Boolean))].join(',')
+      const [proys, gente] = await Promise.all([
+        db.get(`proyectos?select=id,numero,titulo,estado&id=in.(${ids})`),
+        pers ? db.get(`usuarios?select=id,nombre,email&id=in.(${pers})`) : [],
+      ])
+      return { pendientes: filas.map(f => ({ ...f, proyecto: proys.find(p => p.id === f.proyecto_id), pedido_por: gente.find(g => g.id === f.pedido_por) ?? null })),
+        como_trabajar: 'Toma la petición (claude_peticion_tomar), lee el proyecto (proyecto_detalle), haz el trabajo con las herramientas proyecto_* y ciérrala (claude_peticion_terminar) con un resumen.' }
+    },
+  },
+  {
+    name: 'claude_peticion_tomar', alcance: 'escritura', tabla: 'claude_peticiones',
+    description: 'Marca una petición como «en curso» (la toma el trabajador). Falla si otro ya la tomó.',
+    inputSchema: obj({ id: S('UUID de la petición') }, ['id']),
+    async ejecutar(a, { db }) {
+      if (!esUuid(a.id)) throw new Error('id no válido')
+      const atascada = new Date(Date.now() - 2 * 3600_000).toISOString()
+      const filas = await db.patch(`claude_peticiones?id=eq.${a.id}&or=${encodeURIComponent(`(estado.eq.pendiente,and(estado.eq.en_curso,tomada_at.lt.${atascada}))`)}`,
+        { estado: 'en_curso', tomada_at: new Date().toISOString() })
+      if (!filas.length) throw new Error('Esa petición ya no está pendiente (la tomó otro, se canceló o se terminó)')
+      return { ok: true, tipo: filas[0].tipo, proyecto_id: filas[0].proyecto_id }
+    },
+  },
+  {
+    name: 'claude_peticion_terminar', alcance: 'escritura', tabla: 'claude_peticiones',
+    description: 'Cierra una petición en curso con un resumen en markdown de lo hecho (qué páginas, objetivos, hitos o tareas se crearon y qué falta). Estado «hecha», o «error» si no se pudo.',
+    inputSchema: obj({ id: S('UUID de la petición'), resultado: S('Resumen en markdown'), estado: S('hecha | error'),
+      error: S('Si estado = error: qué pasó') }, ['id', 'resultado']),
+    async ejecutar(a, { db }) {
+      if (!esUuid(a.id)) throw new Error('id no válido')
+      const estado = a.estado === 'error' ? 'error' : 'hecha'
+      const filas = await db.patch(`claude_peticiones?id=eq.${a.id}&estado=eq.en_curso`, {
+        estado, resultado: String(a.resultado ?? '').slice(0, 20000), error: estado === 'error' ? txt(a.error, 2000) ?? 'sin detalle' : null,
+        terminada_at: new Date().toISOString() })
+      if (!filas.length) throw new Error('Esa petición no está en curso: tómala antes con claude_peticion_tomar')
+      return { ok: true, estado }
     },
   },
   // Escrituras sobre áreas que hoy manda la app: se ofrecen solas el día que el

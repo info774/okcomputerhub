@@ -19,6 +19,9 @@ const INICIAL = {
   proyectos: [{ id: 'p1', numero: 7, titulo: 'Copias en la nube', tipo: 'interno', estado: 'definicion', prioridad: 'alta',
     responsable_id: 'u-tito', orden: 1, created_at: '2026-09-20T10:00:00Z', updated_at: '2026-09-20T10:00:00Z', descripcion: 'Idea base' }],
   proyecto_objetivos: [], proyecto_hitos: [], proyecto_paginas: [], proyecto_vinculos: [],
+  claude_peticiones: [{ id: 'c1', proyecto_id: 'p1', created_at: '2026-09-25T09:00:00Z', tipo: 'investigar', fase: 'definicion',
+    instrucciones: null, estado: 'hecha', pedido_por: 'u-tito', terminada_at: '2026-09-25T10:00:00Z',
+    resultado: '### Hecho\n- 2 páginas con **fuentes**\n<img src=x onerror=alert(1)>', error: null }],
   proyecto_tareas: [{ id: 't0', proyecto_id: 'p1', titulo: 'Llamar a 5 clientes', estado: 'pendiente', responsable_id: 'u-tito',
     fecha_limite: '2020-01-01', orden: 1 }],
   trabajos: [{ id: 'tr1', numero: 151, titulo: 'Instalar NAS', descripcion: 'NAS en Bar Pepe', estado: 'Completado' }],
@@ -130,6 +133,23 @@ try {
   const coste = await page.textContent('#pf-cuerpo');
   ok(coste.includes('2.5 h') && coste.includes('240') && coste.includes('usado 24%'), 'Coste: horas fichadas, material y % del previsto');
   await page.screenshot({ path: `${CAPTURAS}/proyectos-coste.png`, fullPage: true });
+
+  // Claude: pedir, ver resultado, cancelar
+  await page.click('.pf-pestana[data-p1="investigacion"]');
+  await page.click('[data-action="pfPedirClaude"][data-p0="investigar"]');
+  await page.waitForSelector('#pc-instrucciones');
+  ok((await page.textContent('.pf-pestana.activo')) === 'Claude', '«Investigar con Claude» lleva a la pestaña Claude con el formulario');
+  ok(!(await page.innerHTML('#pf-cuerpo')).includes('<img') && await page.isVisible('text=2 páginas con'), 'el resultado de Claude se pinta en markdown seguro');
+  await page.fill('#pc-instrucciones', 'Compara 3 proveedores');
+  await page.click('[data-action="pfEnviarClaude"]');
+  await page.waitForSelector('text=Pendiente');
+  const pet = base.db.claude_peticiones.find(x => x.id !== 'c1');
+  ok(pet?.tipo === 'investigar' && pet.fase === 'investigacion' && pet.pedido_por === 'u-ana' && pet.instrucciones === 'Compara 3 proveedores',
+    'la petición se guarda con tipo, fase, quién la pide e instrucciones');
+  await page.click(`[data-action="pfCancelarPeticion"][data-p0="${pet.id}"]`);
+  await page.waitForSelector('text=Cancelada');
+  ok(base.db.claude_peticiones.find(x => x.id === pet.id).estado === 'cancelada', 'una pendiente se puede cancelar');
+  await page.screenshot({ path: `${CAPTURAS}/proyectos-claude.png`, fullPage: true });
 
   // Tareas por persona
   await page.goto(`${srv.base}/#/proyectos`);

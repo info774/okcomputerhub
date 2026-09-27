@@ -56,7 +56,23 @@
       "mcp__okhub__proyecto_detalle",
       "mcp__okhub__proyecto_pagina_leer",
       "mcp__okhub__equipo",
-      "mcp__okhub__sync_estado"
+      "mcp__okhub__sync_estado",
+      "mcp__okhub__claude_peticiones_pendientes",
+      "mcp__okhub__claude_peticion_tomar",
+      "mcp__okhub__claude_peticion_terminar",
+      "mcp__okhub__proyecto_crear",
+      "mcp__okhub__proyecto_actualizar",
+      "mcp__okhub__proyecto_objetivo_crear",
+      "mcp__okhub__proyecto_objetivo_actualizar",
+      "mcp__okhub__proyecto_hito_crear",
+      "mcp__okhub__proyecto_hito_actualizar",
+      "mcp__okhub__proyecto_tarea_crear",
+      "mcp__okhub__proyecto_tarea_actualizar",
+      "mcp__okhub__proyecto_pagina_crear",
+      "mcp__okhub__proyecto_pagina_actualizar",
+      "mcp__okhub__proyecto_vincular",
+      "WebSearch",
+      "WebFetch"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -66,5 +82,6 @@
       "Bash(git reset --hard:*)",
       "Bash(git clean -fd:*)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true
 }
