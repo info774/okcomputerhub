@@ -5,7 +5,8 @@
 //
 // Comprueba: entrar desde el menú y por ?os=1; barra, dock, widgets con datos
 // del espejo (Hoy, Avisos con el motor panorama_direccion, Cobros solo admin,
-// Equipos, Agenda con «Sin técnico»); una ventana por módulo que se abre por
+// Equipos, Agenda con «Sin técnico»); widgets que se arrastran, se recuerdan
+// y se recolocan; una ventana por módulo que se abre por
 // el dock y por la URL; arrastrar al borde encaja a media pantalla; atajos
 // Alt+Mayús; minimizar/restaurar/cerrar; escritorios con nombre que se
 // recuerdan al recargar; centro de avisos; lanzador «Todas»; paleta en modo
@@ -130,6 +131,30 @@ try {
     ok((await page.textContent('#os-agenda')).includes('Bananas Cafetería'), 'agenda: el cliente del trabajo sale por su nombre');
     ok((await page.textContent('#os-sync')).includes('Sync hace'), 'chip de sync en la barra');
     await page.screenshot({ path: `${CAPTURAS}/escritorio-dia.png` });
+
+    // Widgets movibles: se arrastran, los demás no se mueven, se recuerdan y se recolocan
+    const caja = sel => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y) }; });
+    const antesAvisos = await caja('#os-w-avisos');
+    const antesEquipos = await caja('#os-w-equipos');
+    await page.mouse.move(antesEquipos.x + 40, antesEquipos.y + 14);
+    await page.mouse.down();
+    await page.mouse.move(antesEquipos.x + 80, antesEquipos.y + 40, { steps: 4 });
+    await page.mouse.move(1100, 520, { steps: 8 });
+    await page.mouse.up();
+    const trasEquipos = await caja('#os-w-equipos');
+    ok(Math.abs(trasEquipos.x - (1100 - 40)) < 6 && Math.abs(trasEquipos.y - (520 - 14)) < 6, `el widget Equipos se arrastra donde se suelta (${trasEquipos.x},${trasEquipos.y})`);
+    const trasAvisos = await caja('#os-w-avisos');
+    ok(trasAvisos.x === antesAvisos.x && trasAvisos.y === antesAvisos.y, 'los demás widgets se quedan donde estaban');
+    ok(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.startsWith('hub_os_')))).escritorios[0].widgets ?? {}).length >= 5), 'el sitio de los widgets se guarda en la disposición');
+    await page.reload();
+    await page.waitForSelector('#os-w-equipos');
+    const recargado = await caja('#os-w-equipos');
+    ok(recargado.x === trasEquipos.x && recargado.y === trasEquipos.y, 'al recargar el widget sigue donde se dejó');
+    await page.screenshot({ path: `${CAPTURAS}/escritorio-widgets.png` });
+    await page.click('[data-action="osMenu"]');
+    await page.click('[data-action="osRecolocarWidgets"]');
+    const recolocado = await caja('#os-w-equipos');
+    ok(recolocado.x === antesEquipos.x && recolocado.y === antesEquipos.y && !(await page.$('#os-widgets.libre')), '«Recolocar los widgets» los devuelve a la rejilla');
 
     // Ventanas por el dock y por la URL
     await page.click('.os-ditem[data-p0="proyectos"]');

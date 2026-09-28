@@ -19,7 +19,10 @@ código el 2026-09-28. Convive con el hub clásico y no lo toca.
   avatar renombra o elimina), buscador **Ctrl+K**, chip del **sync** con la
   app (`hub.sync_estado`, verde / ámbar / rojo por antigüedad), **campana** con
   el número de avisos, tema día/noche, reloj y avatar.
-- **El escritorio es el panel** (widgets, refrescados cada minuto):
+- **El escritorio es el panel** (widgets, refrescados cada minuto). Cada
+  widget se **arrastra** a cualquier sitio (cogiéndolo por donde no haya un
+  enlace o botón); el sitio se guarda por escritorio y «Recolocar los widgets»
+  (menú del avatar) los devuelve a la rejilla:
   - *Hoy*: bloques de agenda de hoy, tickets abiertos, sin técnico y tareas.
   - *Avisos*: los cinco primeros del motor `hub.panorama_direccion` (el mismo
     que el puesto de mando, el bot y los informes).

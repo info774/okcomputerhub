@@ -6,7 +6,8 @@
 // Cómo funciona: cada módulo se pinta en el cuerpo de SU ventana (una por
 // módulo; navegar a #/proyectos/12 repinta la de Proyectos), con la misma
 // `pintarPantalla` del shell clásico. El escritorio es el panel: widgets de
-// Hoy, Avisos, Cobros (admin), Equipos y Agenda, refrescados cada 5 min.
+// Hoy, Avisos, Cobros (admin), Equipos y Agenda, refrescados cada 5 min, que
+// se arrastran a cualquier punto del escritorio (sitio guardado por escritorio).
 // Barra con escritorios (varios, con nombre), Ctrl+K, sync, avisos, tema y
 // reloj; dock con las pantallas del hub, Claude y «Todas». La disposición
 // (ventanas, tamaño, sitio, zona de ajuste) se guarda por persona y por
@@ -29,7 +30,7 @@ const MARGEN = 16;
 const DOCK_FIJAS = 12;
 type Zona = 'izq' | 'der' | 'ai' | 'ad' | 'bi' | 'bd' | 'max' | null;
 interface Ventana { id: string; params: string[]; x: number; y: number; w: number; h: number; min: boolean; snap: Zona; z: number }
-interface Escritorio { nombre: string; ventanas: Ventana[] }
+interface Escritorio { nombre: string; ventanas: Ventana[]; widgets?: Record<string, { x: number; y: number }> }
 interface Estado { activo: number; escritorios: Escritorio[] }
 
 let _estado: Estado = { activo: 0, escritorios: [{ nombre: 'Principal', ventanas: [] }] };
@@ -91,6 +92,7 @@ export function pintarEscritorio(raiz: HTMLElement) {
           <div class="os-menu-cab"><b>${esc(u?.nombre ?? '')}</b><span>${esc(u?.email ?? '')}</span></div>
           <button data-action="osRenombrarEscritorio">Renombrar este escritorio</button>
           <button data-action="osEliminarEscritorio">Eliminar este escritorio</button>
+          <button data-action="osRecolocarWidgets">Recolocar los widgets</button>
           <button data-action="osSalir">Volver a la app clásica</button>
           <button class="os-menu-peligro" data-action="salir">Salir</button>
         </div>
@@ -171,7 +173,8 @@ function areaEscritorio() {
 function sitioNuevo(n: number): Pick<Ventana, 'x' | 'y' | 'w' | 'h'> {
   const { W, H } = areaEscritorio();
   const wid = document.getElementById('os-widgets');
-  const libreX = wid ? wid.offsetWidth + MARGEN * 2 : MARGEN;
+  // Con los widgets movidos a mano no hay columna que respetar.
+  const libreX = wid && !wid.classList.contains('libre') ? wid.offsetWidth + MARGEN * 2 : MARGEN * 2;
   const x = libreX + 640 <= W ? libreX : Math.round(W * 0.28);
   const w = Math.max(560, Math.min(880, W - x - MARGEN));
   const h = Math.max(420, H - MARGEN * 2 - 24);
@@ -359,6 +362,7 @@ export function instalarAtajosEscritorio() {
     if (!document.body.classList.contains('os-modo')) return;
     if (innerWidth < ANCHO_MINIMO) { quitarEscritorio(); ir(rutaActual().id, ...rutaActual().params); return; }
     for (const v of escritorio().ventanas) aplicarGeometria(v);
+    colocarWidgets();
   });
 }
 
@@ -382,6 +386,84 @@ function pintarWidgets() {
       <a class="os-wenlace" href="#/monitorizacion">Monitorización →</a></article>
     <article class="os-widget os-w-agenda" id="os-w-agenda"><div class="os-wtit"><i class="hex-punto"></i>Agenda de hoy<span id="os-agenda-n"></span></div><div class="os-wcuerpo" id="os-agenda"><p class="cargando">Cargando…</p></div>
       <a class="os-wenlace" href="#/calendario">Calendario en la app ↗</a></article>`;
+  colocarWidgets();
+  for (const w of document.querySelectorAll<HTMLElement>('#os-widgets > .os-widget')) instalarArrastreWidget(w);
+}
+
+// Widgets movibles. Mientras nadie mueve ninguno van en la rejilla de siempre;
+// al soltar el primero se congela el sitio de TODOS (para que los demás no
+// salten a rellenar el hueco) y desde ahí cada uno va donde se le deje.
+function colocarWidgets() {
+  const cont = document.getElementById('os-widgets');
+  if (!cont) return;
+  const pos = escritorio().widgets;
+  const ws = [...cont.querySelectorAll<HTMLElement>(':scope > .os-widget')];
+  if (!pos || !Object.keys(pos).length) {
+    cont.classList.remove('libre');
+    ws.forEach(w => { w.style.left = w.style.top = w.style.width = ''; });
+    return;
+  }
+  // Un widget sin sitio guardado (p. ej. uno nuevo) toma el de la rejilla.
+  const sinSitio = ws.filter(w => !pos[w.id]);
+  if (sinSitio.length) {
+    cont.classList.remove('libre');
+    ws.forEach(w => { w.style.width = ''; });
+    for (const w of sinSitio) pos[w.id] = { x: cont.offsetLeft + w.offsetLeft, y: cont.offsetTop + w.offsetTop };
+  }
+  if (!cont.classList.contains('libre')) ws.forEach(w => { w.style.width = `${w.offsetWidth}px`; });
+  cont.classList.add('libre');
+  const { W, H } = areaEscritorio();
+  for (const w of ws) {
+    const p = pos[w.id];
+    w.style.left = `${Math.max(0, Math.min(W - 80, p.x))}px`;
+    w.style.top = `${Math.max(0, Math.min(H - 40, p.y))}px`;
+  }
+}
+
+function congelarWidgets() {
+  const e = escritorio();
+  if (e.widgets && Object.keys(e.widgets).length) return;
+  const cont = document.getElementById('os-widgets')!;
+  e.widgets = Object.fromEntries([...cont.querySelectorAll<HTMLElement>(':scope > .os-widget')]
+    .map(w => [w.id, { x: cont.offsetLeft + w.offsetLeft, y: cont.offsetTop + w.offsetTop }]));
+  colocarWidgets();
+}
+
+let _zWidget = 1;
+function instalarArrastreWidget(w: HTMLElement) {
+  w.addEventListener('pointerdown', (e: PointerEvent) => {
+    if (e.button !== 0 || (e.target as Element).closest('a, button, input, select, textarea')) return;
+    const desde = { x: e.clientX, y: e.clientY };
+    let movio = false;
+    let base = { x: 0, y: 0 };
+    const mover = (ev: PointerEvent) => {
+      const dx = ev.clientX - desde.x, dy = ev.clientY - desde.y;
+      if (!movio) {
+        if (Math.hypot(dx, dy) < 5) return;
+        movio = true;
+        congelarWidgets();
+        base = { x: w.offsetLeft, y: w.offsetTop };
+        w.setPointerCapture(ev.pointerId);
+        w.classList.add('arrastrando');
+        w.style.zIndex = String(++_zWidget);
+      }
+      ev.preventDefault();
+      w.style.left = `${base.x + dx}px`; w.style.top = `${base.y + dy}px`;
+    };
+    const soltar = () => {
+      w.removeEventListener('pointermove', mover);
+      w.removeEventListener('pointerup', soltar);
+      w.removeEventListener('pointercancel', soltar);
+      if (!movio) return;
+      w.classList.remove('arrastrando');
+      escritorio().widgets![w.id] = { x: w.offsetLeft, y: w.offsetTop };
+      colocarWidgets();
+      guardarEstado();
+    };
+    w.addEventListener('pointermove', mover);
+    w.addEventListener('pointerup', soltar);
+    w.addEventListener('pointercancel', soltar);
+  });
 }
 
 async function refrescarDatos() {
@@ -567,6 +649,12 @@ registrarAcciones({
     _estado.activo = Math.max(0, _estado.activo - 1);
     guardarEstado();
     pintarEscritorio(_raiz!);
+  },
+  osRecolocarWidgets() {
+    document.getElementById('os-menu')!.hidden = true;
+    delete escritorio().widgets;
+    guardarEstado();
+    colocarWidgets();
   },
   osMenu() { const m = document.getElementById('os-menu')!; m.hidden = !m.hidden; },
   osAvisos() {

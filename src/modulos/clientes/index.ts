@@ -145,7 +145,7 @@ async function tabSedes(c: Cliente): Promise<string> {
     <tbody>${ls.map(l => {
       const e = rmm.get(l.id);
       const mapa = l.maps_url || (l.lat ? `https://www.google.com/maps?q=${l.lat},${l.lng}` : l.direccion ? `https://www.google.com/maps/search/${encodeURIComponent(l.direccion)}` : '');
-      return `<tr class="${l.activo === false ? 'in-pausado' : ''}"><td><strong>${esc(l.nombre)}</strong>${l.direccion ? `<br><small class="nota">${esc(l.direccion)}</small>` : ''}
+      return `<tr class="${l.activo === false ? 'in-pausado' : ''}"><td><a href="#/sitios/${esc(l.id)}"><strong>${esc(l.nombre)}</strong></a>${l.direccion ? `<br><small class="nota">${esc(l.direccion)}</small>` : ''}
         ${mapa ? ` <a href="${esc(mapa)}" target="_blank" rel="noopener">mapa ↗</a>` : ''}</td>
         <td>${l.plan ? `${esc(l.plan)}${esAdmin() && l.importe_mantenimiento ? ` · ${eur(l.importe_mantenimiento, 2)}/mes` : ''}<br>` : '—'}${l.estado_pago && l.estado_pago !== 'Al corriente' ? `<span class="chip aviso">${esc(l.estado_pago)}</span>` : ''}</td>
         <td>${esc(l.programa_tpv ?? '—')}</td>

@@ -363,6 +363,16 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   a partir de 1024 px; la disposición va en `localStorage.hub_os_<usuario>`;
   no escribe nada en la base. Un módulo nuevo entra solo en el dock y el
   lanzador (sale de `visibles()`). Arnés `verify-escritorio.mjs`.
+- **Sitios** (`src/modulos/sitios/`, `#/sitios`, 2026-09-28): las sedes como
+  en «Sitios» de la app (lista con filtros y ficha con resumen, contactos,
+  trabajos, tickets y equipos). Espejo en SOLO LECTURA (área `clientes`); la
+  cuota solo para admin y el código de alarma oculto hasta pulsar «Ver». Las
+  sedes de la ficha del cliente enlazan aquí. Arnés `verify-sitios.mjs`.
+- **Widgets movibles** del modo escritorio: se arrastran por cualquier punto
+  que no sea un enlace o botón; al mover el primero se congela el sitio de
+  todos (`Escritorio.widgets`, por escritorio, en la misma disposición de
+  `localStorage`) y «Recolocar los widgets» (menú del avatar) vuelve a la
+  rejilla.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

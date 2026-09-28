@@ -13,6 +13,7 @@ import { moduloPersonas } from './personas';
 import { moduloBuscar } from './buscar';
 import { moduloMonitorizacion } from './monitorizacion';
 import { moduloClientes } from './clientes';
+import { moduloSitios } from './sitios';
 import { moduloOportunidades } from './oportunidades';
 import { moduloTickets } from './tickets';
 import { moduloPortal } from './portal';
@@ -38,6 +39,7 @@ export const MODULOS: Modulo[] = [
   moduloWiki,
   moduloBuscar,
   moduloClientes,
+  moduloSitios,
   moduloOportunidades,
   moduloTickets,
   moduloPortal,
