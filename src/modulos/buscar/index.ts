@@ -50,14 +50,17 @@ async function pintarEstado(): Promise<string> {
         ${drive.carpeta ? '<button class="btn secundario" type="button" data-action="buDrive">Leer Drive ahora</button>' : ''}</form>` : ''}</section>`;
 }
 
-async function pintar(el: HTMLElement) {
+// #/buscar/<pregunta> (desde la paleta Ctrl+K) llega con la pregunta puesta y la lanza.
+async function pintar(el: HTMLElement, params: string[] = []) {
+  const pregunta = params[0]?.trim() ?? '';
   el.innerHTML = `<form class="tarjeta bu-caja" data-on-submit="buPreguntar" data-prevent="1">
       <label for="bu-q">¿Qué quieres saber?</label>
-      <div class="acciones"><input id="bu-q" maxlength="500" placeholder="p. ej. ¿Qué TPV tiene el Bar Pepe y dónde está la clave del router?" value="${esc(_ultima?.pregunta ?? '')}" required>
+      <div class="acciones"><input id="bu-q" maxlength="500" placeholder="p. ej. ¿Qué TPV tiene el Bar Pepe y dónde está la clave del router?" value="${esc(pregunta || _ultima?.pregunta || '')}" required>
         <button class="btn" type="submit">Preguntar</button></div>
     </form>
     <div id="bu-respuesta">${pintarRespuesta()}</div>
     <div id="bu-estado"><p class="cargando">Cargando el índice…</p></div>`;
+  if (pregunta && _ultima?.pregunta !== pregunta) (el.querySelector('form') as HTMLFormElement | null)?.requestSubmit();
   const est = document.getElementById('bu-estado');
   if (est) est.innerHTML = await pintarEstado();
 }

@@ -211,7 +211,9 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
 - `src/modulos/index.ts` registra las pantallas; el orden es el del menú.
   `app-actual/` son los enlaces a la app actual con contador sacado del
   ESPEJO del hub (ni una consulta más a producción).
-- `src/shell/`: shell, login, buscador (Ctrl+K), tema, tour.
+- `src/shell/`: shell, login, buscador (la paleta Ctrl+K), tema, tour,
+  `pantalla.ts` (pintar un módulo en un contenedor) y `escritorio.ts` (modo
+  escritorio).
 - `src/core/equipo.ts`: personas del equipo (caché 5 min, una carga en
   vuelo) y `nombreDe(id)`. `src/ui/markdown.ts`: markdown SEGURO (escapa todo
   antes de dar formato); úsese para todo texto que escriba una persona o Claude.
@@ -274,6 +276,28 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
 - Al entrar se busca el correo de la sesión en `hub.usuarios` (activo): sin
   fila, se cierra la sesión y se avisa. La RLS usa la misma regla
   (`hub.es_usuario()`, `hub.es_admin()`).
+- **Marca en el front** (2026-09-28): `src/estilo.css` lleva los tokens del
+  sistema «OK Computer» (`--verde`, `--lima`, `--hondo`, `--tinta`, `--noche`,
+  `--menta`, `--palido`, `--linea`) y redefine los de interfaz en los dos temas
+  (`--primario` = hondo/lima para texto y activo, `--primario-suave` para
+  fondos de lo activo, `--accion` = verde/lima para el botón principal). Las
+  pantallas siguen usando los nombres de siempre. El hexágono es el único
+  motivo gráfico (`.hex`, `.hex-punto`, `--hex`); sin azules ni degradados.
+  OJO: `.aviso` es una CAJA (padding y fondo); un color de gravedad va como
+  `g-mal` / `g-aviso`. Gráficas: `--serie-1` verde y `--serie-2` ámbar.
+- **Modo escritorio** (`src/shell/escritorio.ts`, `src/escritorio.css`, todo
+  bajo `body.os-modo`; `docs/MODO_ESCRITORIO.md`): el hub como escritorio con
+  ventanas (una por módulo, pintadas con `shell/pantalla.ts`, la misma pieza
+  que usa el shell clásico), widgets (Hoy, Avisos de `panorama_direccion`,
+  Cobros solo admin, Equipos, Agenda), dock, escritorios con nombre y centro
+  de avisos. Se enciende por persona (botón al pie del menú, `?os=1`) y solo
+  a partir de 1024 px; la disposición va en `localStorage.hub_os_<usuario>`;
+  no escribe nada en la base. Un módulo nuevo entra solo en el dock y el
+  lanzador (sale de `visibles()`). Arnés `verify-escritorio.mjs`.
+- **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
+  (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
+  `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto
+  elegido (Claude trabaja siempre sobre un proyecto).
 
 ## Convenciones
 

@@ -73,7 +73,15 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   (respuesta en markdown seguro con citas, fuentes, estado del índice,
   carpeta de Drive solo admin). Funciones simuladas en el propio arnés.
 
-`npm run verify` pasa los siete.
+- `verify-escritorio.mjs`: modo escritorio (entrar desde el menú y por
+  `?os=1`, widgets con datos del espejo y del motor de avisos, ventanas por
+  el dock y por la URL, ajuste a zonas al arrastrar y con Alt+Mayús,
+  minimizar/restaurar/cerrar, escritorios con nombre que se recuerdan, centro
+  de avisos con «Los míos», lanzador, tema noche, volver a la app clásica, un
+  técnico sin Cobros, 900 px no entra) y la paleta Ctrl+K con sus cuatro
+  modos. No escribe nada.
+
+`npm run verify` pasa los ocho.
 
 ## Pantalla nueva
 

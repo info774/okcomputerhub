@@ -1,5 +1,6 @@
 // Arranque: tema → sesión → ¿es usuario del hub? → shell + router.
 import './estilo.css';
+import './escritorio.css';
 import { instalarDispatcher, registrarAcciones } from './core/dispatcher';
 import { sesionInicial, alCambiarSesion, entrarConCorreo, entrarConGoogle, salir, emailSesion } from './core/auth';
 import { API } from './core/api';
@@ -9,7 +10,8 @@ import { MODULOS } from './modulos';
 import { aplicarTema, alternarTema } from './shell/tema';
 import { pintarShell, mostrarModulo, alternarMenu } from './shell/shell';
 import { pintarLogin, avisoLogin } from './shell/login';
-import { abrirBuscador, cerrarBuscador, filtrarBuscador, buscadorEnter, instalarAtajoBuscador } from './shell/buscador';
+import { abrirBuscador, cerrarBuscador, filtrarBuscador, buscadorEnter, buscadorTecla, busModo, instalarAtajoBuscador } from './shell/buscador';
+import { leerParametroOs, instalarAtajosEscritorio } from './shell/escritorio';
 import { empezarTour, tourSiguiente, tourCerrar, tourSiEsNuevo } from './shell/tour';
 
 const raiz = document.getElementById('app')!;
@@ -19,10 +21,12 @@ let arrancando: Promise<void> | null = null;
 registrarModulos(MODULOS);
 instalarDispatcher();
 instalarAtajoBuscador();
+instalarAtajosEscritorio();
+leerParametroOs();
 aplicarTema();
 
 registrarAcciones({
-  alternarTema, alternarMenu, abrirBuscador, cerrarBuscador, filtrarBuscador, buscadorEnter,
+  alternarTema, alternarMenu, abrirBuscador: () => abrirBuscador(), cerrarBuscador, filtrarBuscador, buscadorEnter, buscadorTecla, busModo,
   empezarTour, tourSiguiente, tourCerrar,
   async entrar() {
     const email = (document.getElementById('lg-email') as HTMLInputElement).value.trim();
