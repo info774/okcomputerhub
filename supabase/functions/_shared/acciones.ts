@@ -4,6 +4,7 @@
 //   · `alcance`: lectura < escritura < admin (el del token tiene que llegar);
 //   · una escritura sobre una tabla cuya área tenga dueño 'app' (hub.areas) NO
 //     se ofrece ni se ejecuta: esa área la manda todavía la app actual.
+import { crearComanda } from './comandas.ts'
 import { type Db, type Fila, limpio, esUuid, esFecha } from './hub-db.ts'
 import { ejecutarAccionRmm, COMANDOS, type AccionRmm } from './rmm-acciones.ts'
 import { construirInforme, TIPOS } from './informes.ts'
@@ -26,6 +27,9 @@ export interface Herramienta {
 // ── Utilidades ──────────────────────────────────────────────────────────────
 const txt = (v: unknown, max = 500) => (v == null ? undefined : String(v).trim().slice(0, max) || undefined)
 const lim = (v: unknown, def = 20, max = 100) => Math.min(Math.max(Number(v) || def, 1), max)
+const ESTADOS_TICKET = ['Abierto', 'En curso', 'Pendiente', 'Cerrado']
+// Las prioridades de los tickets van con mayúscula, como en la app.
+const prioridadTicket = (v: unknown) => { const p = String(v ?? 'media').toLowerCase(); return ['baja', 'media', 'alta', 'urgente'].includes(p) ? p[0].toUpperCase() + p.slice(1) : 'Media' }
 const obj = (props: Record<string, unknown>, required: string[] = []) => ({ type: 'object', properties: props, required })
 const S = (description: string, extra: Record<string, unknown> = {}) => ({ type: 'string', description, ...extra })
 const N = (description: string) => ({ type: 'number', description })
@@ -481,13 +485,51 @@ const escritura: Herramienta[] = [
   // área se corte (hub.areas.dueno = 'hub'). Mismas columnas que la app.
   {
     name: 'ticket_crear', alcance: 'escritura', tabla: 'tickets',
-    description: 'Crea un ticket de soporte.',
-    inputSchema: obj({ titulo: S('Título'), descripcion: S('Detalle'), cliente_id: S('UUID del cliente'),
-      prioridad: S('baja | media | alta | urgente') }, ['titulo']),
+    description: 'Crea un ticket de soporte en el Desk del hub (el SLA se calcula solo por la prioridad).',
+    inputSchema: obj({ titulo: S('Título'), descripcion: S('Detalle'), cliente_id: S('UUID del cliente'), local_id: S('UUID de la sede'),
+      prioridad: S('Baja | Media | Alta | Urgente'), tecnico: S('Nombre del técnico asignado'), canal: S('email | whatsapp | telefono | portal | hub') }, ['titulo']),
     async ejecutar(a, { db }) {
       const [t] = await db.post('tickets', soloDefinidos({ titulo: txt(a.titulo, 200), descripcion: txt(a.descripcion, 5000),
-        cliente_id: esUuid(a.cliente_id) ? a.cliente_id : undefined, prioridad: a.prioridad, estado: 'Abierto' }))
-      return { id: t.id, numero: t.numero }
+        cliente_id: esUuid(a.cliente_id) ? a.cliente_id : undefined, local_id: esUuid(a.local_id) ? a.local_id : undefined,
+        prioridad: prioridadTicket(a.prioridad), tecnico_id: txt(a.tecnico, 80), canal: txt(a.canal, 20) ?? 'hub', estado: 'Abierto' }))
+      return { id: t.id, numero: t.numero, sla_respuesta: t.sla_respuesta_at, sla_resolucion: t.sla_resolucion_at }
+    },
+  },
+  {
+    name: 'ticket_detalle', alcance: 'lectura',
+    description: 'Un ticket por su número: datos, SLA, valoración y la conversación (notas internas, respuestas y mensajes del cliente).',
+    inputSchema: obj({ numero: N('Número del ticket') }, ['numero']),
+    async ejecutar(a, { db }) {
+      const [t] = await db.get(`tickets?select=*&numero=eq.${Number(a.numero) || 0}`)
+      if (!t) throw new Error('No existe ese ticket')
+      const comentarios = await db.get(`ticket_comentarios?select=created_at,tipo,canal,autor_nombre,texto,enviado_at&ticket_id=eq.${t.id}&order=created_at`)
+      delete t.valoracion_token
+      return { ...t, comentarios }
+    },
+  },
+  {
+    name: 'ticket_actualizar', alcance: 'escritura', tabla: 'tickets',
+    description: 'Cambia estado (Abierto | En curso | Pendiente | Cerrado), prioridad, técnico o resolución de un ticket.',
+    inputSchema: obj({ numero: N('Número del ticket'), estado: S('Abierto | En curso | Pendiente | Cerrado'), prioridad: S('Baja | Media | Alta | Urgente'),
+      tecnico: S('Nombre del técnico'), resolucion: S('Qué se hizo (al cerrar)') }, ['numero']),
+    async ejecutar(a, { db }) {
+      const estado = a.estado ? ESTADOS_TICKET.find(e => e.toLowerCase() === String(a.estado).toLowerCase()) : undefined
+      if (a.estado && !estado) throw new Error(`Estado no válido (${ESTADOS_TICKET.join(', ')})`)
+      const r = await db.patch(`tickets?numero=eq.${Number(a.numero) || 0}`, soloDefinidos({ estado, prioridad: a.prioridad ? prioridadTicket(a.prioridad) : undefined,
+        tecnico_id: txt(a.tecnico, 80), resolucion: txt(a.resolucion, 5000) }))
+      if (!r.length) throw new Error('No existe ese ticket')
+      return { numero: r[0].numero, estado: r[0].estado, prioridad: r[0].prioridad, tecnico: r[0].tecnico_id }
+    },
+  },
+  {
+    name: 'ticket_comentar', alcance: 'escritura', tabla: 'ticket_comentarios',
+    description: 'Apunta una NOTA INTERNA en un ticket (no le llega al cliente; las respuestas al cliente se mandan desde el Desk).',
+    inputSchema: obj({ numero: N('Número del ticket'), texto: S('La nota') }, ['numero', 'texto']),
+    async ejecutar(a, { db, usuarioId, nombre }) {
+      const [t] = await db.get(`tickets?select=id&numero=eq.${Number(a.numero) || 0}`)
+      if (!t) throw new Error('No existe ese ticket')
+      const [c] = await db.post('ticket_comentarios', { ticket_id: t.id, texto: txt(a.texto, 5000), tipo: 'nota', autor_id: usuarioId, autor_nombre: nombre })
+      return { id: c.id }
     },
   },
 ]
@@ -586,7 +628,7 @@ async function persona(ctx: Contexto) {
 const mando: Herramienta[] = [
   {
     name: 'avisos', alcance: 'lectura',
-    description: 'Avisos accionables del puesto de mando: presupuestos sin respuesta, trabajos por facturar, tickets sin asignar, alertas RMM, hitos vencidos y, si el dueño del token es admin, facturas vencidas, cobros de mantenimiento torcidos, clientes importantes sin comprar y cierre de mes.',
+    description: 'Avisos accionables del puesto de mando: presupuestos sin respuesta, trabajos por facturar, tickets sin asignar o con el SLA vencido, correos por revisar, alertas RMM, hitos vencidos y, si el dueño del token es admin, facturas vencidas, cobros de mantenimiento torcidos, clientes importantes sin comprar y cierre de mes.',
     inputSchema: obj({ tipo: S('Filtrar por tipo (p. ej. factura_vencida, alerta_rmm)') }),
     async ejecutar(a, ctx) {
       const filas = (await ctx.db.rpc('panorama_direccion', { p_para: ctx.usuarioId })) as Fila[] ?? []
@@ -739,7 +781,89 @@ const wiki: Herramienta[] = [
   },
 ]
 
-export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...mando, ...ventas, ...wiki, ...escritura]
+// ── Comandas (fase 8) ───────────────────────────────────────────────────────
+const comandas: Herramienta[] = [
+  {
+    name: 'comanda_crear', alcance: 'escritura', tabla: 'comanda_tareas',
+    description: 'Reparte una comanda: un texto con cosas por hacer («Tito, cambia el router del Bar Pepe; Ana, llama al Hotel por la factura») se trocea en tareas del tablero de comandas, cada una a su persona, y se les avisa por Telegram.',
+    inputSchema: obj({ texto: S('Lo que hay que hacer, como se diría en voz alta') }, ['texto']),
+    async ejecutar(a, { db, usuarioId, nombre }) {
+      const r = await crearComanda(db, { texto: String(a.texto ?? ''), origen: 'mcp', autorId: usuarioId, autorNombre: nombre })
+      return { comanda_id: r.comanda_id, con_claude: r.con_claude, tareas: r.tareas.map(t => ({ id: t.id, texto: t.texto, persona_id: t.persona_id, prioridad: t.prioridad })) }
+    },
+  },
+  {
+    name: 'comandas_listar', alcance: 'lectura',
+    description: 'Tablero de comandas: tareas pendientes y en curso (o las hechas), de todos o de una persona.',
+    inputSchema: obj({ persona_email: S('Correo de la persona (vacío = todas)'), estado: S('pendiente | en_curso | hecha (vacío = las no hechas)') }),
+    async ejecutar(a, { db }) {
+      const f = [`estado=${a.estado ? `eq.${encodeURIComponent(limpio(a.estado))}` : 'neq.hecha'}`]
+      if (a.persona_email) f.push(`persona_id=eq.${await usuarioPorEmail(db, a.persona_email)}`)
+      const [ts, gente] = await Promise.all([db.get(`comanda_tareas?select=id,texto,estado,prioridad,fecha_limite,persona_id,created_at&${f.join('&')}&order=prioridad.desc,created_at&limit=200`),
+        db.get('usuarios?select=id,nombre')])
+      return ts.map(t => ({ ...t, persona: gente.find(g => g.id === t.persona_id)?.nombre ?? null }))
+    },
+  },
+  {
+    name: 'comanda_tarea_actualizar', alcance: 'escritura', tabla: 'comanda_tareas',
+    description: 'Mueve una tarea del tablero de comandas (pendiente, en_curso, hecha) o se la pasa a otra persona.',
+    inputSchema: obj({ id: S('UUID de la tarea'), estado: S('pendiente | en_curso | hecha'), persona_email: S('Correo de la nueva persona') }, ['id']),
+    async ejecutar(a, { db }) {
+      if (!esUuid(a.id)) throw new Error('id no válido')
+      if (a.estado && !['pendiente', 'en_curso', 'hecha'].includes(String(a.estado))) throw new Error('Estado no válido')
+      const r = await db.patch(`comanda_tareas?id=eq.${a.id}`, soloDefinidos({ estado: a.estado, persona_id: a.persona_email ? await usuarioPorEmail(db, a.persona_email) : undefined }))
+      if (!r.length) throw new Error('No existe esa tarea')
+      return { id: r[0].id, estado: r[0].estado, persona_id: r[0].persona_id }
+    },
+  },
+]
+
+// ── Almacén (fase 9) ────────────────────────────────────────────────────────
+const almacen: Herramienta[] = [
+  {
+    name: 'stock', alcance: 'lectura',
+    description: 'Stock de un material en todas las ubicaciones (almacén y furgonetas), con su mínimo, consumo de 90 días, lo pedido en camino y el proveedor. Sin texto: lo que hay que pedir ya.',
+    inputSchema: obj({ q: S('Parte del nombre del material (vacío = lo urgente)') }),
+    async ejecutar(a, { db }) {
+      const filas = (await db.rpc('mrp', {})) as Fila[] ?? []
+      const q = limpio(a.q ?? '').toLowerCase()
+      return q ? filas.filter(f => String(f.nombre ?? '').toLowerCase().includes(q)).slice(0, 30) : filas.filter(f => f.urgente)
+    },
+  },
+  {
+    name: 'compras_sugeridas', alcance: 'lectura',
+    description: 'MRP: qué pedir y a quién (cantidad sugerida por material con el consumo, el plazo del proveedor y lo que ya viene), agrupado por proveedor.',
+    inputSchema: obj({}),
+    async ejecutar(_a, { db }) {
+      const filas = ((await db.rpc('mrp', {})) as Fila[] ?? []).filter(f => Number(f.sugerido) > 0)
+      const por: Record<string, Fila[]> = {}
+      for (const f of filas) (por[String(f.proveedor ?? 'Sin proveedor')] ??= []).push({ nombre: f.nombre, pedir: f.sugerido, stock: f.stock, urgente: f.urgente, precio: f.precio_compra })
+      return por
+    },
+  },
+  {
+    name: 'envios_listar', alcance: 'lectura',
+    description: 'Envíos por agencia (Correos, Correos Express…) que no se han entregado, o los últimos.',
+    inputSchema: obj({ todos: B('También los entregados (últimos 50)') }),
+    async ejecutar(a, { db }) {
+      return db.get(`envios?select=id,sentido,agencia,seguimiento,estado,destinatario,contenido,enviado_at,entregado_at&${a.todos ? '' : 'estado=not.in.(entregado,devuelto)&'}order=created_at.desc&limit=50`)
+    },
+  },
+  {
+    name: 'envio_crear', alcance: 'escritura', tabla: 'envios',
+    description: 'Apunta un envío con su agencia y número de seguimiento.',
+    inputSchema: obj({ agencia: S('Correos | Correos Express | MRW | SEUR | GLS | Otra'), seguimiento: S('Número de seguimiento'), destinatario: S('A quién'),
+      contenido: S('Qué va'), sentido: S('salida | entrada'), cliente_id: S('UUID del cliente') }, ['agencia']),
+    async ejecutar(a, { db }) {
+      const [e] = await db.post('envios', soloDefinidos({ agencia: txt(a.agencia, 40), seguimiento: txt(a.seguimiento, 80), destinatario: txt(a.destinatario, 200),
+        contenido: txt(a.contenido, 500), sentido: a.sentido === 'entrada' ? 'entrada' : 'salida', cliente_id: esUuid(a.cliente_id) ? a.cliente_id : undefined,
+        estado: a.seguimiento ? 'enviado' : 'preparado' }))
+      return { id: e.id, estado: e.estado }
+    },
+  },
+]
+
+export const HERRAMIENTAS: Herramienta[] = [...lectura, ...rmm, ...mando, ...ventas, ...wiki, ...comandas, ...almacen, ...escritura]
 
 // Tablas cuyo dueño es la app (no se escribe en ellas desde el hub).
 export async function tablasDeLaApp(db: Db): Promise<Set<string>> {

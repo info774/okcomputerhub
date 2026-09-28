@@ -26,6 +26,7 @@ import { abrirBuscador } from './buscador';
 const CLAVE_ACTIVO = 'hub_escritorio';
 const ANCHO_MINIMO = 1024;
 const MARGEN = 16;
+const DOCK_FIJAS = 12;
 type Zona = 'izq' | 'der' | 'ai' | 'ad' | 'bi' | 'bd' | 'max' | null;
 interface Ventana { id: string; params: string[]; x: number; y: number; w: number; h: number; min: boolean; snap: Zona; z: number }
 interface Escritorio { nombre: string; ventanas: Ventana[] }
@@ -134,8 +135,13 @@ function pintarDock() {
   const item = (m: Modulo, extra = '') => `
     <button class="os-ditem ${abiertas.has(m.id) ? 'abierta' : ''} ${frente === m.id ? 'activa' : ''} ${extra}" data-action="osAbrir" data-p0="${esc(m.id)}" title="${esc(m.titulo)}">
       <span class="hex" aria-hidden="true">${esc(m.icono)}</span><span class="os-dlabel">${esc(m.titulo)}</span><span class="os-dpunto"></span></button>`;
+  // Fijas: las primeras del menú (las del hub); lo abierto que no esté entre
+  // ellas se añade mientras dure, como en cualquier dock. El resto, en «Todas».
+  const hub = visibles().filter(delHub);
+  const fijas = hub.slice(0, DOCK_FIJAS);
+  const enDock = [...fijas, ...hub.filter(m => abiertas.has(m.id) && !fijas.includes(m))];
   document.getElementById('os-dock')!.innerHTML = item({ id: 'inicio', titulo: 'Panel', icono: '▦' } as Modulo)
-    + visibles().filter(delHub).map(m => item(m)).join('')
+    + enDock.map(m => item(m)).join('')
     + '<span class="os-dsep"></span>'
     + `<button class="os-ditem os-claude" data-action="osClaude" title="Pedir a Claude"><span class="hex" aria-hidden="true">✨</span><span class="os-dlabel">Claude</span><span class="os-dpunto"></span></button>`
     + `<button class="os-ditem" data-action="osLanzador" data-p0="1" title="Todas las pantallas"><span class="hex os-hex-borde" aria-hidden="true">⋯</span><span class="os-dlabel">Todas</span><span class="os-dpunto"></span></button>`;

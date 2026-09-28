@@ -30,8 +30,10 @@ por HTTP sin estado. Nada de SQL libre: solo las herramientas de
 | `admin` | Todo lo anterior; reservado para lo que se añada de administración. |
 
 Una escritura sobre un área cuyo dueño sea la app (`hub.areas`) **ni se ofrece
-ni se ejecuta**: `ticket_crear` existe en el catálogo pero no aparece hasta que
-el área `tickets` se corte al hub (fase 6).
+ni se ejecuta**. Desde la fase 6 el área `tickets` es del hub: `ticket_crear`,
+`ticket_actualizar` y `ticket_comentar` (nota interna; al cliente se le
+contesta desde el Desk) están activas, con `ticket_detalle` para leer uno con
+su conversación.
 
 ## Wiki y buscador (fase 5)
 
@@ -40,6 +42,17 @@ el área `tickets` se corte al hub (fase 6).
 - `wiki_buscar`, `wiki_leer`: páginas por palabras y una página entera.
 - `wiki_crear`, `wiki_editar` (escritura): se reindexan solas en la siguiente
   pasada de la cola; el historial lo guarda la base.
+
+## Comandas (fase 8)
+
+- `comanda_crear`: un texto con cosas por hacer se trocea en tareas repartidas
+  por persona (y se les avisa por Telegram).
+- `comandas_listar`, `comanda_tarea_actualizar` (estado o persona).
+
+## Almacén (fase 9)
+
+- `stock` (un material en todas las ubicaciones, o lo urgente),
+  `compras_sugeridas` (MRP por proveedor), `envios_listar`, `envio_crear`.
 
 ## Seguridad y rastro
 

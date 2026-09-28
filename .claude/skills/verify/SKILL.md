@@ -73,6 +73,38 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   (respuesta en markdown seguro con citas, fuentes, estado del índice,
   carpeta de Drive solo admin). Funciones simuladas en el propio arnés.
 
+- `verify-tickets.mjs`: Desk (vistas y SLA, nuevo con cliente/sede/contacto,
+  responder por correo y por WhatsApp, nota interna, plantillas, técnico,
+  vincular trabajo, cerrar con valoración, bandeja de correo, ajustes, técnico
+  sin borrar ni cambiar el SLA) y la página pública `valorar.html`.
+  `window.open` se sustituye en la página para ver la URL de WhatsApp.
+
+- `verify-portal.mjs`: `portal.html` con la función `portal` simulada (enlace,
+  entrar y quitar el código de la URL, tickets, aviso, mensaje, aceptar,
+  PDF, mantenimiento, equipos, sesión caducada, salir; comprueba que no toca
+  PostgREST) y `#/portal` del equipo (invitar, enlace, revocar, aceptaciones).
+
+- `verify-comandas.mjs`: escribir y GRABAR una comanda (Chromium con
+  `--use-fake-device-for-media-stream`: `navegador(args)` de `comun.mjs`),
+  tablero (botones y arrastre; ventana alta para que arrastrar no desplace la
+  página), repartir, tarea suelta, filtro por persona, borrar solo lo propio.
+
+- `verify-almacen.mjs`: stock y filtros (MRP simulado por RPC), «Qué pedir» →
+  pedido en borrador, ficha (línea del catálogo, cantidad, enviar pide
+  proveedor, recibido, entrada dada), proveedor y sus materiales (preferido),
+  envíos (seguimiento, estado); nada escribe en el espejo del inventario.
+
+- `verify-personas.mjs`: jornada (RPC simulado; corrección con motivo en hora
+  de Canarias, CSV), ausencias (pedir, aprobar), gastos (subir → gastos-ocr
+  simulada → confirmar), cierre, firmas (vista previa segura, enviar) y las
+  páginas `firmar.html` (firma dibujada en el lienzo) y `gestoria.html`.
+  OJO al simular funciones: un cuerpo puede traer su propio `nombre`
+  (`{ ...b, nombre }`, no al revés).
+
+- `verify-facturacion.mjs`: sin activar (aviso, serie real deshabilitada),
+  borrador de prueba (cliente, línea, IGIC), emitir por RPC, emitida (marca
+  PRUEBA, huella, no editable, cobro, rectificar), desde trabajos, emisor.
+
 - `verify-escritorio.mjs`: modo escritorio (entrar desde el menú y por
   `?os=1`, widgets con datos del espejo y del motor de avisos, ventanas por
   el dock y por la URL, ajuste a zonas al arrastrar y con Alt+Mayús,
@@ -81,7 +113,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   técnico sin Cobros, 900 px no entra) y la paleta Ctrl+K con sus cuatro
   modos. No escribe nada.
 
-`npm run verify` pasa los ocho.
+- `verify-final.mjs`: trabajos, calendario, hoy y chat en los dos mundos: con
+  las áreas de la app (todo se ve, nada se edita, avisa) y cortadas (estado,
+  material, mover, fichar, terminar con foto, por sus RPC). El GPS no
+  contesta en el arnés: el fichaje sigue a los 6 s sin él.
+
+`npm run verify` pasa los quince.
 
 ## Pantalla nueva
 

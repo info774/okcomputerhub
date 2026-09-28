@@ -5,7 +5,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 // deploy pone HUB_BUILD=<sha> y aquí se sella en dist/sw.js, así cada deploy
 // estrena caché y no se sirve JS de una versión anterior.
 export default defineConfig({
-  build: { target: 'es2022', sourcemap: true },
+  // Páginas: la app del equipo, el área de clientes, firmar un documento y la gestoría.
+  build: { target: 'es2022', sourcemap: true, rollupOptions: { input: { main: 'index.html', portal: 'portal.html', firmar: 'firmar.html', gestoria: 'gestoria.html' } } },
   plugins: [{
     name: 'sellar-sw',
     apply: 'build',

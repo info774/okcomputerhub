@@ -8,6 +8,10 @@
   <title>Ok Computer Hub</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/iconos/icono.svg" type="image/svg+xml">
+  <script>
+    // clientes.okcomputertenerife.com sirve este mismo sitio: allí se entra al portal.
+    if (location.hostname.indexOf('clientes.') === 0) location.replace('/portal.html' + location.search + location.hash);
+  </script>
 </head>
 <body>
   <div id="app"><p class="cargando">Cargando…</p></div>

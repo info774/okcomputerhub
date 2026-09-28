@@ -34,6 +34,26 @@ siguen en la app; las OPORTUNIDADES son ya del hub. Detalle en `docs/FASE4.md`.
 `#/buscar`, funciones `documentos-indexar`, `documentos-preguntar`). Detalle en
 `docs/FASE5.md`. Las decisiones de Fran para las fases 5 a Final están en
 `docs/DECISIONES_FASES.md` y lo que tiene que hacer él, en `docs/PENDIENTE_FRAN.md`.
+**Fase 6 HECHA** (2026-09-27): Desk (`20261010_desk.sql`, `#/tickets`, funciones
+`desk-correo` y `ticket-valorar`, `valorar.html`). Los TICKETS son ya del hub.
+Detalle en `docs/FASE6.md`.
+**Fase 7 HECHA** (2026-09-27): portal de clientes (`20261011_portal.sql`,
+`portal.html`, función `portal`, `#/portal`). Detalle en `docs/FASE7.md`.
+**Fase 8 HECHA** (2026-09-27): comandas (`20261012_comandas.sql`, `#/comandas`,
+función `comandas`, notas de voz al bot). Detalle en `docs/FASE8.md`.
+**Fase 9 HECHA** (2026-09-27): almacén (`20261013_almacen.sql`, `#/almacen`, MRP en
+`hub.mrp()`, proveedores, pedidos de compra y envíos; inventario en espejo).
+Detalle en `docs/FASE9.md`.
+**Fase 10 HECHA** (2026-09-27): personas (`20261014_personas.sql`, `#/personas`,
+`#/firmas`, `firmar.html`, `gestoria.html`, funciones `gastos-ocr` y `firma`).
+Detalle en `docs/FASE10.md`.
+**Fase 11 PROGRAMADA SIN ACTIVAR** (2026-09-27): facturación propia
+(`20261015_facturacion.sql`, `#/facturacion`); Zoho sigue facturando; solo emite
+la serie de PRUEBA. Detalle y pasos para activarla en `docs/FASE11.md`.
+**Fase Final PROGRAMADA SIN EL CAMBIO** (2026-09-27): `#/trabajos`, `#/calendario`,
+`#/chat`, `#/hoy` (`20261016_final.sql`); el corte está preparado en
+`supabase/cortes/corte_final.sql` y NO se aplica sin el OK de Fran. Pasos en
+`docs/FASE_FINAL.md`.
 
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
@@ -272,6 +292,55 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   nuevo que deba encontrarse: una fila en `hub.documentos` (`pendiente`) y la
   cola lo indexa; el extractor está en `documentos-indexar`. Claude, por
   `_shared/claude.ts` (sin clave, se degrada: fuentes sin redacción).
+- Desk: tickets y `ticket_comentarios` son del hub (área cortada con
+  `importar_altas`; numeración propia desde el 5000). El SLA lo calcula la base
+  (trigger + `hub.sumar_laborables`), no el front. Una respuesta al cliente es
+  un comentario `tipo = 'respuesta'` y el envío queda en `enviado_at`/`canal`;
+  por correo lo manda `desk-correo` (Gmail con delegación, actuando como
+  info@). Nada sale solo hacia un cliente: lo manda una persona.
+- Páginas públicas sueltas (sin login): `public/<nombre>.html`, autorizadas por
+  un token en la URL y una función SIN_JWT; el service worker no las toca.
+- Portal de clientes: los clientes NO son usuarios de Supabase ni tocan
+  PostgREST; todo va por la función `portal` con sesión propia
+  (`x-portal-token`) y filtrado por el cliente del acceso. Algo nuevo que vea
+  el cliente = una acción en `portal/index.ts` que filtre por
+  `s.cliente_id`, y nunca notas internas. `portal.html` es otra entrada de Vite
+  (`src/portal/`), sin supabase-js.
+- Comandas: tareas DEL HUB (`hub.comanda_tareas`), no las de la app (que no se
+  cortan). Todo lo que crea comandas pasa por `crearComanda()` de
+  `_shared/comandas.ts` (pantalla, bot y MCP), que también avisa por Telegram.
+- Jornada (RD-ley 8/2019): `hub.jornada()` la CALCULA sobre los fichajes de la
+  app; nunca se corrige tocando `sesiones` (espejo) sino con
+  `hub.jornada_ajustes` (motivo + autor). Gestoría = acceso del portal de
+  `tipo = 'gestoria'`: todo lo que ve pasa por las acciones `g_*` de la función
+  `portal` y queda en `portal_traza`.
+- Firmas: lo firmado es inmutable (trigger `hub.firma_antes`); solo
+  `hub.firma_firmar` (service_role, con la huella) lo pasa a firmado.
+- Ficheros privados (Storage, cubo `gastos`): los sube y firma URLs
+  `_shared/archivos.ts` con la service key; el navegador nunca toca Storage.
+- Facturación propia: SIN ACTIVAR. Nada la activa salvo
+  `hub.config.facturacion_activa = true` con el OK de Fran (no hay botón). Una
+  factura se emite SOLO con `hub.emitir_factura()`; lo emitido es inmutable
+  (se rectifica con `hub.crear_rectificativa()`).
+- Áreas aún de la app (trabajos, agenda, sesiones, inventario…): las pantallas
+  del hub preguntan `esDelHub()` (`src/core/areas.ts`) y, si es de la app,
+  enseñan en solo lectura con `avisoSoloLectura()`. Las escrituras de esas
+  áreas van por funciones de la base (`hub.fichar`, `hub.trabajo_guardar_lineas`,
+  `hub.trabajo_estado`, `hub.agenda_mover`) que llaman a `hub.exigir_area()`:
+  el corte (supabase/cortes/) las enciende sin tocar el front.
+- Pantallas pesadas: `pintar` hace `import('./vista')` (se cargan bajo demanda);
+  el `index.ts` del módulo solo lleva el contrato y el `contador()`.
+- `supabase/cortes/`: SQL preparado que NO se aplica solo (lo comprueba
+  `comprobar-migraciones` y lo prueba `probar-migraciones`).
+- Avisos de fases nuevas: cada fase tiene su gancho (`hub.avisos_portal`,
+  `_comandas`, `_almacen`, `_personas`, `_facturacion`; este último solo para
+  admins) que junta `hub.avisos_extra()` y llama `panorama_direccion`. Un aviso
+  nuevo se añade redefiniendo SOLO el gancho de su fase.
+- Almacén: el inventario es ESPEJO (área `inventario`, dueño `app`); el MRP
+  (`hub.mrp()`) lo lee. Lo recibido se da de entrada en la app y se marca
+  «entrada dada» en el pedido.
+- El shell pinta cada navegación en un contenedor nuevo (`.vista`): un
+  `pintar()` lento que acaba tarde escribe en el suyo, ya fuera del documento.
 - Leaflet se importa de forma diferida (`import('leaflet')`) solo en `#/mapa`.
 - Al entrar se busca el correo de la sesión en `hub.usuarios` (activo): sin
   fila, se cierra la sesión y se avisa. La RLS usa la misma regla

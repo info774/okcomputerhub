@@ -6,6 +6,9 @@
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://okhub-tenerife.web.app',
   'https://okhub-tenerife.firebaseapp.com',
+  // Dominios propios (DECISIONES_FASES.md): el hub y el portal de clientes.
+  'https://hub.okcomputertenerife.com',
+  'https://clientes.okcomputertenerife.com',
   'http://localhost:5173',
   'http://localhost:4173',
 ]

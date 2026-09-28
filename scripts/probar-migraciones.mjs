@@ -57,7 +57,7 @@ begin;
 set local role ${rol};
 select set_config('request.jwt.claims', '${JSON.stringify({ role: rol, email })}', true);
 select set_config('request.headers', '${JSON.stringify(headers)}', true);
-${sql}
+${/;\s*$/.test(sql) ? sql : sql + ';'}
 commit;`;
 
 try {
@@ -144,7 +144,7 @@ try {
     }
   }
   ok(huellaPublic() === antes, 'public (Breeze) queda igual');
-  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '8', 'ocho tareas de pg_cron, sin duplicar');
+  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '9', 'nueve tareas de pg_cron, sin duplicar');
 
   // ── Permisos y RLS ─────────────────────────────────────────────────────
   ok(!psql(como('anon', null, 'select count(*) from hub.clientes;'), { esperaError: true }).ok, 'anon no entra en hub');
@@ -436,6 +436,231 @@ try {
   ok(una('extrano@ok.test', `select count(*) from hub.buscar_fragmentos(${vec(0.1)}, 'clave', 5);`) === '0', 'buscador: quien no está en el hub no busca');
   ok(!psql(como('authenticated', 'ana@ok.test', `insert into hub.documentos (fuente, ref, titulo) values ('wiki', 'x', 'x');`), { esperaError: true }).ok,
     'buscador: el índice solo lo escribe la función');
+
+  // ── Desk (fase 6) ──────────────────────────────────────────────────────
+  // Lunes 5/10/2026 a las 13:00 (Canarias): 1 h de mañana + 2 h de tarde → 18:00.
+  ok(psql(`select to_char(hub.sumar_laborables('2026-10-05 13:00 Atlantic/Canary', 180) at time zone 'Atlantic/Canary', 'DD HH24:MI')`) === '05 18:00',
+    'SLA: suma minutos laborables saltando el mediodía');
+  ok(psql(`select to_char(hub.sumar_laborables('2026-10-09 18:00 Atlantic/Canary', 120) at time zone 'Atlantic/Canary', 'DD HH24:MI')`) === '13 10:00',
+    'SLA: salta el fin de semana y el festivo del 12 de octubre');
+  const tk = idDe('tito@ok.test', `insert into hub.tickets (titulo, prioridad, canal, created_at) values ('Sin internet', 'Urgente', 'email', '2026-10-05 09:00 Atlantic/Canary') returning id;`);
+  ok(!!tk, 'desk: un usuario crea tickets (área cortada)');
+  ok(psql(`select numero >= 5000 and to_char(sla_respuesta_at at time zone 'Atlantic/Canary', 'HH24:MI') = '11:00'
+           and to_char(sla_resolucion_at at time zone 'Atlantic/Canary', 'HH24:MI') = '13:00' from hub.tickets where id = '${tk}'`) === 't',
+    'desk: numeración propia y SLA de urgente (2 h / 4 h)');
+  psql(como('authenticated', 'tito@ok.test', `update hub.tickets set prioridad = 'Baja' where id = '${tk}';`));
+  ok(psql(`select to_char(sla_respuesta_at at time zone 'Atlantic/Canary', 'DD HH24:MI') from hub.tickets where id = '${tk}'`) === '07 19:00',
+    'desk: cambiar la prioridad recalcula el SLA (baja: 3 días laborables)');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.ticket_comentarios (ticket_id, texto, tipo) values ('${tk}', 'Nos conectamos', 'respuesta');`));
+  ok(psql(`select primera_respuesta_at is not null from hub.tickets where id = '${tk}'`) === 't', 'desk: la primera respuesta queda apuntada');
+  ok(psql(`select autor_id = '${titoId}' from hub.ticket_comentarios where ticket_id = '${tk}'`) === 't', 'desk: el comentario sale a nombre de quien lo escribe');
+  psql(como('authenticated', 'tito@ok.test', `update hub.tickets set estado = 'Cerrado' where id = '${tk}';`));
+  ok(psql(`select cerrado_at is not null from hub.tickets where id = '${tk}'`) === 't', 'desk: al cerrar se apunta la hora');
+  psql(como('service_role', null, `insert into hub.ticket_comentarios (ticket_id, autor_nombre, texto, created_at) values ('${tk}', 'WhatsApp · Marta', 'Sigue sin ir', now() + interval '1 minute');`, { 'x-hub-sync': '1' }));
+  ok(psql(`select t.estado || ':' || c.tipo from hub.tickets t join hub.ticket_comentarios c on c.ticket_id = t.id and c.autor_nombre like 'WhatsApp%' where t.id = '${tk}'`) === 'Abierto:cliente',
+    'desk: el WhatsApp del cliente (de la app) reabre el ticket cerrado en el hub');
+  psql(como('authenticated', 'tito@ok.test', `delete from hub.tickets where id = '${tk}';`));
+  ok(psql(`select count(*) from hub.tickets where id = '${tk}'`) === '1', 'desk: un técnico no borra tickets');
+  const tokVal = psql(`select valoracion_token from hub.tickets where id = '${tk}'`);
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.valorar_ticket('${tokVal}', 5, 'x');`), { esperaError: true }).ok, 'desk: la valoración solo la guarda la función');
+  psql(como('service_role', null, `select hub.valorar_ticket('${tokVal}', 4, 'Rápidos');`));
+  ok(psql(`select valoracion || valoracion_comentario from hub.tickets where id = '${tk}'`) === '4Rápidos', 'desk: valoración con el token del enlace');
+  ok(!psql(como('authenticated', 'tito@ok.test', `update hub.sla_politicas set respuesta_min = 1 where prioridad = 'urgente';`) +
+    `\nselect 1/(select count(*) from hub.sla_politicas where respuesta_min = 1);`, { esperaError: true }).ok, 'desk: un técnico no cambia el SLA');
+  psql(`insert into hub.tickets (titulo, prioridad, created_at) values ('Viejo', 'Urgente', now() - interval '10 days')`);
+  psql(`insert into hub.correos_entrantes (gmail_id, de, asunto, recibido_at) values ('g1', 'x@y.z', 'Hola', now())`);
+  ok(avisosDe('tito@ok.test').includes('correo_sin_revisar') && avisosDe('tito@ok.test').includes('sla_vencido'), 'avisos: SLA vencido y bandeja de correo');
+
+  // ── Portal de clientes (fase 7) ────────────────────────────────────────
+  const cliP = psql(`insert into hub.clientes (nombre) values ('Cliente portal') returning id`).split('\n')[0];
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.portal_accesos (email, cliente_id) values ('x@y.es', '${cliP}');`), { esperaError: true }).ok,
+    'portal: un técnico no da accesos');
+  const acc = idDe('ana@ok.test', `insert into hub.portal_accesos (email, cliente_id, nombre) values ('  Marta@Cliente.ES ', '${cliP}', 'Marta') returning id;`);
+  ok(psql(`select email || ':' || (creado_por = '${anaId}') from hub.portal_accesos where id = '${acc}'`) === 'marta@cliente.es:true', 'portal: un admin invita (correo normalizado, a su nombre)');
+  psql(`insert into hub.portal_sesiones (acceso_id, huella, caduca_at) values ('${acc}', 'h1', now() + interval '1 day');
+        insert into hub.portal_enlaces (acceso_id, huella, caduca_at) values ('${acc}', 'e1', now() + interval '1 hour');`);
+  ok(una('ana@ok.test', `select count(*) from hub.portal_enlaces;`) === '0', 'portal: los enlaces no los ve nadie del equipo (solo la función)');
+  ok(una('tito@ok.test', `select count(*) from hub.portal_traza;`) === '0', 'portal: la traza solo la ven los admins');
+  psql(como('authenticated', 'ana@ok.test', `update hub.portal_accesos set activo = false where id = '${acc}';`));
+  ok(psql(`select (select count(*) from hub.portal_sesiones where acceso_id = '${acc}' and cerrada_at is null) || ':' ||
+               (select count(*) from hub.portal_enlaces where acceso_id = '${acc}' and usado_at is null) || ':' ||
+               (select revocado_por = '${anaId}' from hub.portal_accesos where id = '${acc}') || ':' ||
+               (select count(*) from hub.portal_traza where acceso_id = '${acc}' and accion = 'revocado')`) === '0:0:true:1',
+    'portal: revocar cierra sesiones y enlaces y queda en la traza');
+  const pre = psql(`insert into hub.presupuestos (cliente_id, titulo, estado, total, numero_presupuesto) values ('${cliP}', 'Cámaras', 'Enviado', 900, 'P-9') returning id`).split('\n')[0];
+  psql(`insert into hub.portal_aceptaciones (presupuesto_id, acceso_id, nombre) values ('${pre}', '${acc}', 'Marta Díaz')`);
+  ok(avisosDe('tito@ok.test').includes('presupuesto_aceptado_portal'), 'avisos: presupuesto aceptado en el portal (gancho avisos_extra)');
+  ok(una('extrano@ok.test', `select count(*) from hub.avisos_extra(null, true);`) === '0', 'avisos_extra: quien no está en el hub no ve nada');
+
+  // ── Comandas (fase 8) ──────────────────────────────────────────────────
+  const com = idDe('ana@ok.test', `insert into hub.comandas (transcripcion, origen) values ('Tito, cambia el router del bar', 'app') returning id;`);
+  ok(psql(`select creada_por = '${anaId}' from hub.comandas where id = '${com}'`) === 't', 'comandas: la comanda sale a nombre de quien la dicta');
+  const ct = idDe('ana@ok.test', `insert into hub.comanda_tareas (comanda_id, texto, persona_id, prioridad, origen, created_at) values ('${com}', 'Cambiar el router del bar', '${titoId}', true, 'voz', now() - interval '5 hours') returning id;`);
+  ok(avisosDe('tito@ok.test').includes('comanda_parada'), 'avisos: comanda prioritaria sin empezar');
+  psql(como('authenticated', 'tito@ok.test', `update hub.comanda_tareas set estado = 'en_curso' where id = '${ct}';`));
+  ok(psql(`select empezada_at is not null from hub.comanda_tareas where id = '${ct}'`) === 't', 'comandas: empezar apunta la hora');
+  psql(como('authenticated', 'tito@ok.test', `update hub.comanda_tareas set estado = 'hecha' where id = '${ct}';`));
+  ok(psql(`select hecha_at is not null from hub.comanda_tareas where id = '${ct}'`) === 't' && !avisosDe('tito@ok.test').includes('comanda_parada'), 'comandas: hecha apunta la hora y quita el aviso');
+  psql(como('authenticated', 'tito@ok.test', `delete from hub.comanda_tareas where id = '${ct}';`));
+  ok(psql(`select count(*) from hub.comanda_tareas where id = '${ct}'`) === '1', 'comandas: un técnico no borra la tarea que le mandaron');
+  psql(como('authenticated', 'ana@ok.test', `delete from hub.comanda_tareas where id = '${ct}';`));
+  ok(psql(`select count(*) from hub.comanda_tareas where id = '${ct}'`) === '0', 'comandas: quien la creó sí la borra');
+
+  // ── Almacén (fase 9) ───────────────────────────────────────────────────
+  ok(!psql(como('authenticated', 'ana@ok.test', `insert into hub.catalogo (nombre) values ('x');`), { esperaError: true }).ok, 'almacén: el catálogo es espejo (ni un admin escribe)');
+  psql(`insert into hub.catalogo (id, nombre, categoria) values ('00000000-0000-0000-0000-0000000000c1', 'Cable RJ45 Cat6', 'Material');
+        insert into hub.furgonetas (id, nombre) values ('00000000-0000-0000-0000-0000000000f1', 'Almacén'), ('00000000-0000-0000-0000-0000000000f2', 'Furgo Tito');
+        insert into hub.furgoneta_inventario (id, furgoneta_id, nombre, cantidad, stock_minimo, catalogo_id) values
+          ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000f1', 'Cable RJ45', 4, 5, '00000000-0000-0000-0000-0000000000c1'),
+          ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000f2', 'Cable RJ45', 2, 1, '00000000-0000-0000-0000-0000000000c1');
+        insert into hub.furgoneta_movimientos (furgoneta_id, producto_id, tipo, cantidad, created_at) values
+          ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000a1', 'salida', 45, now() - interval '10 days'),
+          ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000a1', 'salida', 900, now() - interval '200 days');`);
+  const prov = idDe('tito@ok.test', `insert into hub.proveedores (nombre, plazo_dias) values ('Distribuidora Canaria', 5) returning id;`);
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.material_proveedor (catalogo_id, proveedor_id, precio_compra, preferido) values ('00000000-0000-0000-0000-0000000000c1', '${prov}', 0.8, true);`));
+  // stock 6, mínimo 6, consumo 45 en 90 días = 0,5/día; plazo 5 + 30 de cobertura → 17,5 + 6 − 6 = 17,5 → 18
+  ok(una('tito@ok.test', `select stock || '|' || minimo || '|' || consumo_90 || '|' || sugerido || '|' || proveedor || '|' || urgente from hub.mrp()`) === '6|6|45|18|Distribuidora Canaria|false',
+    'MRP: junta ubicaciones, consumo de 90 días, proveedor preferido y cuánto pedir');
+  const pc = idDe('tito@ok.test', `insert into hub.pedidos_compra (proveedor_id) values ('${prov}') returning id;`);
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.pedido_compra_lineas (pedido_compra_id, catalogo_id, nombre, cantidad, precio) values ('${pc}', '00000000-0000-0000-0000-0000000000c1', 'Cable RJ45', 18, 0.8);`));
+  ok(psql(`select total from hub.pedidos_compra where id = '${pc}'`) === '14.4', 'compras: el total del pedido es la suma de sus líneas');
+  ok(una('tito@ok.test', `select en_camino || '|' || sugerido from hub.mrp()`) === '18|0', 'MRP: lo pedido cuenta como en camino');
+  psql(como('authenticated', 'tito@ok.test', `update hub.pedidos_compra set estado = 'Enviado' where id = '${pc}';`));
+  ok(psql(`select (esperado_para = current_date + 5) and enviado_at is not null from hub.pedidos_compra where id = '${pc}'`) === 't', 'compras: al enviarlo se espera para dentro del plazo del proveedor');
+  psql(`update hub.pedidos_compra set esperado_para = current_date - 1 where id = '${pc}'`);
+  ok(avisosDe('tito@ok.test').includes('pedido_retrasado'), 'avisos: pedido de compra retrasado');
+  psql(como('authenticated', 'tito@ok.test', `update hub.pedidos_compra set estado = 'Recibido' where id = '${pc}';`));
+  ok(avisosDe('tito@ok.test').includes('pedido_sin_entrada'), 'avisos: recibido sin dar entrada en el inventario de la app');
+  psql(`update hub.furgoneta_inventario set cantidad = 0`);
+  psql(`delete from hub.pedido_compra_lineas`);
+  ok(avisosDe('tito@ok.test').includes('hay_que_comprar'), 'avisos: hay que comprar lo que se queda sin stock');
+  psql(como('authenticated', 'tito@ok.test', `delete from hub.proveedores where id = '${prov}';`));
+  ok(psql(`select count(*) from hub.proveedores where id = '${prov}'`) === '1', 'compras: un técnico no borra proveedores');
+  const envio = idDe('tito@ok.test', `insert into hub.envios (agencia, seguimiento, destinatario, estado) values ('Correos', 'PQ123', 'Hotel Playa', 'enviado') returning id;`);
+  psql(`update hub.envios set enviado_at = now() - interval '6 days' where id = '${envio}'`);
+  ok(avisosDe('tito@ok.test').includes('envio_atascado'), 'avisos: envío sin entregar después de 5 días');
+  psql(como('authenticated', 'tito@ok.test', `update hub.envios set estado = 'entregado' where id = '${envio}';`));
+  ok(psql(`select entregado_at is not null from hub.envios where id = '${envio}'`) === 't' && !avisosDe('tito@ok.test').includes('envio_atascado'), 'envíos: entregado apunta la hora y quita el aviso');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select * from hub.avisos_almacen(null, false);`), { esperaError: true }).ok, 'avisos: los ganchos por fase no se llaman sueltos');
+
+  // ── Personas (fase 10) ─────────────────────────────────────────────────
+  // Lunes 5/10/2026: dos fichajes solapados (9-11 y 10-12 → 3 h) y otro 16-18 → 5 h; entrada 9, salida 18.
+  psql(`insert into hub.sesiones (tecnico_id, tecnico_nombre, traslado, inicio, fin) values
+          ('${titoId}', 'Tito', null, '2026-10-05 09:00 Atlantic/Canary', '2026-10-05 11:00 Atlantic/Canary'),
+          ('${titoId}', 'Tito', '2026-10-05 10:00 Atlantic/Canary', '2026-10-05 10:15 Atlantic/Canary', '2026-10-05 12:00 Atlantic/Canary'),
+          (null, 'tito', null, '2026-10-05 16:00 Atlantic/Canary', '2026-10-05 18:00 Atlantic/Canary');`);
+  const jor = una('tito@ok.test', `select to_char(entrada at time zone 'Atlantic/Canary', 'HH24:MI') || '-' || to_char(salida at time zone 'Atlantic/Canary', 'HH24:MI') || '|' || trabajado_min || '|' || pausas_min || '|' || sesiones from hub.jornada('2026-10-01', '2026-10-31')`);
+  ok(jor === '09:00-18:00|300|240|3', `jornada: entrada, salida y tiempo sin contar dos veces lo solapado (${jor})`);
+  ok(una('tito@ok.test', `select count(*) from hub.jornada('2026-10-01', '2026-10-31', '${anaId}')`) === '0', 'jornada: cada uno ve solo la suya');
+  ok(una('ana@ok.test', `select count(*) from hub.jornada('2026-10-01', '2026-10-31')`) === '1', 'jornada: un admin ve la de todos');
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.jornada_ajustes (usuario_id, fecha, entrada, salida, motivo) values ('${titoId}', '2026-10-05', now(), now() + interval '1 hour', 'me olvidé');`), { esperaError: true }).ok,
+    'jornada: un técnico no corrige su jornada');
+  psql(como('authenticated', 'ana@ok.test', `insert into hub.jornada_ajustes (usuario_id, fecha, entrada, salida, pausa_min, motivo) values ('${titoId}', '2026-10-05', '2026-10-05 08:30 Atlantic/Canary', '2026-10-05 18:00 Atlantic/Canary', 60, 'Olvidó fichar la primera visita');`));
+  ok(una('tito@ok.test', `select trabajado_min || '|' || ajustado || '|' || motivo_ajuste from hub.jornada('2026-10-05', '2026-10-05')`) === '510|true|Olvidó fichar la primera visita',
+    'jornada: la corrección manda, con su motivo');
+  ok(psql(`select creado_por = '${anaId}' from hub.jornada_ajustes`) === 't', 'jornada: la corrección queda a nombre de quien la hizo');
+  const aus = idDe('tito@ok.test', `insert into hub.ausencias (usuario_id, tipo, desde, hasta) values ('${titoId}', 'vacaciones', '2026-10-09', '2026-10-13') returning id;`);
+  ok(psql(`select dias || estado from hub.ausencias where id = '${aus}'`) === '2solicitada', 'ausencias: se piden y cuentan solo los laborables (sin fin de semana ni festivo)');
+  ok(!psql(como('authenticated', 'tito@ok.test', `update hub.ausencias set estado = 'aprobada' where id = '${aus}';`), { esperaError: true }).ok
+    && psql(`select estado from hub.ausencias where id = '${aus}'`) === 'solicitada', 'ausencias: uno no se aprueba las suyas');
+  ok(avisosDe('ana@ok.test').includes('ausencia_por_decidir') && !avisosDe('tito@ok.test').includes('ausencia_por_decidir'), 'avisos: ausencia por aprobar (a los admins)');
+  psql(como('authenticated', 'ana@ok.test', `update hub.ausencias set estado = 'aprobada' where id = '${aus}';`));
+  ok(psql(`select decidida_por = '${anaId}' from hub.ausencias where id = '${aus}'`) === 't', 'ausencias: aprobada por un admin (queda quién)');
+  ok(una('tito@ok.test', `select ausencia from hub.jornada('2026-10-09', '2026-10-09')`) === 'vacaciones', 'jornada: los días de ausencia salen en el registro');
+  const tg = idDe('tito@ok.test', `insert into hub.tickets_gasto (total, estado) values (12.5, 'revisar') returning id;`);
+  ok(una('ana@ok.test', `select count(*) from hub.tickets_gasto`) === '1' && una('extrano@ok.test', `select count(*) from hub.tickets_gasto`) === '0', 'gastos: los ve quien los sube y los admins');
+  psql(como('authenticated', 'ana@ok.test', `update hub.tickets_gasto set estado = 'ok' where id = '${tg}';`));
+  psql(como('authenticated', 'tito@ok.test', `update hub.tickets_gasto set total = 99 where id = '${tg}';`), { esperaError: true });
+  ok(psql(`select total || '|' || (revisado_por = '${anaId}') from hub.tickets_gasto where id = '${tg}'`) === '12.5|true', 'gastos: revisado no se toca (salvo un admin)');
+  const fi = idDe('tito@ok.test', `insert into hub.firmas (titulo, contenido, firmante_nombre) values ('Acta de entrega', 'Se entrega un portátil', 'Marta') returning id;`);
+  const tok1 = psql(`select token from hub.firmas where id = '${fi}'`);
+  psql(como('authenticated', 'tito@ok.test', `update hub.firmas set contenido = 'Se entregan dos portátiles' where id = '${fi}';`));
+  const [tok2, hash] = psql(`select token || ' ' || contenido_hash from hub.firmas where id = '${fi}'`).split(' ');
+  ok(tok2 !== tok1 && hash.length === 64, 'firma: cambiar el texto cambia la huella y anula el enlace viejo');
+  ok(!psql(como('authenticated', 'tito@ok.test', `update hub.firmas set estado = 'firmado', firmado_at = now() where id = '${fi}';`), { esperaError: true }).ok, 'firma: nadie del equipo la da por firmada');
+  ok(!psql(como('service_role', null, `select hub.firma_firmar('${tok2}', 'otra', 'Marta Díaz', null, 'data:image/png;base64,AAAA', '1.2.3.4', 'x');`), { esperaError: true }).ok, 'firma: si la huella no cuadra, no se firma');
+  psql(como('service_role', null, `select hub.firma_firmar('${tok2}', '${hash}', 'Marta Díaz', '12345678Z', 'data:image/png;base64,AAAA', '1.2.3.4', 'Chrome');`));
+  ok(psql(`select estado || '|' || firmado_nombre || '|' || firmado_ip from hub.firmas where id = '${fi}'`) === 'firmado|Marta Díaz|1.2.3.4', 'firma: firmada con nombre, IP y hora');
+  ok(!psql(como('authenticated', 'ana@ok.test', `update hub.firmas set contenido = 'x' where id = '${fi}';`), { esperaError: true }).ok, 'firma: lo firmado no se cambia (ni un admin)');
+  ok(!psql(`insert into hub.portal_accesos (email, tipo) values ('cli@x.es', 'cliente')`, { esperaError: true }).ok
+    && psql(`insert into hub.portal_accesos (email, tipo, nombre) values ('gestoria@asesor.es', 'gestoria', 'Asesoría') returning tipo`).split('\n')[0] === 'gestoria',
+    'gestoría: acceso del portal sin cliente (un cliente sigue necesitándolo)');
+
+  // ── Facturación propia (fase 11, SIN ACTIVAR) ──────────────────────────
+  const fac = (serie) => idDe('ana@ok.test', `insert into hub.facturas (serie, cliente_id) values ('${serie}', '${cliP}') returning id;`);
+  const f1 = fac('F');
+  psql(como('authenticated', 'ana@ok.test', `insert into hub.factura_lineas (factura_id, concepto, cantidad, precio, impuesto_pct) values ('${f1}', 'Mantenimiento', 2, 50, 7), ('${f1}', 'Cable', 1, 10, 3);`));
+  ok(psql(`select base_total || '|' || impuesto_total || '|' || total from hub.facturas where id = '${f1}'`) === '110.00|7.30|117.30', 'facturas: totales con IGIC por línea (7 % y 3 %)');
+  ok(!psql(como('authenticated', 'ana@ok.test', `select hub.emitir_factura('${f1}');`), { esperaError: true }).ok, 'facturas: sin activar, la serie real no emite (Zoho sigue)');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select count(*) from hub.facturas;`) + `\nselect 1/(select count(*) from hub.facturas);`, { esperaError: true }).ok || una('tito@ok.test', 'select count(*) from hub.facturas') === '0', 'facturas: un técnico no las ve');
+  const p1 = fac('P'), p2 = fac('P');
+  for (const p of [p1, p2]) psql(como('authenticated', 'ana@ok.test', `insert into hub.factura_lineas (factura_id, concepto, cantidad, precio) values ('${p}', 'Prueba', 1, 100);`));
+  psql(como('authenticated', 'ana@ok.test', `select hub.emitir_factura('${p2}'); select hub.emitir_factura('${p1}');`));
+  ok(psql(`select string_agg(codigo, ',' order by numero) from hub.facturas where serie = 'P'`) === `P-${new Date().getFullYear()}-0001,P-${new Date().getFullYear()}-0002`, 'facturas: la serie de PRUEBA numera correlativo, en el orden de emisión');
+  ok(psql(`select (select huella_anterior from hub.facturas where id = '${p1}') = (select huella from hub.facturas where id = '${p2}')`) === 't', 'facturas: cada emitida encadena la huella de la anterior');
+  ok(psql(`select cliente_nombre from hub.facturas where id = '${p1}'`) === 'Cliente portal', 'facturas: los datos del cliente se congelan al emitir');
+  ok(!psql(como('authenticated', 'ana@ok.test', `update hub.facturas set total = 1 where id = '${p1}';`), { esperaError: true }).ok, 'facturas: lo emitido no se toca (ni un admin)');
+  ok(!psql(como('authenticated', 'ana@ok.test', `update hub.factura_lineas set precio = 1 where factura_id = '${p1}';`), { esperaError: true }).ok, 'facturas: ni sus líneas');
+  ok(!psql(como('authenticated', 'ana@ok.test', `delete from hub.facturas where id = '${p1}';`), { esperaError: true }).ok, 'facturas: ni se borra');
+  ok(!psql(como('authenticated', 'ana@ok.test', `update hub.facturas set estado = 'emitida' where id = '${f1}';`), { esperaError: true }).ok, 'facturas: solo se emite con emitir_factura()');
+  psql(como('authenticated', 'ana@ok.test', `insert into hub.factura_cobros (factura_id, importe) values ('${p1}', 50);`));
+  ok(psql(`select cobrado from hub.facturas where id = '${p1}'`) === '50.00', 'facturas: se cobra (parcial)');
+  const rid = psql(como('authenticated', 'ana@ok.test', `select hub.crear_rectificativa('${p1}', 'Precio mal puesto');`)).split('\n').pop();
+  ok(psql(`select tipo || '|' || total || '|' || serie from hub.facturas where id = '${rid}'`) === 'rectificativa|-107.00|P', 'facturas: rectificativa en borrador con las líneas en negativo');
+  psql(como('authenticated', 'ana@ok.test', `select hub.emitir_factura('${rid}');`));
+  ok(psql(`select estado from hub.facturas where id = '${p1}'`) === 'rectificada', 'facturas: al emitir la rectificativa, la original queda rectificada');
+  psql(`update hub.config set valor = 'true' where clave = 'facturacion_activa'`);
+  ok(!psql(como('authenticated', 'ana@ok.test', `select hub.emitir_factura('${f1}');`), { esperaError: true }).ok, 'facturas: activada, sin los datos fiscales del emisor no emite');
+  psql(`update hub.config set valor = jsonb_set(valor, '{nif}', '"B38000000"') where clave = 'facturacion_emisor'`);
+  psql(como('authenticated', 'ana@ok.test', `select hub.emitir_factura('${f1}');`));
+  ok(psql(`select codigo || '|' || (huella_anterior is null) from hub.facturas where id = '${f1}'`) === `F-${new Date().getFullYear()}-0001|true`, 'facturas: activada, la serie real empieza su propia cadena');
+  psql(`update hub.config set valor = 'false' where clave = 'facturacion_activa'`);
+
+  // ── Fase Final: antes del corte todo es de solo lectura ─────────────────
+  const tr = psql(`insert into hub.trabajos (id, numero, descripcion, estado, tecnicos) values ('00000000-0000-0000-0000-0000000000e1', 700, 'Cambiar router', 'Pendiente', '{Tito}') returning id`).split('\n')[0];
+  const noCortado = psql(como('authenticated', 'tito@ok.test', `select hub.fichar('inicio', 'trabajo', '${tr}');`), { esperaError: true });
+  ok(!noCortado.ok && /app/.test(noCortado.err), 'final: sin el corte, fichar desde el hub avisa de que se hace en la app');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_guardar_lineas('${tr}', '[]');`), { esperaError: true }).ok, 'final: sin el corte, el material tampoco');
+  // Chat
+  const gen = psql(`select id from hub.chat_canales where nombre = 'General'`);
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.chat_mensajes (canal_id, texto) values ('${gen}', 'Hola equipo');`));
+  ok(una('ana@ok.test', `select sin_leer || '|' || ultimo_texto from hub.chat_resumen() where id = '${gen}'`) === '1|Hola equipo', 'chat: mensaje en General, sin leer para los demás');
+  const dm = psql(como('authenticated', 'tito@ok.test', `select hub.chat_directo('${anaId}');`)).split('\n').pop();
+  ok(psql(como('authenticated', 'ana@ok.test', `select hub.chat_directo('${titoId}');`)).split('\n').pop() === dm, 'chat: el directo entre dos es siempre el mismo canal');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.chat_mensajes (canal_id, texto) values ('${dm}', 'Secreto');`));
+  ok(una('extrano@ok.test', `select count(*) from hub.chat_mensajes`) === '0' && una('ana@ok.test', `select count(*) from hub.chat_mensajes where canal_id = '${dm}'`) === '1',
+    'chat: un directo solo lo leen sus dos personas');
+  ok(!psql(como('authenticated', 'ana@ok.test', `update hub.chat_mensajes set texto = 'x' where canal_id = '${dm}';`) + `\nselect 1/(select count(*) from hub.chat_mensajes where texto = 'x');`, { esperaError: true }).ok,
+    'chat: nadie edita lo que escribió otro');
+
+  // ── Corte final (preparado, NO aplicado en producción): se prueba aquí ──
+  psql(`begin;
+${readFileSync('supabase/cortes/corte_final.sql', 'utf8')}
+commit;`);
+  ok(psql(`select count(*) from hub.areas where dueno = 'app'`) === '0', 'corte final: todas las áreas pasan al hub');
+  psql(`insert into hub.furgoneta_inventario (id, nombre, cantidad) values ('00000000-0000-0000-0000-0000000000b9', 'Router', 2)`);
+  const fch = psql(como('authenticated', 'tito@ok.test', `select hub.fichar('traslado');`)).split('\n').pop();
+  ok(fch.includes('"ok": true'), 'corte final: fichar el traslado');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.fichar('traslado');`), { esperaError: true }).ok, 'fichar: no hay dos sesiones abiertas');
+  psql(como('authenticated', 'tito@ok.test', `select hub.fichar('inicio', 'trabajo', '${tr}');`));
+  ok(psql(`select count(*) || '|' || bool_and(inicio is not null and traslado is not null) from hub.sesiones where entidad_id = '${tr}'`) === '1|true'
+    && psql(`select estado from hub.trabajos where id = '${tr}'`) === 'En progreso', 'fichar: el inicio reusa el traslado y pone el trabajo en progreso');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_estado('${tr}', 'Completado');`), { esperaError: true }).ok, 'trabajo: no se completa sin fichar el fin');
+  psql(como('authenticated', 'tito@ok.test', `select hub.fichar('fin');`));
+  psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_estado('${tr}', 'Completado');`));
+  ok(psql(`select estado from hub.trabajos where id = '${tr}'`) === 'Completado', 'trabajo: con inicio y fin, se completa');
+  psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_guardar_lineas('${tr}', '[{"nombre":"Router","cantidad":3,"precio":40,"inventario_id":"00000000-0000-0000-0000-0000000000b9"},{"nombre":"Mano de obra","cantidad":1,"precio":35}]');`));
+  ok(psql(`select cantidad from hub.furgoneta_inventario where id = '00000000-0000-0000-0000-0000000000b9'`) === '0'
+    && psql(`select tipo || cantidad || (trabajo_id = '${tr}') from hub.furgoneta_movimientos where producto_id = '00000000-0000-0000-0000-0000000000b9'`) === 'salida2true',
+    'material: gastar 3 con 2 en stock deja 0 y apunta la salida REAL (2) con el trabajo');
+  psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_guardar_lineas('${tr}', '[{"nombre":"Router","cantidad":1,"precio":40,"inventario_id":"00000000-0000-0000-0000-0000000000b9"}]');`));
+  ok(psql(`select cantidad from hub.furgoneta_inventario where id = '00000000-0000-0000-0000-0000000000b9'`) === '2'
+    && psql(`select count(*) from hub.documento_lineas where trabajo_id = '${tr}'`) === '1', 'material: bajar de 3 a 1 devuelve 2 al stock');
+  psql(como('authenticated', 'ana@ok.test', `delete from hub.trabajos where id = '${tr}';`));
+  ok(psql(`select cantidad from hub.furgoneta_inventario where id = '00000000-0000-0000-0000-0000000000b9'`) === '3', 'material: borrar el trabajo devuelve lo que tenía');
+  ok(psql(`select count(*) from cron.job where jobname in ('hub-sync-app', 'hub-sync-app-completo')`) === '0', 'corte final: el sync con la app se apaga');
+  const nt = psql(como('authenticated', 'ana@ok.test', `insert into hub.trabajos (descripcion) values ('Nuevo tras el corte') returning numero;`)).split('\n').pop();
+  ok(Number(nt) > 700, `corte final: los trabajos nuevos siguen la numeración (${nt})`);
 
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);

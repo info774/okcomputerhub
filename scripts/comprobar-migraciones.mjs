@@ -3,7 +3,7 @@
 // ni el esquema `public`, ni sus roles, ni la exposición de la API sobre él.
 // Lo corre `npm run lint` y el workflow de lint; también «Aplicar migración»
 // antes de ejecutar nada.
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DIR = 'supabase/migrations';
@@ -26,9 +26,13 @@ const NOMBRE = /^\d{8}[a-z]?_[a-z0-9_]+\.sql$/;
 const sinComentarios = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--[^\n]*/g, '');
 
 let fallos = 0;
-for (const f of readdirSync(DIR).filter(f => f.endsWith('.sql')).sort()) {
-  if (!NOMBRE.test(f)) { console.error(`✗ ${f}: el nombre tiene que ser AAAAMMDD[letra]_descripcion.sql`); fallos++; }
-  const sql = sinComentarios(readFileSync(join(DIR, f), 'utf8'));
+// También los cortes preparados (supabase/cortes/): se aplican a mano, pero las mismas reglas.
+const CORTES = 'supabase/cortes';
+const ficheros = [...readdirSync(DIR).filter(f => f.endsWith('.sql')).sort().map(f => [DIR, f]),
+  ...(existsSync(CORTES) ? readdirSync(CORTES).filter(f => f.endsWith('.sql')).map(f => [CORTES, f]) : [])];
+for (const [dir, f] of ficheros) {
+  if (dir === DIR && !NOMBRE.test(f)) { console.error(`✗ ${f}: el nombre tiene que ser AAAAMMDD[letra]_descripcion.sql`); fallos++; }
+  const sql = sinComentarios(readFileSync(join(dir, f), 'utf8'));
   sql.split('\n').forEach((l, i) => {
     for (const [re, motivo, prep] of PROHIBIDO) {
       if (re.test(prep ? prep(l) : l)) { console.error(`✗ ${f}:${i + 1} ${motivo}\n    ${l.trim()}`); fallos++; }
@@ -36,4 +40,4 @@ for (const f of readdirSync(DIR).filter(f => f.endsWith('.sql')).sort()) {
   });
 }
 if (fallos) { console.error(`\n${fallos} problema(s). Todo lo del hub va en el esquema hub.`); process.exit(1); }
-console.log('✓ Migraciones: ninguna toca public (solo lo leen) ni los roles de Breeze.');
+console.log('✓ Migraciones y cortes: ninguno toca public (solo lo leen) ni los roles de Breeze.');
