@@ -124,7 +124,7 @@ async function tabContactos(l: Sitio): Promise<string> {
   if (!(data ?? []).length) return '<p class="vacio">Sin contactos de este sitio en la app.</p>';
   return `<div class="cl-contactos">${(data ?? []).map(p => {
     const wa = telWhatsApp(p.telefono);
-    return `<article class="tarjeta"><h3>${p.favorito ? '⭐ ' : ''}${esc(p.nombre)}</h3>${p.cargo ? `<p class="nota">${esc(p.cargo)}</p>` : ''}
+    return `<article class="tarjeta"><h3><a href="#/contactos/${esc(p.id)}">${p.favorito ? '⭐ ' : ''}${esc(p.nombre)}</a></h3>${p.cargo ? `<p class="nota">${esc(p.cargo)}</p>` : ''}
       <div class="acciones">${p.telefono ? `<a class="btn secundario" href="tel:${esc(p.telefono)}">📞 ${esc(p.telefono)}</a>` : ''}
         ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
         ${p.email ? `<a class="btn secundario" href="mailto:${esc(p.email)}">✉️ ${esc(p.email)}</a>` : ''}</div></article>`;
