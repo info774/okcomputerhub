@@ -9,6 +9,7 @@ import { moduloConector } from './conector';
 import { moduloProyectos } from './proyectos';
 import { moduloWiki } from './wiki';
 import { moduloComandas } from './comandas';
+import { moduloTareas } from './tareas';
 import { moduloPersonas } from './personas';
 import { moduloBuscar } from './buscar';
 import { moduloMonitorizacion } from './monitorizacion';
@@ -35,6 +36,7 @@ export const MODULOS: Modulo[] = [
   moduloInformes,
   moduloProyectos,
   moduloComandas,
+  moduloTareas,
   moduloChat,
   moduloPersonas,
   moduloWiki,

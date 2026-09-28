@@ -373,6 +373,10 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   desde la fila) y ficha con datos, trabajos y tickets donde figura. Espejo en
   SOLO LECTURA; los contactos de las fichas de cliente y sitio enlazan aquí.
   Arnés `verify-contactos.mjs`.
+- **Tareas** (`src/modulos/tareas/`, `#/tareas`, 2026-09-28): las tareas de la
+  app (ya no es un enlace): filtros de la app, por persona, lista y tablero, y
+  ficha con lo que enlaza. Espejo en SOLO LECTURA (área `tareas`); NO son las
+  comandas (`hub.comanda_tareas`). Arnés `verify-tareas.mjs`.
 - **Widgets movibles** del modo escritorio: se arrastran por cualquier punto
   que no sea un enlace o botón; al mover el primero se congela el sitio de
   todos (`Escritorio.widgets`, por escritorio, en la misma disposición de

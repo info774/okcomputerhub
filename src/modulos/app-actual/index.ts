@@ -23,7 +23,6 @@ function enlace(id: string, titulo: string, icono: string, contador?: Modulo['co
 }
 
 export const modulosAppActual: Modulo[] = [
-  enlace('tareas', 'Tareas', '✅', () => cuenta('tareas', { estado: 'in.(pendiente,en_progreso)' }, 'pendientes')),
   enlace('presupuestos', 'Presupuestos', '📄', () => cuenta('presupuestos', { estado: 'eq.Borrador' }, 'en borrador')),
   enlace('facturacion-app', 'Facturación y cobros (app)', '💶'),
   enlace('mantenimientos', 'Mantenimientos', '🔁'),
