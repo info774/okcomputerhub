@@ -16,7 +16,6 @@ function enlace(id: string, titulo: string, icono: string, contador?: Modulo['co
 
 export const modulosAppActual: Modulo[] = [
   enlace('facturacion-app', 'Facturación y cobros (app)', '💶'),
-  enlace('mantenimientos', 'Mantenimientos', '🔁'),
   enlace('inventario', 'Inventario', '📦'),
   enlace('whatsapp', 'WhatsApp', '📱'),
   enlace('fichaje', 'Fichaje y horas', '⏱'),

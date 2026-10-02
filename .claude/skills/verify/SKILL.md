@@ -122,6 +122,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   aceptado / tasa, barras de importe por estado que filtran, filtros, por
   persona, buscador, ficha con líneas y enlaces, tema noche, móvil sin
   desbordar); solo lectura.
+- `verify-mantenimientos.mjs`: cartera por sede (quién cobra: Stripe, esperando
+  el primer pago, Zoho viva o cancelada, sin domiciliar; cobro torcido y en
+  curso; cuota NETA con el bruto heredado de Zoho sin IGIC), barras por plan
+  que filtran, la fila lleva al sitio, y un técnico en el móvil sin euros.
+  `comun.mjs` entiende `not.` (un NULL no cumple `not.in`, como en SQL).
 
 `npm run verify` pasa todos los de la lista.
 

@@ -180,6 +180,8 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .chip.mal { background: var(--mal-fondo); color: var(--mal); }
 .aviso { padding: .6rem .8rem; border-radius: 8px; background: var(--aviso-fondo); color: var(--aviso); }
 .aviso.mal { background: var(--mal-fondo); color: var(--mal); }
+/* Un chip con tono «aviso» no es la caja: conserva su forma de píldora. */
+.chip.aviso { padding: .1rem .5rem; border-radius: 999px; }
 
 /* ── Inicio: baldosas ────────────────────────────────────────────────── */
 .saludo { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; }
@@ -381,6 +383,9 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .di-cifra h3 { margin: 0; font-size: .9rem; color: var(--texto-suave); font-weight: 600; }
 .di-valor { margin: .25rem 0; font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .di-cifra.mal { border-left: 4px solid var(--mal); }
+/* Ámbar sin ser caja: `.aviso` es una CAJA (padding y fondo), aquí solo el filo. */
+.di-cifra.atento { border-left: 4px solid var(--aviso); }
+.di-cifra.atento .di-valor { color: var(--aviso); }
 .di-pie { margin: .4rem 0 1rem; }
 .di-cuerpo { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1rem; align-items: start; }
 .di-cuerpo:not(:has(.di-lateral)) { grid-template-columns: 1fr; }
@@ -587,19 +592,24 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .ho-terminar textarea, .ho-terminar input[type=file] { width: 100%; }
 .si-pre { white-space: pre-wrap; margin: 0; }
 
-/* ── Presupuestos (pp-) ─────────────────────────────────────────────── */
+/* ── Barras horizontales de una serie (ui/barras.ts) ─────────────────── */
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.num, .tabla .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.barras-tarjeta h3 { margin: 0 0 .5rem; font-size: .9rem; color: var(--texto-suave); font-weight: 600; }
+.barras { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
+.barras th { text-align: left; font-weight: 500; padding-right: .6rem; white-space: nowrap; width: 1%; }
+.barras .num { padding-left: .6rem; width: 1%; }
+.barras tr.fila-clic:hover .barras-barra { filter: brightness(1.12); }
+.barras tr.fila-clic:hover th { color: var(--primario); }
+.barras-pista { display: block; height: 14px; border-radius: 0 4px 4px 0; background: var(--fondo); }
+.barras-barra { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--serie-1); }
+
+/* ── Presupuestos (pp-) y Mantenimientos (mt-): cifras + barras arriba ─ */
 .pp-cabeza { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: .75rem; margin-bottom: .75rem; align-items: stretch; }
 .pp-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.pp-reparto h3 { margin: 0 0 .5rem; font-size: .9rem; color: var(--texto-suave); font-weight: 600; }
-.pp-barras { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
-.pp-barras th { text-align: left; font-weight: 500; padding-right: .6rem; white-space: nowrap; width: 1%; }
-.pp-barras tr:hover .pp-barra { filter: brightness(1.12); }
-.pp-barras tr:hover th { color: var(--primario); }
-.pp-pista { display: block; height: 14px; border-radius: 0 4px 4px 0; background: var(--fondo); }
-.pp-barra { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--serie-1); }
-.pp-num, .tabla .pp-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.pp-barras .pp-num { padding-left: .6rem; width: 1%; }
+.pp-cabeza .tarjeta { margin: 0; }
 .pp-total .di-valor { color: var(--primario); }
 @media (max-width: 900px) { .pp-cabeza { grid-template-columns: 1fr; } }
-@media (max-width: 520px) { .pp-cifras { grid-template-columns: 1fr; } }
+/* En el móvil las cuatro cifras van de dos en dos, más bajas. */
+@media (max-width: 520px) { .pp-cifras .di-valor { font-size: 1.35rem; } .pp-cifras .di-cifra { padding: .75rem; } }
+.tabla .chip { white-space: nowrap; }

@@ -64,7 +64,7 @@ try {
   ok(cifras[1].includes('1') && cifras[1].includes('1200 €'), 'sin respuesta: uno, con su importe');
   ok(cifras[2].includes('2401 €'), `aceptado 12 meses (${cifras[2]})`);
   ok(cifras[3].includes('50 %'), 'tasa de aceptación 1 de 2');
-  const barras = await page.$$eval('#pp-barras tr', trs => trs.map(t => [t.querySelector('th').textContent, t.querySelector('.pp-barra').style.width]));
+  const barras = await page.$$eval('#pp-barras tr', trs => trs.map(t => [t.querySelector('th').textContent, t.querySelector('.barras-barra').style.width]));
   ok(barras.map(b => b[0]).join(',') === 'Borrador,Enviado,Aceptado,Rechazado', 'barras en el orden del recorrido');
   ok(parseFloat(barras[3][1]) === 100, 'la barra mayor (Rechazado, 3.000 €) llena la pista');
   await page.screenshot({ path: `${CAPTURAS}/presupuestos-lista.png` });
@@ -103,7 +103,7 @@ try {
   await page.goto(`${srv.base}/#/presupuestos`);
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
   await page.waitForSelector('#pp-barras');
-  const color = await page.$eval('.pp-barra', b => getComputedStyle(b).backgroundColor);
+  const color = await page.$eval('.barras-barra', b => getComputedStyle(b).backgroundColor);
   ok(color === 'rgb(125, 217, 86)', `en noche la serie es lima (${color})`);
   await page.screenshot({ path: `${CAPTURAS}/presupuestos-noche.png` });
 

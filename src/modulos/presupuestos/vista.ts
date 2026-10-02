@@ -4,6 +4,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, hace } from '../../ui/dom';
+import { barras } from '../../ui/barras';
 import { enApp, eur } from '../ventas/datos';
 import { esMio } from '../direccion';
 
@@ -87,23 +88,12 @@ function cifras(): string {
   </div>`;
 }
 
-// Una serie (importe por estado): barras horizontales en --serie-1, sin
-// leyenda (el título la nombra), etiqueta directa y el detalle al pasar por encima.
 function reparto(): string {
   const otros = [...new Set(_lista.map(p => p.estado ?? '—'))].filter(e => !ESTADOS.includes(e));
-  const filas = [...ESTADOS, ...otros].map(e => {
+  return barras('pp-barras', 'Importe por estado', [...ESTADOS, ...otros].map(e => {
     const ps = _lista.filter(p => (p.estado ?? '—') === e);
-    return { e, n: ps.length, total: suma(ps) };
-  }).filter(f => f.n || ESTADOS.includes(f.e));
-  const max = Math.max(1, ...filas.map(f => f.total));
-  return `<section class="tarjeta pp-reparto" aria-label="Importe por estado">
-    <h3>Importe por estado</h3>
-    <table class="pp-barras" id="pp-barras"><caption class="sr">Importe y número de presupuestos por estado</caption>
-      <tbody>${filas.map(f => `<tr class="fila-clic" data-action="ppFiltro" data-p0="${esc(f.e)}" title="${esc(`${f.e}: ${f.n} presupuestos · ${eur(f.total)}`)}">
-        <th scope="row">${esc(f.e)}</th>
-        <td><span class="pp-pista"><span class="pp-barra" style="width:${Math.max(f.total ? 1.5 : 0, 100 * f.total / max).toFixed(1)}%"></span></span></td>
-        <td class="pp-num">${eur(f.total)} <small class="nota">· ${f.n}</small></td></tr>`).join('')}</tbody></table>
-  </section>`;
+    return { clave: e, etiqueta: e, valor: suma(ps), texto: `${eur(suma(ps))} <small class="nota">· ${ps.length}</small>`, detalle: `${e}: ${ps.length} presupuestos · ${eur(suma(ps))}` };
+  }), 'ppFiltro');
 }
 
 // ── Lista ───────────────────────────────────────────────────────────────────
@@ -123,14 +113,14 @@ async function pintarLista(el: HTMLElement) {
     </div>
     <div class="acciones mo-barra">${FILTROS.map(([k, n]) => `<button class="chip-boton ${_filtro === k ? 'activo' : ''}" data-action="ppFiltro" data-p0="${k}">${n}</button>`).join('')}</div>
     <p class="nota">Mostrando ${Math.min(lista.length, 200)} de ${lista.length} · ${eur(suma(lista))} en total.</p>
-    <div class="tarjeta mo-scroll"><table class="tabla" id="pp-tabla"><thead><tr><th>Presupuesto</th><th>Estado</th><th>Fecha</th><th>Cliente</th><th>Quién</th><th class="pp-num">Total</th></tr></thead>
+    <div class="tarjeta mo-scroll"><table class="tabla" id="pp-tabla"><thead><tr><th>Presupuesto</th><th>Estado</th><th>Fecha</th><th>Cliente</th><th>Quién</th><th class="num">Total</th></tr></thead>
       <tbody>${lista.slice(0, 200).map(p => `<tr class="fila-clic" data-action="ppAbrir" data-p0="${esc(p.id)}">
         <td><strong>${esc(nombre(p))}</strong>${p.zoho_estimate_id ? ' <span class="chip" title="Ya está en Zoho Books">Zoho</span>' : ''}</td>
         <td>${chipEstado(p.estado)}${sinRespuesta(p) ? ` <span class="chip mal" title="Enviado y sin respuesta">${diasDesde(p)} d</span>` : ''}</td>
         <td>${fechaCorta(p)}</td>
         <td>${esc(_clientes.get(p.cliente_id ?? '') ?? '')}</td>
         <td>${esc(p.tecnico_id ?? '')}</td>
-        <td class="pp-num">${eur(p.total, 2)}</td></tr>`).join('') || '<tr><td colspan="6" class="vacio">Ningún presupuesto con ese filtro.</td></tr>'}</tbody></table></div>`;
+        <td class="num">${eur(p.total, 2)}</td></tr>`).join('') || '<tr><td colspan="6" class="vacio">Ningún presupuesto con ese filtro.</td></tr>'}</tbody></table></div>`;
 }
 
 // ── Ficha ───────────────────────────────────────────────────────────────────
@@ -172,11 +162,11 @@ async function pintarFicha(el: HTMLElement, id: string) {
     </div>
     <section class="tarjeta mo-scroll"><h3>📦 Líneas</h3>
       ${lin.error ? `<p class="aviso mal">No se pudieron leer las líneas: ${esc(lin.error.message)}</p>` : ''}
-      <table class="tabla" id="pp-lineas"><thead><tr><th>Concepto</th><th class="pp-num">Cant.</th><th class="pp-num">Precio</th><th class="pp-num">Dto.</th><th class="pp-num">Subtotal</th></tr></thead>
+      <table class="tabla" id="pp-lineas"><thead><tr><th>Concepto</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Dto.</th><th class="num">Subtotal</th></tr></thead>
       <tbody>${lineas.map(l => `<tr><td>${esc(l.nombre ?? '')}${l.categoria ? ` <small class="nota">${esc(l.categoria)}</small>` : ''}</td>
-        <td class="pp-num">${Number(l.cantidad ?? 0).toLocaleString('es-ES')}</td><td class="pp-num">${eur(l.precio, 2)}</td>
-        <td class="pp-num">${l.descuento ? `${Number(l.descuento).toLocaleString('es-ES')} %` : ''}</td>
-        <td class="pp-num">${eur(l.subtotal ?? Number(l.cantidad ?? 0) * Number(l.precio ?? 0), 2)}</td></tr>`).join('') || '<tr><td colspan="5" class="vacio">Sin líneas.</td></tr>'}</tbody></table>
+        <td class="num">${Number(l.cantidad ?? 0).toLocaleString('es-ES')}</td><td class="num">${eur(l.precio, 2)}</td>
+        <td class="num">${l.descuento ? `${Number(l.descuento).toLocaleString('es-ES')} %` : ''}</td>
+        <td class="num">${eur(l.subtotal ?? Number(l.cantidad ?? 0) * Number(l.precio ?? 0), 2)}</td></tr>`).join('') || '<tr><td colspan="5" class="vacio">Sin líneas.</td></tr>'}</tbody></table>
     </section>`;
 }
 

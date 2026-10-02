@@ -384,6 +384,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   ficha con sus `documento_lineas` y los trabajos que salieron de él. Espejo en
   SOLO LECTURA (área `presupuestos`); se crean y se mandan a Zoho en la app.
   Arnés `verify-presupuestos.mjs`.
+- **Mantenimientos** (`src/modulos/mantenimientos/`, `#/mantenimientos`,
+  2026-10-02): la cartera de sedes con plan en SOLO LECTURA (área `clientes`).
+  «Quién cobra» y la cuota NETA siguen las reglas de `mant-estados.js` de la app
+  (`sedeEnZoho`, `netoSede`; el bruto heredado de Zoho se divide por el IGIC
+  del 7 %, que `mant_config` no viaja): si cambian allí, cambiarlas aquí. Euros
+  y deuda solo para admins. Arnés `verify-mantenimientos.mjs`.
+- **Barras de una serie**: `src/ui/barras.ts` (tabla de verdad, `--serie-1`,
+  etiqueta directa, la fila filtra con su `data-action`). `.chip.aviso` es una
+  píldora; la CIFRA en ámbar es `.di-cifra.atento` (nunca `.aviso`, que es caja).
 - **Widgets movibles** del modo escritorio: se arrastran por cualquier punto
   que no sea un enlace o botón; al mover el primero se congela el sitio de
   todos (`Escritorio.widgets`, por escritorio, en la misma disposición de

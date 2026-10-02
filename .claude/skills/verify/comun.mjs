@@ -60,6 +60,8 @@ function cumple(fila, k, v) {
     case 'in': return arg.slice(1, -1).split(',').map(s => s.replace(/^"|"$/g, '')).includes(String(x));
     case 'ilike': return new RegExp('^' + arg.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$', 'i').test(String(x ?? ''));
     case 'is': return arg === 'null' ? x == null : String(x) === arg;
+    // Como en SQL: un NULL no cumple «not.in»/«not.eq» (salvo «not.is»).
+    case 'not': return (x != null || arg.startsWith('is.')) && !cumple(fila, k, arg);
     default: return true;
   }
 }
