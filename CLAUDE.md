@@ -398,6 +398,30 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   todos (`Escritorio.widgets`, por escritorio, en la misma disposición de
   `localStorage`) y «Recolocar los widgets» (menú del avatar) vuelve a la
   rejilla.
+- **Portada de Oki** (`src/modulos/inicio/vista.ts`, `src/oki.css`,
+  2026-10-02): Inicio es el centro de mando de Oki (diseño del lienzo «Oki ·
+  Centro de mando», tablero «Flujo de Oki en blanco»): Oki en el centro unido
+  por circuitos a seis áreas, cada una con el `contador()` de SU pantalla
+  (`AREAS`; WhatsApp sale de la función), estadísticas del Desk de la semana
+  (SLA de respuesta de 30 días, cerrados por día), «Oki dice» y «Necesita a una
+  persona» desde `panorama_direccion` y, debajo, las baldosas de siempre. El
+  diagrama es un lienzo de 860 × 620 que escala por `cqw`. Sin colores fuera de
+  los tokens; el movimiento se apaga con `prefers-reduced-motion`. El menú
+  lateral se anima desde `oki.css`. Arnés `verify-oki.mjs`.
+- **Chat de WhatsApp fijo** (`src/shell/whatsapp.ts`, función `whatsapp`,
+  2026-10-02, con el OK de Fran a escribir en la app para esto): ventana abajo a
+  la derecha en TODAS las pantallas, plegada al entrar. Las conversaciones son
+  de la APP (`wa_conversaciones`/`wa_mensajes`, las recibe su webhook): la
+  función las LEE con la service key de la app y, al contestar, manda a Meta con
+  `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID` (secrets del hub, los mismos que
+  la app; `_shared/whatsapp.ts` portado) y APUNTA como `guardarSaliente` de la
+  app: insert en `wa_mensajes`, `ultimo_mensaje*` y `sin_leer` en
+  `wa_conversaciones`. Son las ÚNICAS escrituras del hub en `okcomputer`; nada
+  más se le escribe. El comentario del ticket va a `hub.ticket_comentarios`
+  (`tipo = respuesta`, canal whatsapp). Regla de Meta: texto libre solo dentro
+  de las 24 h desde el último mensaje del CLIENTE (la caja se bloquea fuera; la
+  plantilla se manda desde la app). Oki PROPONE (`proponer`, Claude) y una
+  persona manda. Si cambian las tablas `wa_*` de la app, cambiar la función.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

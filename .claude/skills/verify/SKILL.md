@@ -127,6 +127,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   curso; cuota NETA con el bruto heredado de Zoho sin IGIC), barras por plan
   que filtran, la fila lleva al sitio, y un técnico en el móvil sin euros.
   `comun.mjs` entiende `not.` (un NULL no cumple `not.in`, como en SQL).
+- `verify-oki.mjs`: portada de Oki (diagrama con 6 áreas y su dato, SLA y
+  cerrados por día, «Oki dice» y «Necesita a una persona» desde
+  `panorama_direccion`, baldosas debajo) y chat de WhatsApp fijo (plegado al
+  entrar, leer y marcar leída, propuesta de Oki, enviar, ventana de 24 h
+  cerrada bloquea, sigue en otra pantalla, móvil sin desbordar). La función
+  `whatsapp` va simulada con su propia ruta encima de la de `preparar`.
 
 `npm run verify` pasa todos los de la lista.
 

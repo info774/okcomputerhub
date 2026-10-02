@@ -1,9 +1,9 @@
-// Inicio: una baldosa por módulo con número en vivo (su `contador()`).
-// Cada baldosa se pinta al llegar su número; una que falla se queda con «—»
-// y no tumba a las demás.
+// Inicio: la portada de Oki (vista.ts, se carga bajo demanda) y, debajo, una
+// baldosa por módulo con número en vivo (su `contador()`). Cada baldosa se
+// pinta al llegar su número; una que falla se queda con «—» y no tumba a las demás.
 import type { Modulo } from '../../core/modulo';
 import { modulos } from '../../core/router';
-import { esAdmin, usuario } from '../../core/estado';
+import { esAdmin } from '../../core/estado';
 import { esc } from '../../ui/dom';
 
 export function visibles(): Modulo[] {
@@ -24,18 +24,19 @@ function baldosa(m: Modulo): string {
   </a>`;
 }
 
-async function pintar(el: HTMLElement) {
+// Las baldosas de siempre («Todas las pantallas»), debajo de la portada de Oki.
+function baldosas(): string {
   const lista = visibles();
   const grupos = [...new Set(lista.map(m => m.grupo))];
-  const nombre = usuario()?.nombre?.split(' ')[0] ?? '';
-  el.innerHTML = `
-    <h2 class="saludo">Hola${nombre ? `, ${esc(nombre)}` : ''}</h2>
-    ${grupos.map(g => `<section class="grupo-baldosas">
+  return grupos.map(g => `<section class="grupo-baldosas">
       <h3>${esc(g)}</h3>
       <div class="baldosas">${lista.filter(m => m.grupo === g).map(baldosa).join('')}</div>
-    </section>`).join('')}`;
+    </section>`).join('');
+}
 
-  for (const m of lista) {
+async function pintar(el: HTMLElement) {
+  await (await import('./vista')).pintar(el, baldosas());
+  for (const m of visibles()) {
     if (!m.contador) continue;
     m.contador().then(c => {
       const b = document.getElementById(`bal-${m.id}`);
@@ -52,9 +53,9 @@ async function pintar(el: HTMLElement) {
 
 export const moduloInicio: Modulo = {
   id: 'inicio',
-  titulo: 'Inicio',
+  titulo: 'Oki · centro de mando',
   grupo: 'General',
   icono: '🏠',
-  explicacion: 'Todo de un vistazo: cada baldosa es una pantalla con su número al día. Las marcadas con ↗ siguen en la app actual y se abren en otra pestaña.',
+  explicacion: 'Oki en el centro y lo que está pasando ahora: cada área con su número al día, las estadísticas del soporte de la semana y lo que necesita a una persona. Debajo, todas las pantallas. Los WhatsApp de los clientes se contestan desde la ventana de abajo a la derecha, en cualquier pantalla.',
   pintar,
 };
