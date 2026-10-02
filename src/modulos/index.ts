@@ -26,6 +26,7 @@ import { moduloFacturacion } from './facturacion';
 import { moduloCobros } from './cobros';
 import { moduloMapa } from './mapa';
 import { moduloAlmacen } from './almacen';
+import { moduloInventario } from './inventario';
 import { moduloTrabajos } from './trabajos';
 import { moduloCalendario } from './calendario';
 import { moduloChat } from './chat';
@@ -60,6 +61,7 @@ export const MODULOS: Modulo[] = [
   moduloCalendario,
   moduloMonitorizacion,
   moduloAlmacen,
+  moduloInventario,
   ...modulosAppActual,
   moduloDatos,
   moduloConector,

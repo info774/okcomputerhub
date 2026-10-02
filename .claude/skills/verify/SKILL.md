@@ -127,6 +127,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   curso; cuota NETA con el bruto heredado de Zoho sin IGIC), barras por plan
   que filtran, la fila lleva al sitio, y un técnico en el móvil sin euros.
   `comun.mjs` entiende `not.` (un NULL no cumple `not.in`, como en SQL).
+- `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
+  producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
+  por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de
+  movimientos (tipos, trasvase con destino, trabajo) y lo más gastado en 90
+  días; ficha con dónde más lo hay; técnico en el móvil sin euros.
 
 `npm run verify` pasa todos los de la lista.
 

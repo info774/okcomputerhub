@@ -108,7 +108,7 @@ function cabeza(): string {
       ${cifra('Cobro torcido', String(torcidas.length), torcidas.length ? 'pendiente, último aviso, no paga o error de Stripe' : 'todas al corriente', torcidas.length ? 'mal' : '')}
       ${cifra('Sin cobrar todavía', String(sinCobrar.length), admin && deuda ? `sin domiciliar o esperando el primer pago · deuda Zoho ${eur(deuda)}` : 'sin domiciliar o esperando el primer pago', sinCobrar.length ? 'atento' : '')}
     </div>
-    ${barras('mt-barras', admin ? 'Cuota mensual por plan' : 'Sedes por plan', filas, 'mtPlanBarra')}
+    ${barras('mt-barras', admin ? 'Cuota mensual por plan' : 'Sedes por plan', filas, 'mtPlanBarra', _plan)}
   </div>`;
 }
 

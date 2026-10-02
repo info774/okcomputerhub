@@ -93,7 +93,7 @@ function reparto(): string {
   return barras('pp-barras', 'Importe por estado', [...ESTADOS, ...otros].map(e => {
     const ps = _lista.filter(p => (p.estado ?? '—') === e);
     return { clave: e, etiqueta: e, valor: suma(ps), texto: `${eur(suma(ps))} <small class="nota">· ${ps.length}</small>`, detalle: `${e}: ${ps.length} presupuestos · ${eur(suma(ps))}` };
-  }), 'ppFiltro');
+  }), 'ppFiltro', _filtro);
 }
 
 // ── Lista ───────────────────────────────────────────────────────────────────

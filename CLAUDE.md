@@ -390,8 +390,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   (`sedeEnZoho`, `netoSede`; el bruto heredado de Zoho se divide por el IGIC
   del 7 %, que `mant_config` no viaja): si cambian allí, cambiarlas aquí. Euros
   y deuda solo para admins. Arnés `verify-mantenimientos.mjs`.
+- **Inventario** (`src/modulos/inventario/`, `#/inventario`, 2026-10-02): el
+  stock POR UBICACIÓN (furgonetas, tienda) y «Todas» sumando el mismo producto
+  por `catalogo_id` o por nombre (la regla de «Total» de `furgonetas.js`), el
+  libro de movimientos (`#/inventario/movimientos`; llegan cada noche) y la
+  ficha del producto. Espejo en SOLO LECTURA (área `inventario`); lo agregado
+  por material y «qué pedir» siguen en `#/almacen`. Arnés `verify-inventario.mjs`.
 - **Barras de una serie**: `src/ui/barras.ts` (tabla de verdad, `--serie-1`,
-  etiqueta directa, la fila filtra con su `data-action`). `.chip.aviso` es una
+  etiqueta directa, la fila filtra con su `data-action` y la `activa` lleva el
+  hexágono). `.chip.aviso` es una
   píldora; la CIFRA en ámbar es `.di-cifra.atento` (nunca `.aviso`, que es caja).
 - **Widgets movibles** del modo escritorio: se arrastran por cualquier punto
   que no sea un enlace o botón; al mover el primero se congela el sitio de
