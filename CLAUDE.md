@@ -405,6 +405,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   todos (`Escritorio.widgets`, por escritorio, en la misma disposición de
   `localStorage`) y «Recolocar los widgets» (menú del avatar) vuelve a la
   rejilla.
+- **Reloj** (`reloj/`, `#/reloj`, función `reloj`, `20261017_reloj.sql`,
+  2026-10-02): app Wear OS (Galaxy Watch) con tile, complicación y app
+  (avisos, mi día, RMM, cifras, fichar, comanda dictada). Se vincula con un
+  código corto que se teclea en `#/reloj` (token `okr_…`, solo su huella en
+  la base). Fichar va por `hub.reloj_fichar` → la MISMA `hub.fichar`. El APK
+  lo compila `reloj-apk.yml` y desde `main` lo publica como versión
+  `reloj-<n>`; aquí no hay SDK de Android (dl.google.com bloqueado). El
+  `resumen` es un contrato con relojes ya instalados: se añaden campos, no se
+  quitan. Detalle e instalación en `docs/RELOJ.md`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto
