@@ -42,6 +42,7 @@ try {
   const llamada = base.reg.escrituras.find(e => e.tabla === 'reloj_aprobar');
   ok(llamada?.cuerpo.p_codigo === 'K7M-4QP' && llamada.cuerpo.p_nombre === 'Galaxy Watch de Tito', 'vincular: RPC con código y nombre');
   ok(!(await page.inputValue('#rl-codigo')), 'tras vincular, el código ya no queda en el campo');
+  ok(await page.locator('tbody tr', { hasText: 'Galaxy Watch de Tito' }).locator('td').nth(1).innerText() === 'Tito Pérez', 'la lista dice de quién es cada reloj');
   await page.screenshot({ path: `${CAPTURAS}/reloj.png`, fullPage: true });
   await page.fill('#rl-codigo', 'AAA-AAA');
   await page.click('form[data-on-submit="rlAprobar"] button[type=submit]');

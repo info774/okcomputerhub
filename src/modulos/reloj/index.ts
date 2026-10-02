@@ -5,7 +5,7 @@
 // Prefijo de ids: rl-.
 import type { Modulo, Contador } from '../../core/modulo';
 import { API } from '../../core/api';
-import { nombreDe } from '../../core/equipo';
+import { equipo, nombreDe } from '../../core/equipo';
 import { usuario } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { esc, fechaHora, hace, toast } from '../../ui/dom';
@@ -17,8 +17,10 @@ let _el: HTMLElement | null = null;
 async function pintar(el: HTMLElement, params: string[] = []) {
   _el = el;
   el.innerHTML = '<p class="cargando">Cargando…</p>';
-  const { data, error } = await API.get<Reloj[]>('reloj_dispositivos', {
-    select: 'id,nombre,usuario_id,aprobado_at,ultimo_uso,revocado_at', order: 'aprobado_at.desc' });
+  const [{ data, error }] = await Promise.all([
+    API.get<Reloj[]>('reloj_dispositivos', { select: 'id,nombre,usuario_id,aprobado_at,ultimo_uso,revocado_at', order: 'aprobado_at.desc' }),
+    equipo(),  // para nombreDe()
+  ]);
   if (error) { el.innerHTML = `<p class="aviso mal">No se pudieron leer los relojes: ${esc(error.message)}</p>`; return; }
   const relojes = data ?? [];
   const yo = usuario();
