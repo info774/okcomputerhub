@@ -56,7 +56,7 @@ export async function trocear(texto: string, personas: { nombre: string }[], hoy
 export interface Resultado { comanda_id: string; tareas: Fila[]; con_claude: boolean; transcripcion: string }
 
 // Guarda la comanda y sus tareas y avisa por Telegram a quien le toca.
-export async function crearComanda(db: Db, o: { texto: string; origen: 'app' | 'telegram' | 'mcp'; autorId: string; autorNombre: string }): Promise<Resultado> {
+export async function crearComanda(db: Db, o: { texto: string; origen: 'app' | 'telegram' | 'mcp' | 'reloj'; autorId: string; autorNombre: string }): Promise<Resultado> {
   const texto = o.texto.trim().slice(0, 8000)
   if (texto.length < 3) throw new Error('La comanda está vacía')
   const personas = (await db.get('usuarios?select=id,nombre&activo=eq.true&order=nombre')) as { id: string; nombre: string }[]

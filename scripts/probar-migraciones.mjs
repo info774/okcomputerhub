@@ -633,6 +633,30 @@ try {
   ok(!psql(como('authenticated', 'ana@ok.test', `update hub.chat_mensajes set texto = 'x' where canal_id = '${dm}';`) + `\nselect 1/(select count(*) from hub.chat_mensajes where texto = 'x');`, { esperaError: true }).ok,
     'chat: nadie edita lo que escribió otro');
 
+  // ── Reloj: vinculación por código, huella del token y fichar a nombre de la persona ──
+  const [rtok, rcod] = psql(como('service_role', null, `select token || '|' || codigo from hub.reloj_iniciar();`)).split('\n').pop().split('|');
+  ok(rtok.startsWith('okr_') && /^[A-Z0-9]{3}-[A-Z0-9]{3}$/.test(rcod), 'reloj: el reloj recibe token y código corto');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select * from hub.reloj_iniciar();`), { esperaError: true }).ok
+    && !psql(como('authenticated', 'tito@ok.test', `select * from hub.reloj_validar('${rtok}');`), { esperaError: true }).ok,
+    'reloj: iniciar y validar son solo de la función (service_role)');
+  ok(psql(`select count(*) from hub.reloj_dispositivos where huella = '${rtok}'`) === '0', 'reloj: se guarda la huella, no el token');
+  ok(psql(como('service_role', null, `select estado || ':' || coalesce(email, '-') from hub.reloj_validar('${rtok}');`)).split('\n').pop() === 'pendiente:-',
+    'reloj: sin aprobar, el token está pendiente y no es de nadie');
+  ok(psql(como('authenticated', 'tito@ok.test', `select count(*) from hub.reloj_dispositivos;`)).split('\n').pop() === '0', 'reloj: un pendiente no lo ve nadie');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.reloj_aprobar('ZZZ-ZZZ');`), { esperaError: true }).ok, 'reloj: un código que no existe no vincula');
+  psql(como('authenticated', 'tito@ok.test', `select hub.reloj_aprobar('${rcod.toLowerCase().replace('-', ' ')}', 'Watch de Tito');`));
+  ok(psql(como('service_role', null, `select estado || ':' || email || ':' || dispositivo from hub.reloj_validar('${rtok}');`)).split('\n').pop() === 'ok:tito@ok.test:Watch de Tito',
+    'reloj: al teclear el código (sin guion ni mayúsculas) el token es de esa persona');
+  ok(psql(`select count(*) from hub.reloj_dispositivos where codigo is not null`) === '0', 'reloj: el código no se reutiliza');
+  ok(psql(como('authenticated', 'ana@ok.test', `select count(*) from hub.reloj_dispositivos;`)).split('\n').pop() === '1'
+    && psql(como('authenticated', 'pepa@ok.test', `select count(*) from hub.reloj_dispositivos;`)).split('\n').pop() === '0',
+    'reloj: lo ve su dueño y un admin, nadie más');
+  const titoReloj = psql(`select id from hub.usuarios where email = 'tito@ok.test'`);
+  ok(!psql(como('service_role', null, `select hub.reloj_fichar('${titoReloj}', 'traslado');`), { esperaError: true }).ok,
+    'reloj: con el fichaje en la app, fichar desde el reloj no escribe');
+  ok(psql(como('authenticated', 'tito@ok.test', `insert into hub.comandas (transcripcion, origen) values ('del reloj', 'reloj') returning origen;`)).split('\n').pop() === 'reloj',
+    'reloj: una comanda puede venir del reloj');
+
   // ── Corte final (preparado, NO aplicado en producción): se prueba aquí ──
   psql(`begin;
 ${readFileSync('supabase/cortes/corte_final.sql', 'utf8')}
@@ -658,6 +682,14 @@ commit;`);
     && psql(`select count(*) from hub.documento_lineas where trabajo_id = '${tr}'`) === '1', 'material: bajar de 3 a 1 devuelve 2 al stock');
   psql(como('authenticated', 'ana@ok.test', `delete from hub.trabajos where id = '${tr}';`));
   ok(psql(`select cantidad from hub.furgoneta_inventario where id = '00000000-0000-0000-0000-0000000000b9'`) === '3', 'material: borrar el trabajo devuelve lo que tenía');
+  const rfch = psql(como('service_role', null, `select hub.reloj_fichar(id, 'traslado') from hub.usuarios where email = 'tito@ok.test';`)).split('\n').pop();
+  ok(rfch.includes('"ok": true') && psql(`select tecnico_nombre from hub.sesiones where fin is null order by created_at desc limit 1`) === 'Tito'
+    && psql(`select usuario_email from hub.auditoria where tabla = 'sesiones' order by id desc limit 1`) === 'tito@ok.test',
+    'reloj: tras el corte, ficha a nombre de la persona y la auditoría la apunta');
+  ok(!psql(como('service_role', null, `select hub.reloj_fichar(id, 'traslado') from hub.usuarios where email = 'tito@ok.test';`), { esperaError: true }).ok,
+    'reloj: las reglas son las de hub.fichar (no hay dos sesiones abiertas)');
+  psql(como('authenticated', 'tito@ok.test', `select hub.reloj_revocar(id) from hub.reloj_dispositivos;`));
+  ok(psql(como('service_role', null, `select count(*) from hub.reloj_validar('${rtok}');`)).split('\n').pop() === '0', 'reloj: desvinculado deja de valer');
   ok(psql(`select count(*) from cron.job where jobname in ('hub-sync-app', 'hub-sync-app-completo')`) === '0', 'corte final: el sync con la app se apaga');
   const nt = psql(como('authenticated', 'ana@ok.test', `insert into hub.trabajos (descripcion) values ('Nuevo tras el corte') returning numero;`)).split('\n').pop();
   ok(Number(nt) > 700, `corte final: los trabajos nuevos siguen la numeración (${nt})`);

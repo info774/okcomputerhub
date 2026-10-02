@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ok Hub</string>
+    <string name="tile_nombre">Ok Hub</string>
+    <string name="complicacion_nombre">Avisos del hub</string>
+</resources>

@@ -6,6 +6,7 @@ import { moduloDireccion } from './direccion';
 import { moduloInformes } from './informes';
 import { moduloDatos } from './datos';
 import { moduloConector } from './conector';
+import { moduloReloj } from './reloj';
 import { moduloProyectos } from './proyectos';
 import { moduloWiki } from './wiki';
 import { moduloComandas } from './comandas';
@@ -65,4 +66,5 @@ export const MODULOS: Modulo[] = [
   ...modulosAppActual,
   moduloDatos,
   moduloConector,
+  moduloReloj,
 ];

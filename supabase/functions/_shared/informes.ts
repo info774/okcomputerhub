@@ -21,9 +21,9 @@ export const TIPOS: Record<string, { nombre: string; dinero: boolean; comando: s
 
 const HUB = 'https://okhub-tenerife.web.app/'
 const eur = (n: unknown) => `${Number(n ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
-const hoyCanarias = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Atlantic/Canary' })
+export const hoyCanarias = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Atlantic/Canary' })
 // Inicio y fin del día de hoy en Canarias (UTC+0 en invierno, +1 en verano).
-function limitesHoy(): { ini: string; fin: string } {
+export function limitesHoy(): { ini: string; fin: string } {
   const hoy = hoyCanarias()
   const u = new Date(`${hoy}T12:00:00Z`)
   const off = new Date(u.toLocaleString('en-US', { timeZone: 'Atlantic/Canary' })).getTime() - new Date(u.toLocaleString('en-US', { timeZone: 'UTC' })).getTime()
