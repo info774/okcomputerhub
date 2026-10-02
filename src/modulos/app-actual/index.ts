@@ -2,19 +2,11 @@
 // (okcomputertenerife.web.app). Son dos orígenes y dos sesiones mientras
 // convivan, así que allí se entra otra vez.
 //
-// Los contadores salen del ESPEJO del hub (tablas de hub copiadas por
-// sync-app), no de la app: así la baldosa no le suma ni una consulta a la
-// base de producción.
-import type { Modulo, Contador } from '../../core/modulo';
-import { API } from '../../core/api';
+// Si alguno lleva contador, que salga del ESPEJO del hub (tablas de hub
+// copiadas por sync-app), no de la app: ni una consulta más a producción.
+import type { Modulo } from '../../core/modulo';
 import { APP_ACTUAL_URL } from '../../core/config';
 
-
-async function cuenta(tabla: string, filtro: Record<string, string>, sub: string, tonoSiHay: Contador['tono'] = 'neutro'): Promise<Contador | null> {
-  const n = await API.contar(tabla, filtro);
-  if (n == null) return null;
-  return { valor: n, subtitulo: sub, tono: n > 0 ? tonoSiHay : 'bien' };
-}
 
 const EXPLICA = 'Esta pantalla sigue en la app actual. El número sale de la copia del hub (se refresca cada 15 min); al pulsar se abre la app de siempre en otra pestaña.';
 
@@ -23,7 +15,6 @@ function enlace(id: string, titulo: string, icono: string, contador?: Modulo['co
 }
 
 export const modulosAppActual: Modulo[] = [
-  enlace('presupuestos', 'Presupuestos', '📄', () => cuenta('presupuestos', { estado: 'eq.Borrador' }, 'en borrador')),
   enlace('facturacion-app', 'Facturación y cobros (app)', '💶'),
   enlace('mantenimientos', 'Mantenimientos', '🔁'),
   enlace('inventario', 'Inventario', '📦'),

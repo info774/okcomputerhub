@@ -118,7 +118,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   material, mover, fichar, terminar con foto, por sus RPC). El GPS no
   contesta en el arnés: el fichaje sigue a los 6 s sin él.
 
-`npm run verify` pasa los quince.
+- `verify-presupuestos.mjs`: Presupuestos (cifras abiertos / sin respuesta /
+  aceptado / tasa, barras de importe por estado que filtran, filtros, por
+  persona, buscador, ficha con líneas y enlaces, tema noche, móvil sin
+  desbordar); solo lectura.
+
+`npm run verify` pasa todos los de la lista.
 
 ## Pantalla nueva
 

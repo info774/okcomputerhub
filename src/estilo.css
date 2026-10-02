@@ -586,3 +586,20 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .ho-botones .btn { min-height: 44px; }
 .ho-terminar textarea, .ho-terminar input[type=file] { width: 100%; }
 .si-pre { white-space: pre-wrap; margin: 0; }
+
+/* ── Presupuestos (pp-) ─────────────────────────────────────────────── */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.pp-cabeza { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: .75rem; margin-bottom: .75rem; align-items: stretch; }
+.pp-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pp-reparto h3 { margin: 0 0 .5rem; font-size: .9rem; color: var(--texto-suave); font-weight: 600; }
+.pp-barras { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
+.pp-barras th { text-align: left; font-weight: 500; padding-right: .6rem; white-space: nowrap; width: 1%; }
+.pp-barras tr:hover .pp-barra { filter: brightness(1.12); }
+.pp-barras tr:hover th { color: var(--primario); }
+.pp-pista { display: block; height: 14px; border-radius: 0 4px 4px 0; background: var(--fondo); }
+.pp-barra { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--serie-1); }
+.pp-num, .tabla .pp-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pp-barras .pp-num { padding-left: .6rem; width: 1%; }
+.pp-total .di-valor { color: var(--primario); }
+@media (max-width: 900px) { .pp-cabeza { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .pp-cifras { grid-template-columns: 1fr; } }
