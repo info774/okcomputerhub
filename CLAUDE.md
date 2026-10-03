@@ -276,8 +276,9 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   avisos (panel, bot, informes, MCP); un aviso nuevo se añade ahí, con
   `dinero = true` si es de dinero (solo admins). Es `security definer`: filtra
   él mismo con `hub.admin_para()`. Dinero de Zoho: espejo de SOLO LECTURA
-  (`hub.zoho_*`, RLS solo admins) que rellena `zoho-lectura`; el hub nunca
-  escribe en Zoho. Los 7 informes viven en `_shared/informes.ts` (texto en el
+  (`hub.zoho_*`, RLS solo admins) que rellena `zoho-lectura`; el hub no
+  escribe dinero en Zoho (la única escritura son los contactos de clientes,
+  ver «Clientes con escritura»). Los 7 informes viven en `_shared/informes.ts` (texto en el
   HTML de Telegram, escapado con `h()`); el front lo pinta con `htmlTelegram()`,
   que solo deja pasar `<b>`, `<i>`, `<code>` y enlaces https.
 - Los técnicos se guardan por NOMBRE en la app y no siempre igual («Matteo» /
@@ -380,6 +381,17 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   entra solo en el dock y el lanzador (sale de `visibles()`). Los arneses usan
   el clásico salvo que pidan `preparar(…, { escritorio: 'defecto' })`. Arnés
   `verify-escritorio.mjs`.
+- **Clientes con escritura** (2026-10-03, paridad bloque 2, PREPARADO para
+  el corte del área `clientes`): `#/clientes/nuevo` y `#/clientes/<id>/editar`
+  (`clientes/formulario.ts`, prefijo `cf-`); con NIF repetido NO se crea
+  (`clientePorNif`). Dar de baja / reactivar = SOLO `activo` (no se borra
+  nada; Zoho no se toca); eliminar (admin) = baja + quitar de Zoho. Zoho
+  (decisión de Fran: igual que la app) por la función `clientes`
+  (`zoho_alta` al crear, `zoho_quitar` al eliminar; `nif` busca la razón
+  social y vale ya), que con el área de la app contesta 409. Es la ÚNICA
+  escritura del hub en Zoho (`zohoEnviar` de `_shared/zoho.ts`); editar no
+  manda nada a Zoho, como la app. Excel: `descargarCsv` de `src/ui/csv.ts`.
+  Arnés `verify-clientes.mjs`.
 - **Sitios** (`src/modulos/sitios/`, `#/sitios`, 2026-09-28): las sedes como
   en «Sitios» de la app (lista con filtros y ficha con resumen, contactos,
   trabajos, tickets y equipos). Espejo en SOLO LECTURA (área `clientes`); la

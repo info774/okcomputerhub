@@ -1,7 +1,11 @@
-// Cliente de SOLO LECTURA de Zoho Books para el hub (organización «Dalmon
-// Sistemas S.L.», región eu). Es un cliente propio del hub, con su «Self
-// Client» y sus permisos de lectura: no comparte credenciales con la app
-// actual, que sigue siendo quien escribe en Zoho.
+// Cliente de Zoho Books para el hub (organización «Dalmon Sistemas S.L.»,
+// región eu). Es un cliente propio del hub, con su «Self Client»: no comparte
+// credenciales con la app actual. Casi todo es LECTURA (el espejo de dinero);
+// la única escritura es la de la paridad con la app (decisión de Fran,
+// 2026-10-03): dar de alta y quitar CONTACTOS al crear o eliminar un cliente
+// (`zohoEnviar`, función `clientes`), y solo con el área `clientes` cortada.
+// Permisos del Self Client: los de lectura + ZohoBooks.contacts.CREATE y
+// ZohoBooks.contacts.DELETE (docs/PENDIENTE_FRAN.md).
 //
 // Secrets de la función (Supabase del hub → Edge Functions → Secrets):
 //   ZOHO_HUB_CLIENT_ID, ZOHO_HUB_CLIENT_SECRET   del Self Client (api-console.zoho.eu)
@@ -68,6 +72,21 @@ export async function zohoGet(db: Db, ruta: string, params: Record<string, strin
   const j = await res.json().catch(() => ({}))
   if (!res.ok || (j.code && j.code !== 0)) throw new Error(`Zoho ${ruta} → ${res.status}: ${j.message ?? 'sin detalle'}`)
   return j
+}
+
+// Escribir en Zoho (POST/DELETE). Devuelve la respuesta; NO lanza si Zoho
+// contesta con un código de error (quien llama decide, p. ej. desactivar en
+// vez de borrar).
+// deno-lint-ignore no-explicit-any
+export async function zohoEnviar(db: Db, metodo: 'POST' | 'DELETE', ruta: string, cuerpo?: unknown): Promise<any> {
+  const q = new URLSearchParams({ organization_id: ORG() })
+  const res = await fetch(`${API}/${ruta}?${q}`, {
+    method: metodo,
+    headers: { Authorization: `Zoho-oauthtoken ${await accessToken(db)}`, ...(cuerpo ? { 'Content-Type': 'application/json' } : {}) },
+    body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+    signal: AbortSignal.timeout(30000),
+  })
+  return await res.json().catch(() => ({ code: res.status, message: `HTTP ${res.status}` }))
 }
 
 // Recorre todas las páginas (200 por página; tope de seguridad 100 páginas).

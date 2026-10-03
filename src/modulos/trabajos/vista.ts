@@ -15,6 +15,7 @@ import { markdown } from '../../ui/markdown';
 import { nombresClientes, telWhatsApp, eur } from '../ventas/datos';
 import { pintarFormulario, ofrecerFacturar } from './formulario';
 import { APP_ACTUAL_URL } from '../../core/config';
+import { descargarCsv } from '../../ui/csv';
 import { botonChatFicha } from '../../ui/chat-ficha';
 
 interface Trabajo { id: string; numero: number; created_at: string; titulo: string | null; tipo?: string | null; chain_root_id?: string | null; descripcion: string | null; estado: string; tecnicos: string[] | null;
@@ -70,15 +71,9 @@ const cuerpoLista = () => (leer('hub_tr_vista', 'lista') === 'kanban' ? kanban()
 // Exportar lo filtrado a Excel: CSV con BOM y «;», que Excel en español abre
 // con las columnas bien (exportTrabajosExcel de la app).
 function exportarCsv() {
-  const celda = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lineas = [['Nº', 'Título', 'Tipo', 'Cliente', 'Técnicos', 'Fecha', 'Hora', 'Estado', 'Descripción'].map(celda).join(';'),
-    ...filas().map(t => [t.numero, t.titulo, t.tipo, _nombres.get(t.cliente_id ?? '') ?? '', (t.tecnicos ?? []).join(', '), t.fecha_programada ?? '',
-      t.hora_llegada ? new Date(t.hora_llegada).toTimeString().slice(0, 5) : '', t.estado, t.descripcion].map(celda).join(';'))];
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob(['\uFEFF' + lineas.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
-  a.download = `trabajos-${new Date().toLocaleDateString('sv-SE')}.csv`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  descargarCsv('trabajos', ['Nº', 'Título', 'Tipo', 'Cliente', 'Técnicos', 'Fecha', 'Hora', 'Estado', 'Descripción'],
+    filas().map(t => [t.numero, t.titulo, t.tipo, _nombres.get(t.cliente_id ?? '') ?? '', (t.tecnicos ?? []).join(', '), t.fecha_programada ?? '',
+      t.hora_llegada ? new Date(t.hora_llegada).toTimeString().slice(0, 5) : '', t.estado, t.descripcion]));
 }
 
 async function vistaLista(): Promise<string> {

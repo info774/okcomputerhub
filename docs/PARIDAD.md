@@ -37,7 +37,10 @@ Fran, 2026-10-03).
    **Bloque 1 HECHO** (2026-10-03), salvo lo que espera al corte final.
 2. **Clientes, sedes y contactos con escritura**: alta y edición (NIF, Google
    Maps), baja/reactivar, pestañas Software, Hardware y Cámaras, teléfonos con
-   rol, Excel; y lo que escribe en Zoho (alta de cliente).
+   rol, Excel; y lo que escribe en Zoho (alta de cliente). Decisiones de Fran
+   (2026-10-03): Zoho igual que la app; Google Maps en la tanda 4. Tandas:
+   1 clientes (HECHA 2026-10-03), 2 sedes, 3 Software/Hardware/Cámaras,
+   4 contactos y Google Maps.
 3. **Presupuestos y facturar trabajos**: crear con líneas del catálogo,
    plantillas, PDF, a Zoho, convertir en trabajo; facturar trabajos en Zoho.
 4. **Mantenimiento y cobros**: Stripe (domiciliar, enlace de pago, cambiar plan,
@@ -58,10 +61,10 @@ Fran, 2026-10-03).
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
 | Lista de clientes con filtros (`modules/clientes.js`) | Solo lectura | `#/clientes` | Corte del área `clientes`. |
-| Alta/edición de cliente con Zoho (`saveCliente`, `push-cliente-to-zoho`) | Falta | — | Alta propia y escribir en Zoho. |
-| Eliminar cliente y quitarlo de Zoho (`delete-cliente-from-zoho`) | Falta | — | Ídem. |
-| Dar de baja y reactivar cliente o sede | Falta | — | Escribir `activo`. |
-| Empresa por NIF y NIF duplicado (`lookup-nif`) | Falta | — | Portar la función. |
+| Alta/edición de cliente con Zoho (`saveCliente`, `push-cliente-to-zoho`) | Preparado | `#/clientes/nuevo`, `#/clientes/<id>/editar` (`clientes/formulario.ts`); función `clientes` (`zoho_alta`, inerte hasta el corte) | Permisos de escritura de contactos en el Self Client de Zoho (PENDIENTE_FRAN §5). |
+| Eliminar cliente y quitarlo de Zoho (`delete-cliente-from-zoho`) | Preparado | Ficha → «Eliminar» (admin), función `clientes` (`zoho_quitar`) | Ídem. |
+| Dar de baja y reactivar cliente o sede | Preparado (clientes) | Ficha → «Dar de baja» / «Reactivar»; «De baja» en la lista | Sedes (tanda 2). |
+| Empresa por NIF y NIF duplicado (`lookup-nif`) | Hecho | «🔎 Buscar el nombre» del formulario (función `clientes`, acción `nif`); con NIF repetido no se crea | — |
 | Cliente o sede desde Google Maps (`google-places.js`) | Falta | — | Places en el alta. |
 | Sync de clientes y presupuestos desde Zoho (`sync-zoho*`, `sync-auto.js`) | Falta | — | Hoy entra por la app y el hub copia. |
 | Ficha del cliente (General, Locales, Contactos, Historial) | Solo lectura | `#/clientes` (ficha 360) | Editar datos. |
