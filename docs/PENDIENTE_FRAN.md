@@ -161,9 +161,11 @@ presupuestos en PDF del portal de clientes, y lo que ve la gestoría.
    ```
    y avisa a Claude.
 3. Pestaña **Generate Code** → **Scope** (pégalo tal cual; incluye ya los
-   presupuestos para el portal):
-   `ZohoBooks.invoices.READ,ZohoBooks.customerpayments.READ,ZohoBooks.contacts.READ,ZohoBooks.settings.READ,ZohoBooks.estimates.READ`
-   → **Time Duration** 10 minutes → descripción `Hub lectura` → **CREATE** →
+   presupuestos para el portal y, desde el 2026-10-03, dar de alta y quitar
+   contactos, que es lo que hará el hub con los clientes cuando se corte el
+   área, igual que la app):
+   `ZohoBooks.invoices.READ,ZohoBooks.customerpayments.READ,ZohoBooks.contacts.READ,ZohoBooks.settings.READ,ZohoBooks.estimates.READ,ZohoBooks.contacts.CREATE,ZohoBooks.contacts.DELETE`
+   → **Time Duration** 10 minutes → descripción `Hub` → **CREATE** →
    organización **Dalmon Sistemas S.L.** → copia el código `1000.…`.
 4. En el hub: **Datos y sincronización** → tarjeta **Zoho Books** → pega el
    código → **Conectar**.

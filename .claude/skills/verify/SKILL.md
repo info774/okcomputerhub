@@ -169,6 +169,10 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   propias, nota de voz con micrófono de mentira → `comandas` `transcribir`) y
   chat por ficha («💬 Chat» del trabajo → `hub.chat_ficha` → `#/chat/<canal>`
   con «Abrir la ficha»).
+- `verify-clientes.mjs`: alta de cliente (NIF que trae la razón social y avisa
+  del duplicado; con NIF repetido no se crea; alta en Zoho del recién creado),
+  editar (sin Zoho), dar de baja y reactivar, «De baja», Excel, eliminar (admin:
+  baja + quitar de Zoho), el técnico sin «Eliminar» y el mundo sin corte.
 - `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
   producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
   por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de

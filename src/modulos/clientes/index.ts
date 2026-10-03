@@ -1,8 +1,11 @@
 // Clientes 360 (fase 4): #/clientes (lista con clase A/B/C) y
 // #/clientes/<id>/<pestaña> (ficha). Los datos del cliente, sus sedes y
-// contactos son la copia de la app (se editan allí); aquí se ve todo junto y
-// se apunta lo del CRM: «lo siguiente», la clase a mano y las actividades.
-// Prefijo de ids: cl-.
+// contactos son la copia de la app; aquí se ve todo junto y se apunta lo del
+// CRM: «lo siguiente», la clase a mano y las actividades.
+// Paridad bloque 2 (2026-10-03), PREPARADO para el corte del área `clientes`:
+// alta y edición (formulario.ts), dar de baja / reactivar (solo `activo`: no
+// se borra nada), eliminar (admin: baja + quitarlo de Zoho), «De baja» en la
+// lista y Excel. Prefijo de ids: cl-.
 import type { Modulo, Contador } from '../../core/modulo';
 import { API } from '../../core/api';
 import { esAdmin, usuario } from '../../core/estado';
@@ -10,6 +13,9 @@ import { equipo, nombreDe } from '../../core/equipo';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { esDelHub, avisoSoloLectura } from '../../core/areas';
+import { llamarFuncion } from '../../core/funciones';
+import { descargarCsv } from '../../ui/csv';
 import {
   type Cliente, type Crm, type Evento, type Oportunidad,
   TIPOS_ACTIVIDAD, ICONO_EVENTO, CLASE_TONO, eur, clases, olvidarClases, telWhatsApp, enApp,
@@ -22,6 +28,8 @@ let _filtro = '';
 let _clase = '';
 let _filtroTimeline = '';
 let _cliente: Cliente | null = null;
+let _bajas = false;
+let _visibles: Cliente[] = [];
 
 const hoy = () => new Date().toLocaleDateString('sv-SE');
 const chipClase = (c: string | undefined, auto?: string) =>
@@ -36,7 +44,20 @@ async function cargarLista() {
 
 async function pintarLista(el: HTMLElement) {
   el.innerHTML = '<p class="cargando">Cargando…</p>';
-  const [, cs, crm] = await Promise.all([cargarLista(), clases(), API.get<Crm[]>('clientes_crm', { select: 'cliente_id,siguiente_fecha,siguiente_texto' })]);
+  const [, cs, crm, escribe] = await Promise.all([cargarLista(), clases(), API.get<Crm[]>('clientes_crm', { select: 'cliente_id,siguiente_fecha,siguiente_texto' }), esDelHub('clientes')]);
+  // Los de baja van aparte, en su propia lista (como en la app: no ensucian los buscadores).
+  if (_bajas) {
+    const r = await API.fetchAll<Cliente>('clientes', { select: 'id,nombre,nif,telefono,email,estado,zoho_id', activo: 'eq.false', order: 'nombre' });
+    const q = _filtro.toLowerCase();
+    _visibles = (r.data ?? []).filter(c => !q || [c.nombre, c.nif, c.telefono, c.email].some(x => (x ?? '').toLowerCase().includes(q)));
+    el.innerHTML = `${barraLista(escribe)}
+      <div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Cliente de baja</th><th>Contacto</th><th></th></tr></thead><tbody>
+      ${_visibles.map(c => `<tr class="fila-clic" data-action="clAbrir" data-p0="${esc(c.id)}"><td><strong>${esc(c.nombre)}</strong>${c.nif ? `<br><small class="nota">${esc(c.nif)}</small>` : ''}</td>
+        <td>${esc(c.telefono ?? '')}${c.email ? `<br><small class="nota">${esc(c.email)}</small>` : ''}</td>
+        <td>${escribe ? `<button class="btn secundario" data-action="clReactivar" data-p0="${esc(c.id)}" data-stop="1">Reactivar</button>` : ''}</td></tr>`).join('')
+        || '<tr><td colspan="3" class="vacio">Ningún cliente de baja.</td></tr>'}</tbody></table></div>`;
+    return;
+  }
   const sig = new Map((crm.data ?? []).map(c => [c.cliente_id, c]));
   const q = _filtro.toLowerCase();
   const filtrados = _lista.filter(c => (!_clase || cs.get(c.id)?.clase === _clase) &&
@@ -44,8 +65,9 @@ async function pintarLista(el: HTMLElement) {
   const orden = { A: 0, B: 1, C: 2 } as Record<string, number>;
   filtrados.sort((a, b) => (orden[cs.get(a.id)?.clase ?? 'C'] - orden[cs.get(b.id)?.clase ?? 'C']) || a.nombre.localeCompare(b.nombre));
   const cuenta = (k: string) => _lista.filter(c => cs.get(c.id)?.clase === k).length;
-  el.innerHTML = `<div class="acciones mo-barra">
-      <input id="cl-filtro" type="search" placeholder="Buscar por nombre, NIF, teléfono o email…" value="${esc(_filtro)}" data-on-input="clFiltrar:$value" aria-label="Buscar cliente">
+  _visibles = filtrados;
+  el.innerHTML = `${barraLista(escribe)}
+    <div class="acciones mo-barra">
       <div class="segmentado" role="tablist">${['', 'A', 'B', 'C'].map(k => `<button role="tab" aria-selected="${_clase === k}" class="${_clase === k ? 'activo' : ''}"
         data-action="clClase" data-p0="${k}">${k ? `${k} (${cuenta(k)})` : `Todos (${_lista.length})`}</button>`).join('')}</div>
     </div>
@@ -58,6 +80,15 @@ async function pintarLista(el: HTMLElement) {
         <td>${esc(c.telefono ?? '')}${c.email ? `<br><small class="nota">${esc(c.email)}</small>` : ''}</td>
         <td>${s?.siguiente_fecha ? `<span class="${s.siguiente_fecha < hoy() ? 'mal' : ''}">${esc(s.siguiente_fecha)}</span> ${esc(s.siguiente_texto ?? '')}` : ''}</td></tr>`;
     }).join('') || '<tr><td colspan="4" class="vacio">Ningún cliente con ese filtro.</td></tr>'}</tbody></table></div>`;
+}
+
+function barraLista(escribe: boolean): string {
+  return `<div class="acciones mo-barra">
+      <input id="cl-filtro" type="search" placeholder="Buscar por nombre, NIF, teléfono o email…" value="${esc(_filtro)}" data-on-input="clFiltrar:$value" aria-label="Buscar cliente">
+      <button class="chip-boton ${_bajas ? 'activo' : ''}" data-action="clBajas" aria-pressed="${_bajas}">De baja</button>
+      <button class="btn secundario" data-action="clExcel">⬇ Excel</button>
+      ${escribe ? '<a class="btn" href="#/clientes/nuevo">+ Nuevo cliente</a>' : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener">+ Nuevo cliente en la app ↗</a>`}
+    </div>`;
 }
 
 // ── Ficha ───────────────────────────────────────────────────────────────────
@@ -179,7 +210,14 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
   const { data: c, error } = await API.single<Cliente>('clientes', { select: '*', id: `eq.${id}` });
   if (error || !c) { el.innerHTML = `<p class="aviso mal">No se encontró el cliente.</p><p><a href="#/clientes">← Clientes</a></p>`; return; }
   _cliente = c;
-  const cl = (await clases()).get(c.id);
+  const [cls, escribe] = await Promise.all([clases(), esDelHub('clientes')]);
+  const cl = cls.get(c.id);
+  const deBaja = c.activo === false;
+  const botones = escribe
+    ? `<a class="btn secundario" href="#/clientes/${esc(c.id)}/editar">✎ Editar</a>
+       ${deBaja ? `<button class="btn secundario" data-action="clReactivar" data-p0="${esc(c.id)}">Reactivar</button>` : '<button class="btn secundario" data-action="clBaja">Dar de baja</button>'}
+       ${esAdmin() ? '<button class="btn peligro" data-action="clEliminar">Eliminar</button>' : ''}`
+    : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los datos del cliente se editan en la app actual">Editar en la app ↗</a>`;
   const p = PESTANAS.some(([k]) => k === pestana) ? pestana : 'resumen';
   const wa = telWhatsApp(c.telefono);
   el.innerHTML = `<p><a href="#/clientes">← Clientes</a></p>
@@ -187,7 +225,9 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
       <div class="acciones">${c.telefono ? `<a class="btn secundario" href="tel:${esc(c.telefono)}">📞 ${esc(c.telefono)}</a>` : ''}
         ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬</a>` : ''}
         ${c.email ? `<a class="btn secundario" href="mailto:${esc(c.email)}">✉️</a>` : ''}
-        <a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los datos del cliente se editan en la app actual">Editar en la app ↗</a></div></div>
+        ${botones}</div></div>
+    ${deBaja ? '<p class="aviso">Este cliente está <strong>de baja</strong>: no sale en listados ni buscadores, pero no se ha borrado nada.</p>' : ''}
+    ${escribe ? '' : avisoSoloLectura('Los datos del cliente')}
     <p class="nota">${[c.nif, c.direccion].filter(Boolean).map(x => esc(x)).join(' · ')}</p>
     <nav class="pestanas" role="tablist">${PESTANAS.map(([k, n]) =>
       `<button role="tab" aria-selected="${k === p}" class="${k === p ? 'activo' : ''}" data-action="clPestana" data-p0="${esc(id)}" data-p1="${k}">${n}</button>`).join('')}</nav>
@@ -241,6 +281,36 @@ registrarAcciones({
     toast('Apuntado');
     ir('clientes', _cliente.id, 'actividad');
   },
+  clBajas() { _bajas = !_bajas; resolver(); },
+  clExcel() {
+    descargarCsv(_bajas ? 'clientes-de-baja' : 'clientes', ['Nombre', 'NIF', 'Teléfono', 'Correo', 'Estado', 'Zoho'],
+      _visibles.map(c => [c.nombre, c.nif, c.telefono, c.email, c.estado, c.zoho_id]));
+  },
+  // Baja lógica (darDeBajaCliente de la app): solo `activo`; Zoho no se toca.
+  async clBaja() {
+    if (!_cliente || !confirm('¿Dar de baja este cliente? Deja de salir en listados y buscadores, pero no se borra nada: sus trabajos, tickets y facturas siguen ahí y se puede reactivar.')) return;
+    const r = await API.patch('clientes', { id: `eq.${_cliente.id}` }, { activo: false });
+    if (r.error) { toast(`No se pudo dar de baja: ${r.error.message}`, 'error'); return; }
+    _lista = []; toast('Cliente dado de baja'); resolver();
+  },
+  async clReactivar(id: string) {
+    const r = await API.patch('clientes', { id: `eq.${id}` }, { activo: true });
+    if (r.error) { toast(`No se pudo reactivar: ${r.error.message}`, 'error'); return; }
+    _lista = []; toast('Cliente reactivado'); resolver();
+  },
+  // Eliminar (deleteCliente de la app, solo admin): primero la baja aquí,
+  // comprobando el resultado, y después quitarlo de Zoho (o desactivarlo allí
+  // si tiene facturas). Si Zoho falla, se dice.
+  async clEliminar() {
+    if (!_cliente || !esAdmin() || !confirm(`¿Eliminar «${_cliente.nombre}»? Se da de baja aquí y se quita de Zoho Books (si tiene facturas allí, se desactiva).`)) return;
+    const id = _cliente.id;
+    const r = await API.patch('clientes', { id: `eq.${id}` }, { activo: false });
+    if (r.error) { toast(`No se pudo eliminar: ${r.error.message}`, 'error'); return; }
+    const z = _cliente.zoho_id ? await llamarFuncion<{ accion: string }>('clientes', { accion: 'zoho_quitar', cliente_id: id }, 40000) : { data: null, error: null };
+    _lista = [];
+    toast(z.error ? `Cliente eliminado, pero no se pudo quitar de Zoho Books: ${z.error}` : 'Cliente eliminado', z.error ? 'error' : 'info');
+    ir('clientes');
+  },
   clNuevaOportunidad() { if (_cliente) ir('oportunidades', 'nueva', _cliente.id); },
   clAbrirOportunidad(id: string) { ir('oportunidades', id); },
 });
@@ -256,8 +326,10 @@ export const moduloClientes: Modulo = {
   titulo: 'Clientes',
   grupo: 'Clientes',
   icono: '🏢',
-  explicacion: 'Todo lo de un cliente en una ficha: sus sedes (con el estado de los equipos), contactos, lo que se ha hecho con él (trabajos, tickets, presupuestos, oportunidades y lo que apunte el equipo) y lo siguiente que toca. Los datos del cliente se siguen editando en la app actual; aquí se añade el seguimiento.',
+  explicacion: 'Todo lo de un cliente en una ficha: sus sedes (con el estado de los equipos), contactos, lo que se ha hecho con él (trabajos, tickets, presupuestos, oportunidades y lo que apunte el equipo) y lo siguiente que toca. Mientras los clientes se lleven en la app, sus datos se editan allí; aquí se añade el seguimiento.',
   async pintar(el, params) {
+    if (params[0] === 'nuevo') { await (await import('./formulario')).pintarFormulario(el); return; }
+    if (params[0] && params[1] === 'editar') { await (await import('./formulario')).pintarFormulario(el, params[0]); return; }
     if (params[0]) await pintarFicha(el, params[0], params[1]);
     else await pintarLista(el);
   },
