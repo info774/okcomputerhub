@@ -39,7 +39,7 @@ Fran, 2026-10-03).
    Maps), baja/reactivar, pestañas Software, Hardware y Cámaras, teléfonos con
    rol, Excel; y lo que escribe en Zoho (alta de cliente). Decisiones de Fran
    (2026-10-03): Zoho igual que la app; Google Maps en la tanda 4. Tandas:
-   1 clientes (HECHA 2026-10-03), 2 sedes, 3 Software/Hardware/Cámaras,
+   1 clientes (HECHA 2026-10-03), 2 sedes (HECHA 2026-10-03), 3 Software/Hardware/Cámaras,
    4 contactos y Google Maps.
 3. **Presupuestos y facturar trabajos**: crear con líneas del catálogo,
    plantillas, PDF, a Zoho, convertir en trabajo; facturar trabajos en Zoho.
@@ -63,18 +63,18 @@ Fran, 2026-10-03).
 | Lista de clientes con filtros (`modules/clientes.js`) | Solo lectura | `#/clientes` | Corte del área `clientes`. |
 | Alta/edición de cliente con Zoho (`saveCliente`, `push-cliente-to-zoho`) | Preparado | `#/clientes/nuevo`, `#/clientes/<id>/editar` (`clientes/formulario.ts`); función `clientes` (`zoho_alta`, inerte hasta el corte) | Permisos de escritura de contactos en el Self Client de Zoho (PENDIENTE_FRAN §5). |
 | Eliminar cliente y quitarlo de Zoho (`delete-cliente-from-zoho`) | Preparado | Ficha → «Eliminar» (admin), función `clientes` (`zoho_quitar`) | Ídem. |
-| Dar de baja y reactivar cliente o sede | Preparado (clientes) | Ficha → «Dar de baja» / «Reactivar»; «De baja» en la lista | Sedes (tanda 2). |
+| Dar de baja y reactivar cliente o sede | Preparado | Ficha → «Dar de baja» / «Reactivar»; «De baja» en la lista (clientes y sitios) | Corte del área `clientes`. |
 | Empresa por NIF y NIF duplicado (`lookup-nif`) | Hecho | «🔎 Buscar el nombre» del formulario (función `clientes`, acción `nif`); con NIF repetido no se crea | — |
 | Cliente o sede desde Google Maps (`google-places.js`) | Falta | — | Places en el alta. |
 | Sync de clientes y presupuestos desde Zoho (`sync-zoho*`, `sync-auto.js`) | Falta | — | Hoy entra por la app y el hub copia. |
 | Ficha del cliente (General, Locales, Contactos, Historial) | Solo lectura | `#/clientes` (ficha 360) | Editar datos. |
 | Suscripción de Zoho Billing a una sede (`list-zoho-subscriptions`) | Falta | — | Cartera vieja. |
-| Lista de sitios, etiqueta RMM, Excel, AnyDesk/RustDesk (`modules/locales.js`) | Solo lectura | `#/sitios` | Excel, AnyDesk, alta y edición. |
-| Ficha del sitio: Info (renombrar, cliente, contacto) | Solo lectura | `#/sitios` | Escrituras. |
+| Lista de sitios, etiqueta RMM, Excel, AnyDesk/RustDesk (`modules/locales.js`) | Preparado | `#/sitios` (Excel, «+ Nuevo sitio»); alta y edición en `#/sitios/nuevo[/<cliente>]`, `#/sitios/<id>/editar` (`sitios/formulario.ts`) | AnyDesk/RustDesk y su columna del Excel (tanda 3). |
+| Ficha del sitio: Info (renombrar, cliente, contacto) | Preparado | Ficha → «✎ Editar»; «Eliminar» (admin, se lleva sus teléfonos); «+ Nueva sede» en la ficha del cliente | Corte del área `clientes`. |
 | Ficha del sitio: Software y Hardware (`loadSoftware`, `hwAutoGarantia`) | Falta | — | Espejo de sus tablas y pestaña. |
 | Ficha del sitio: Cámaras | Falta | — | Espejo y pestaña. |
-| Ficha del sitio: Alarma (código oculto) | Solo lectura | `#/sitios` | Editar. |
-| Teléfonos de la sede con rol (`local_telefonos`) | Solo lectura | `#/sitios` | `local_telefonos` no viaja en el sync. |
+| Ficha del sitio: Alarma (código oculto) | Preparado | `#/sitios` (se edita en el formulario) | Corte. |
+| Teléfonos de la sede con rol (`local_telefonos`) | Preparado | Ficha del sitio → «Teléfonos» (añadir, rol en la fila, editar, quitar); espejo `20261021_local_telefonos.sql` (pasada nocturna) | Corte. |
 | Ficha del sitio: Historial | Solo lectura | `#/sitios` | — |
 | Seguimiento de tareas de la sede (`loadSeguimientoLocal`) | Falta | — | — |
 | Agenda de contactos (`modules/contactos.js`) | Solo lectura | `#/contactos` | Alta y edición. |

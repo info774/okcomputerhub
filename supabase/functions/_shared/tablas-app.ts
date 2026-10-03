@@ -47,6 +47,8 @@ export const TABLAS_APP: Record<string, TablaApp> = {
     hora_inicio hora_fin tipo oportunidad_id descripcion`) },
   // Lista del día (paridad bloque 1): en el audit_log de la app y, por si el
   // espejo nace vacío, entera cada noche.
+  // Teléfonos de la sede con su rol (paridad bloque 2): fuera del audit_log de la app.
+  local_telefonos: { auditada: false, columnas: c('id created_at local_id nombre numero rol contacto_id') },
   plantillas_trabajo: { auditada: false, columnas: c('id created_at nombre tipo descripcion duracion_teorica checklist activa') },
   lista_dia: { auditada: true, nocturna: true, columnas: c('id created_at fecha usuario tipo ref_id titulo orden completado completado_at estado_previo creado_por') },
   tickets: { auditada: true, columnas: c(`id created_at cliente_id local_id titulo descripcion estado prioridad

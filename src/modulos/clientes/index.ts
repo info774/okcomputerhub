@@ -168,11 +168,12 @@ async function tabActividad(c: Cliente): Promise<string> {
 async function tabSedes(c: Cliente): Promise<string> {
   const { data } = await API.get<any[]>('locales', { select: 'id,nombre,direccion,plan,estado_pago,importe_mantenimiento,programa_tpv,lat,lng,maps_url,activo', cliente_id: `eq.${c.id}`, order: 'nombre' });
   const ls = data ?? [];
-  if (!ls.length) return '<p class="vacio">Este cliente no tiene sedes en la app.</p>';
+  const nueva = await esDelHub('locales') ? `<p class="acciones"><a class="btn" href="#/sitios/nuevo/${esc(c.id)}">+ Nueva sede</a></p>` : '';
+  if (!ls.length) return `${nueva}<p class="vacio">Este cliente no tiene sedes todavía.</p>`;
   const { data: est } = await API.get<any[]>('rmm_estado_local', { select: 'local_id,estado,equipos,conectados', local_id: `in.(${ls.map(l => l.id).join(',')})` });
   const rmm = new Map((est ?? []).map(e => [e.local_id, e]));
   const tonoRmm: Record<string, string> = { ok: 'bien', alerta: 'mal', parcial: 'aviso', caido: 'mal' };
-  return `<div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Sede</th><th>Mantenimiento</th><th>TPV</th><th>Equipos</th></tr></thead>
+  return `${nueva}<div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Sede</th><th>Mantenimiento</th><th>TPV</th><th>Equipos</th></tr></thead>
     <tbody>${ls.map(l => {
       const e = rmm.get(l.id);
       const mapa = l.maps_url || (l.lat ? `https://www.google.com/maps?q=${l.lat},${l.lng}` : l.direccion ? `https://www.google.com/maps/search/${encodeURIComponent(l.direccion)}` : '');

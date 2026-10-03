@@ -651,6 +651,9 @@ try {
   ok(psql(`select 'plantillas_trabajo' = any (tablas) from hub.areas where area = 'trabajos'`) === 't'
     && !psql(como('authenticated', 'ana@ok.test', `insert into hub.plantillas_trabajo (nombre) values ('Antes del corte');`), { esperaError: true }).ok,
     'plantillas (20261019): van con el área trabajos y sin el corte no se escriben');
+  ok(psql(`select 'local_telefonos' = any (tablas) from hub.areas where area = 'clientes'`) === 't'
+    && !psql(como('authenticated', 'ana@ok.test', `insert into hub.local_telefonos (numero) values ('600000000');`), { esperaError: true }).ok,
+    'teléfonos de la sede (20261021): van con el área clientes y sin el corte no se escriben');
 
   // ── Reloj: vinculación por código, huella del token y fichar a nombre de la persona ──
   const [rtok, rcod] = psql(como('service_role', null, `select token || '|' || codigo from hub.reloj_iniciar();`)).split('\n').pop().split('|');
@@ -731,6 +734,9 @@ commit;`);
   psql(como('authenticated', 'tito@ok.test', `insert into hub.plantillas_trabajo (nombre, tipo, duracion_teorica, checklist) values ('Instalar TPV', 'Instalación', 120, '[{"texto":"Probar impresora","completado":false}]');`));
   ok(psql(`select tipo || '|' || jsonb_array_length(checklist) || '|' || activa from hub.plantillas_trabajo where nombre = 'Instalar TPV'`) === 'Instalación|1|true',
     'plantillas: tras el corte se crean (con sus pasos)');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.local_telefonos (local_id, nombre, numero, rol) values ('00000000-0000-0000-0000-0000000000c1', 'Pepe', '600111222', 'dueno');`));
+  ok(psql(`select rol from hub.local_telefonos where numero = '600111222'`) === 'dueno' && psql(`select count(*) from hub.auditoria where tabla = 'local_telefonos'`) !== '0',
+    'teléfonos de la sede: tras el corte se apuntan (con su rol) y quedan en la auditoría');
   const nota = psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${titoId}', 'Comprar bridas') returning id;`)).split('\n').pop();
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${anaId}', 'A nombre de otra');`), { esperaError: true }).ok, 'tablero: nadie apunta notas a nombre de otro');
   psql(como('authenticated', 'ana@ok.test', `update hub.tablero_notas set titulo = 'Pisada' where id = '${nota}'; delete from hub.tablero_notas where id = '${nota}';`));
