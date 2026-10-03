@@ -634,6 +634,19 @@ try {
     'chat: un directo solo lo leen sus dos personas');
   ok(!psql(como('authenticated', 'ana@ok.test', `update hub.chat_mensajes set texto = 'x' where canal_id = '${dm}';`) + `\nselect 1/(select count(*) from hub.chat_mensajes where texto = 'x');`, { esperaError: true }).ok,
     'chat: nadie edita lo que escribió otro');
+  // Chat por ficha (20261020): un canal por ficha; quien entra se apunta.
+  const T9 = '00000000-0000-0000-0000-0000000000c9';
+  const cf1 = psql(como('authenticated', 'tito@ok.test', `select hub.chat_ficha('trabajo', '${T9}', '🔧 Trabajo · #9 Router', '#/trabajos/9');`)).split('\n').pop();
+  ok(una('ana@ok.test', `select count(*) from hub.chat_resumen() where id = '${cf1}'`) === '0', 'chat por ficha: quien no ha entrado no lo ve en su lista');
+  const cf2 = psql(como('authenticated', 'ana@ok.test', `select hub.chat_ficha('trabajo', '${T9}', 'otro nombre', '#/trabajos/9');`)).split('\n').pop();
+  ok(cf1 === cf2 && psql(`select cardinality(miembros) from hub.chat_canales where id = '${cf1}'`) === '2', 'chat por ficha: un solo canal por ficha y quien entra se apunta');
+  ok(una('ana@ok.test', `select r.tipo || '|' || c.ficha_ruta from hub.chat_resumen() r join hub.chat_canales c using (id) where r.id = '${cf1}'`) === 'ficha|#/trabajos/9', 'chat por ficha: sale en la lista y lleva la ruta para volver a la ficha');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.chat_ficha('trabajo', '${T9}', 'x', 'javascript:alert(1)');`), { esperaError: true }).ok
+    && !psql(como('authenticated', 'tito@ok.test', `select hub.chat_ficha('cliente', '${T9}', 'x', '#/clientes/1');`), { esperaError: true }).ok, 'chat por ficha: ruta y tipo validados');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.chat_mensajes (canal_id, texto) values ('${cf1}', 'Llevo el router');`));
+  ok(una('extrano@ok.test', `select count(*) from hub.chat_mensajes where canal_id = '${cf1}'`) === '0', 'chat por ficha: fuera del hub no se lee');
+  // Tablero (20261020): sin el corte no se escribe.
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${titoId}', 'Antes');`), { esperaError: true }).ok, 'tablero: sin el corte no se escribe');
 
   ok(psql(`select 'plantillas_trabajo' = any (tablas) from hub.areas where area = 'trabajos'`) === 't'
     && !psql(como('authenticated', 'ana@ok.test', `insert into hub.plantillas_trabajo (nombre) values ('Antes del corte');`), { esperaError: true }).ok,
@@ -686,6 +699,11 @@ commit;`);
   psql(como('authenticated', 'tito@ok.test', `insert into hub.plantillas_trabajo (nombre, tipo, duracion_teorica, checklist) values ('Instalar TPV', 'Instalación', 120, '[{"texto":"Probar impresora","completado":false}]');`));
   ok(psql(`select tipo || '|' || jsonb_array_length(checklist) || '|' || activa from hub.plantillas_trabajo where nombre = 'Instalar TPV'`) === 'Instalación|1|true',
     'plantillas: tras el corte se crean (con sus pasos)');
+  const nota = psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${titoId}', 'Comprar bridas') returning id;`)).split('\n').pop();
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${anaId}', 'A nombre de otra');`), { esperaError: true }).ok, 'tablero: nadie apunta notas a nombre de otro');
+  psql(como('authenticated', 'ana@ok.test', `update hub.tablero_notas set titulo = 'Pisada' where id = '${nota}'; delete from hub.tablero_notas where id = '${nota}';`));
+  ok(psql(`select titulo from hub.tablero_notas where id = '${nota}'`) === 'Comprar bridas' && una('ana@ok.test', `select count(*) from hub.tablero_notas where id = '${nota}'`) === '1',
+    'tablero: todos la ven y solo su autor la cambia o la borra');
 
   // Paridad (20261017): el trabajo manda su fecha a la agenda y la agenda la devuelve.
   const ta = psql(como('authenticated', 'ana@ok.test', `insert into hub.trabajos (titulo, fecha_programada, hora_llegada, duracion_teorica, tecnicos)

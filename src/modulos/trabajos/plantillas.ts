@@ -24,7 +24,7 @@ let _id: string | null = null;
 let _pasos: { texto: string; completado: boolean }[] = [];
 
 export async function pintarPlantillas(el: HTMLElement, cual?: string) {
-  const escribe = await esDelHub('trabajos');
+  const escribe = await esDelHub('plantillas_trabajo');
   if (!cual) {
     const ps = await plantillasActivas();
     el.innerHTML = `<p><a href="#/trabajos">← Trabajos</a></p><div class="tarjeta-cab"><h2>Plantillas de trabajo</h2>${escribe ? '<a class="btn" href="#/trabajos/plantillas/nueva">+ Nueva plantilla</a>' : ''}</div>

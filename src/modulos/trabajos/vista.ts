@@ -15,6 +15,7 @@ import { markdown } from '../../ui/markdown';
 import { nombresClientes, telWhatsApp, eur } from '../ventas/datos';
 import { pintarFormulario, ofrecerFacturar } from './formulario';
 import { APP_ACTUAL_URL } from '../../core/config';
+import { botonChatFicha } from '../../ui/chat-ficha';
 
 interface Trabajo { id: string; numero: number; created_at: string; titulo: string | null; tipo?: string | null; chain_root_id?: string | null; descripcion: string | null; estado: string; tecnicos: string[] | null;
   cliente_id: string | null; local_id: string | null; contacto_id: string | null; fecha_programada: string | null; hora_llegada: string | null; prioridad: string | null;
@@ -145,6 +146,7 @@ async function vistaFicha(numero: string): Promise<string> {
     <div class="acciones">${tel ? `<a class="btn secundario" href="tel:${esc(tel)}">📞 Llamar</a>` : ''}${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
       ${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">🗺 Cómo llegar</a>` : ''}
       <a class="btn secundario" href="#/trabajos/${t.numero}/parte">🖨 Parte (PDF)</a>
+      ${botonChatFicha('trabajo', t.id, `#${t.numero} ${t.titulo ?? ''}`.trim(), `#/trabajos/${t.numero}`)}
       ${escribe ? `<a class="btn secundario" href="#/trabajos/${t.numero}/editar">✎ Editar</a>
         <button class="btn secundario" data-action="trDuplicar">⧉ Duplicar</button>
         ${['Completado', 'Cancelado', 'Facturado', 'No facturar'].includes(t.estado) ? '' : '<button class="btn secundario" data-action="trContinuacion" title="Otro trabajo que sigue a este (otra visita)">↪ Continuación</button>'}` : ''}</div>

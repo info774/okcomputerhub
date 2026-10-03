@@ -7,6 +7,7 @@ import { esc, hace } from '../../ui/dom';
 import { barras } from '../../ui/barras';
 import { enApp, eur } from '../ventas/datos';
 import { esMio } from '../direccion';
+import { botonChatFicha } from '../../ui/chat-ficha';
 
 interface Presupuesto {
   id: string; created_at: string | null; cliente_id: string | null; local_id: string | null; contacto_id: string | null;
@@ -147,7 +148,7 @@ async function pintarFicha(el: HTMLElement, id: string) {
   el.innerHTML = `<p><a href="#/presupuestos">← Presupuestos</a></p>
     ${delHub ? '' : avisoSoloLectura('Presupuestos')}
     <div class="tarjeta-cab"><h2>${esc(nombre(p))}</h2>
-      <div class="acciones"><a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los presupuestos se cambian y se mandan a Zoho en la app actual">Abrir en la app ↗</a></div></div>
+      <div class="acciones">${botonChatFicha('presupuesto', p.id, nombre(p), `#/presupuestos/${p.id}`)}<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los presupuestos se cambian y se mandan a Zoho en la app actual">Abrir en la app ↗</a></div></div>
     <p>${chipEstado(p.estado)} ${sinRespuesta(p) ? `<span class="chip mal">Enviado hace ${diasDesde(p)} días, sin respuesta</span>` : ''} ${p.zoho_estimate_id ? '<span class="chip">En Zoho Books</span>' : ''}</p>
     <div class="me-grid">
       <section class="tarjeta pp-total"><h3>💶 Total</h3><p class="di-valor">${eur(p.total, 2)}</p>

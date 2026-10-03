@@ -32,9 +32,9 @@ Fran, 2026-10-03).
    trabajo ⇄ agenda) y tanda 2 HECHA (calendario planificador: vistas, carga,
    solapes, traslados, pendientes, «Sugerir hueco», citas y días) y tanda 3
    HECHA (lista del día con su espejo y el planificador hoy/mañana) y tanda 4
-   HECHA (firma del cliente, parte imprimible en PDF y plantillas de trabajo).
-   Falta: chat por ficha y tablero de notas (tanda 5). Es lo que más usan los
-   técnicos.
+   HECHA (firma del cliente, parte imprimible en PDF y plantillas de trabajo)
+   y tanda 5 HECHA (chat por ficha y tablero de notas con nota de voz).
+   **Bloque 1 HECHO** (2026-10-03), salvo lo que espera al corte final.
 2. **Clientes, sedes y contactos con escritura**: alta y edición (NIF, Google
    Maps), baja/reactivar, pestañas Software, Hardware y Cámaras, teléfonos con
    rol, Excel; y lo que escribe en Zoho (alta de cliente).
@@ -92,7 +92,7 @@ Fran, 2026-10-03).
 | Firma del cliente y PDF del parte (`saveFirma`, `generatePDF`) | Preparado | `trabajos/firma.ts` (lienzo a pantalla completa → `firma_cliente`), `#/trabajos/<n>/parte` (`parte.ts`, imprimir o guardar en PDF) | El parte no se guarda en Drive (la app lo sube si hay sesión de Google). |
 | Guía de instalación de cámaras | Falta | — | — |
 | Plantillas de trabajo (`modules/plantillas.js`) | Preparado | `#/trabajos/plantillas`, selector en el alta; espejo en `20261019_plantillas_trabajo.sql` (área `trabajos`) | Los pasos se guardan pero, como en la app, no pasan al trabajo. |
-| Chat de grupo por trabajo/ticket/tarea | Falta | — | Salas por ficha en `#/chat`. |
+| Chat de grupo por trabajo/ticket/tarea | Hecho | «💬 Chat» en las fichas de trabajo, ticket, tarea, presupuesto y oportunidad → `hub.chat_ficha` (`20261020_tablero_chat_ficha.sql`, `ui/chat-ficha.ts`); en `#/chat`, «Abrir la ficha» | Las salas de la app no se traen: el chat del hub empieza vacío. |
 | Borrar trabajo devolviendo el material | Preparado | trigger de `20261016_final.sql` | — |
 | Agenda por bloques y eventos libres (`modules/agenda.js`) | Preparado | `#/calendario/cita`, `#/calendario/dia/<trabajo>` (días de la ficha del trabajo), `calendario/cita.ts` | Corte. |
 | Calendario semanal con fichajes reales (`modules/calendario.js`) | Preparado | `#/calendario` (Semana y Por técnico; mover y reasignar arrastrando) | Corte. |
@@ -103,7 +103,7 @@ Fran, 2026-10-03).
 | Planificador hoy/mañana (`ui/plan-dia.js`) | Preparado | `#/lista-dia/planificar` (hoy, mañana, +7 d; la hora se mueve con la fecha) | — |
 | Modo calle (`ui/calle.js`) | Preparado | `#/hoy`, `hub.fichar`, `trabajo-foto` | Se enciende con el corte. |
 | Fichaje traslado → inicio → fin (`ui/fichaje.js`) | Preparado | `#/hoy` (y Enlace «Fichaje y horas») | Botón + global; fichar tareas y tickets. |
-| Tablero de notas de texto y voz (`modules/tablero.js`) | Falta | (lo indexa `#/buscar`) | Pantalla. |
+| Tablero de notas de texto y voz (`modules/tablero.js`) | Preparado | `#/tablero` (nota de voz con `ui/dictado.ts` → `comandas` `transcribir`); solo las propias (RLS en `20261020`); lo indexa `#/buscar` | — |
 
 ### 3. Tickets / Desk
 

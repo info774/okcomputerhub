@@ -713,3 +713,12 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .tf-plantilla { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .tp-lista { list-style: none; display: grid; gap: .5rem; } .tp-lista li { display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline; }
 .tp-pasos li { margin: .2rem 0; }
+
+/* ── Paridad bloque 1, tanda 5: tablero de notas y chat por ficha ───────── */
+.tb-barra #tb-q { flex: 1; min-width: 12rem; }
+.tb-rejilla { margin-top: .75rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .75rem; align-items: start; }
+.tb-nota { margin: 0; border-top: 3px solid var(--lima); }
+.tb-nota h3 { margin: 0 0 .35rem; font-size: 1rem; overflow-wrap: anywhere; }
+.tb-nota footer { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-top: .5rem; }
+.tb-form { margin-bottom: .75rem; }
+.ch-ficha { font-size: .85rem; margin-left: auto; }

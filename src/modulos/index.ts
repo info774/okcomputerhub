@@ -30,6 +30,7 @@ import { moduloAlmacen } from './almacen';
 import { moduloTrabajos } from './trabajos';
 import { moduloCalendario } from './calendario';
 import { moduloChat } from './chat';
+import { moduloTablero } from './tablero';
 import { moduloHoy } from './hoy';
 import { modulosAppActual } from './app-actual';
 
@@ -41,6 +42,7 @@ export const MODULOS: Modulo[] = [
   moduloComandas,
   moduloTareas,
   moduloChat,
+  moduloTablero,
   moduloPersonas,
   moduloWiki,
   moduloBuscar,

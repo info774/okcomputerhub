@@ -460,6 +460,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `top/left/right` y NUNCA `inset: 0`, que lo corta al alto de la ventana.
   Plantillas: `#/trabajos/plantillas` (prefijo `tp-`), espejo en el área
   `trabajos`; eliminar = `activa = false`. Arnés `verify-parte.mjs`.
+- **Tablero y chat por ficha** (2026-10-03, paridad bloque 1): `#/tablero`
+  (prefijo `tb-`) sobre el espejo `tablero_notas` (área `conocimiento`); todos
+  ven todas y se escriben SOLO las propias (`user_id` = id en usuarios, RLS
+  «propias»). Dictar en un campo: `alternarDictado(boton, campoId)` de
+  `src/ui/dictado.ts` (función `comandas`, acción `transcribir`). Chat por
+  ficha: `botonChatFicha(tipo, id, título, ruta)` de `src/ui/chat-ficha.ts` →
+  `hub.chat_ficha` (canal `tipo = 'ficha'`, uno por ficha, apunta a quien
+  entra). `chat_resumen` NO cambia de forma (la 20261016 la redefine): la ruta
+  de vuelta se lee del canal abierto. Arnés `verify-tablero.mjs`.
 - **Lista del día** (`src/modulos/lista-dia/`, `#/lista-dia`, 2026-10-03,
   paridad bloque 1): espejo de `lista_dia` (área propia, dueño `app`); una fila
   = una cosa de UNA persona para UN día, `usuario` por NOMBRE. Meterla en la

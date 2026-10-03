@@ -155,6 +155,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   productos con IGIC, firma, fotos; al imprimir sale solo el parte y entero),
   plantillas (crear con pasos, editar, eliminar = desactivar, aplicarlas en el
   alta) y el mundo sin corte (se ve, no se escribe).
+- `verify-tablero.mjs`: tablero (todas las notas con su autor, buscador; con
+  corte, nueva con el título sacado de la nota, editar y borrar solo las
+  propias, nota de voz con micrófono de mentira → `comandas` `transcribir`) y
+  chat por ficha («💬 Chat» del trabajo → `hub.chat_ficha` → `#/chat/<canal>`
+  con «Abrir la ficha»).
 
 `npm run verify` pasa todos los de la lista.
 
