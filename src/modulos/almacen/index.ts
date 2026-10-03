@@ -67,8 +67,8 @@ async function vistaStock(): Promise<string> {
   if (r.error) return `<p class="aviso mal">${esc(r.error.message)}</p>`;
   _mrp = r.data ?? [];
   const bajo = _mrp.filter(m => m.stock < m.minimo).length, urg = _mrp.filter(m => m.urgente).length;
-  return `<p class="nota">El stock se mueve en el <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">Inventario de la app ↗</a> (entradas, salidas, trasvases);
-      aquí se ve junto, con lo que se gasta y lo que viene. Se refresca cada 15 minutos (los movimientos, cada noche).</p>
+  return `<p class="nota">El stock se mueve en la <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">app ↗</a> (entradas, salidas, trasvases); por ubicación y con
+      su libro de movimientos está en <a href="#/inventario">Inventario</a>. Aquí se ve junto, con lo que se gasta y lo que viene. Se refresca cada 15 minutos (los movimientos, cada noche).</p>
     <div class="di-cifras"><article class="tarjeta di-cifra"><h3>Materiales</h3><p class="di-valor">${_mrp.length}</p></article>
       <article class="tarjeta di-cifra"><h3>Bajo mínimo</h3><p class="di-valor ${bajo ? 'mal' : ''}">${bajo}</p></article>
       <article class="tarjeta di-cifra"><h3>Hay que pedir</h3><p class="di-valor ${urg ? 'mal' : ''}">${urg}</p><p class="nota"><a href="#/almacen/compras">Ver qué pedir</a></p></article></div>

@@ -657,7 +657,9 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .barras th { text-align: left; font-weight: 500; padding-right: .6rem; white-space: nowrap; width: 1%; }
 .barras .num { padding-left: .6rem; width: 1%; }
 .barras tr.fila-clic:hover .barras-barra { filter: brightness(1.12); }
-.barras tr.fila-clic:hover th { color: var(--primario); }
+.barras tr.fila-clic:hover th, .barras tr.activa th { color: var(--primario); }
+.barras tr.activa th { font-weight: 700; }
+.barras tr.activa th::before { content: ''; display: inline-block; width: 8px; height: 9px; margin-right: .35rem; clip-path: var(--hex); background: var(--verde); }
 .barras-pista { display: block; height: 14px; border-radius: 0 4px 4px 0; background: var(--fondo); }
 .barras-barra { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--serie-1); }
 
@@ -722,3 +724,18 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .tb-nota footer { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-top: .5rem; }
 .tb-form { margin-bottom: .75rem; }
 .ch-ficha { font-size: .85rem; margin-left: auto; }
+
+/* ── Inventario (in-) ───────────────────────────────────────────────── */
+/* Medidor de stock frente al mínimo (la pista entera = el doble del mínimo);
+   la marca vertical es el mínimo. Bajo mínimo pasa a ámbar y lleva su chip. */
+.in-medidor { position: relative; display: inline-block; width: 110px; height: 10px; border-radius: 0 4px 4px 0; background: var(--fondo); vertical-align: middle; }
+.in-medidor-barra { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--serie-1); }
+.in-medidor.bajo .in-medidor-barra { background: var(--serie-2); }
+.in-medidor-min { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--texto-suave); }
+.in-pestanas { margin-bottom: .75rem; }
+.in-pestanas a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 .9rem; color: var(--texto); text-decoration: none; background: var(--superficie); }
+.in-pestanas a.activo { background: var(--primario-suave); color: var(--primario); font-weight: 600; }
+.in-ubicaciones { flex-wrap: wrap; }
+.in-h3 { margin: 0 0 .25rem; font-size: .9rem; color: var(--texto-suave); font-weight: 600; }
+.in-otros { margin: 0 0 .5rem; padding-left: 1.1rem; display: grid; gap: .3rem; }
+.in-mov-cabeza select { margin-top: .5rem; }

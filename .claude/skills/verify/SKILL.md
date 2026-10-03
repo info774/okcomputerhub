@@ -160,6 +160,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   propias, nota de voz con micrófono de mentira → `comandas` `transcribir`) y
   chat por ficha («💬 Chat» del trabajo → `hub.chat_ficha` → `#/chat/<canal>`
   con «Abrir la ficha»).
+- `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
+  producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
+  por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de
+  movimientos (tipos, trasvase con destino, trabajo) y lo más gastado en 90
+  días; ficha con dónde más lo hay; técnico en el móvil sin euros.
 
 `npm run verify` pasa todos los de la lista.
 

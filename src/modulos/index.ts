@@ -6,6 +6,7 @@ import { moduloDireccion } from './direccion';
 import { moduloInformes } from './informes';
 import { moduloDatos } from './datos';
 import { moduloConector } from './conector';
+import { moduloReloj } from './reloj';
 import { moduloProyectos } from './proyectos';
 import { moduloWiki } from './wiki';
 import { moduloComandas } from './comandas';
@@ -27,6 +28,7 @@ import { moduloFacturacion } from './facturacion';
 import { moduloCobros } from './cobros';
 import { moduloMapa } from './mapa';
 import { moduloAlmacen } from './almacen';
+import { moduloInventario } from './inventario';
 import { moduloTrabajos } from './trabajos';
 import { moduloCalendario } from './calendario';
 import { moduloChat } from './chat';
@@ -64,7 +66,9 @@ export const MODULOS: Modulo[] = [
   moduloCalendario,
   moduloMonitorizacion,
   moduloAlmacen,
+  moduloInventario,
   ...modulosAppActual,
   moduloDatos,
   moduloConector,
+  moduloReloj,
 ];
