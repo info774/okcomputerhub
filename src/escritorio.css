@@ -142,10 +142,14 @@ body.os-modo { overflow: hidden; }
 
 #os-ventanas { position: absolute; inset: 0; pointer-events: none; }
 #os-ventanas > * { pointer-events: auto; }
-/* Guía al arrastrar junto a un borde */
+/* Guía al arrastrar junto a un borde: la silueta de donde caerá la ventana,
+   que viaja de una zona a otra en vez de saltar. */
 #os-escritorio::after {
   content: ''; position: absolute; inset: 8px; pointer-events: none; z-index: 40; opacity: 0;
-  border: 2px solid var(--verde); border-radius: 16px; background: color-mix(in srgb, var(--verde) 12%, transparent); transition: opacity .12s;
+  border: 2px solid var(--verde); border-radius: 18px;
+  background: color-mix(in srgb, var(--verde) 12%, transparent); backdrop-filter: blur(3px);
+  box-shadow: inset 0 0 0 6px color-mix(in srgb, var(--superficie) 40%, transparent);
+  transition: opacity .12s, top .16s ease-out, right .16s ease-out, bottom .16s ease-out, left .16s ease-out;
 }
 body[data-os-snap] #os-escritorio::after { opacity: 1; }
 body[data-os-snap="izq"] #os-escritorio::after { right: 50%; }
@@ -155,27 +159,148 @@ body[data-os-snap="ad"] #os-escritorio::after { left: 50%; bottom: 50%; }
 body[data-os-snap="bi"] #os-escritorio::after { right: 50%; top: 50%; }
 body[data-os-snap="bd"] #os-escritorio::after { left: 50%; top: 50%; }
 
+/* ── Ventanas ───────────────────────────────────────────────────────────────
+   Barra de título en `superficie` (con el panal de fondo apagado detrás por el
+   desenfoque) y cuerpo OPACO en `fondo`, como el hub clásico: las tarjetas de
+   cada pantalla resaltan igual que fuera y no se transparenta lo de detrás.
+   La de delante se distingue por la sombra, el aro verde fino y la línea de
+   acento de la barra; las de detrás apagan el título y el icono. */
+#os-root {
+  --os-win-radio: 16px;
+  --os-win-sombra: 0 1px 2px rgb(11 31 20 / .06), 0 10px 28px rgb(11 31 20 / .10);
+  --os-win-sombra-activa: 0 2px 6px rgb(11 31 20 / .08), 0 28px 64px rgb(11 31 20 / .20);
+  --os-win-aro: color-mix(in srgb, var(--verde) 55%, var(--borde));
+}
+:root[data-theme="dark"] #os-root {
+  --os-win-sombra: 0 12px 32px rgb(0 0 0 / .38);
+  --os-win-sombra-activa: 0 30px 70px rgb(0 0 0 / .55);
+  --os-win-aro: color-mix(in srgb, var(--lima) 45%, var(--borde));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #os-root {
+    --os-win-sombra: 0 12px 32px rgb(0 0 0 / .38);
+    --os-win-sombra-activa: 0 30px 70px rgb(0 0 0 / .55);
+    --os-win-aro: color-mix(in srgb, var(--lima) 45%, var(--borde));
+  }
+}
 .os-win {
   position: absolute; display: flex; flex-direction: column; box-sizing: border-box;
   min-width: 420px; min-height: 260px; resize: both; overflow: hidden;
-  background: color-mix(in srgb, var(--superficie) 94%, transparent); backdrop-filter: blur(18px);
-  border: 1px solid var(--borde); border-radius: 20px; box-shadow: var(--sombra);
+  background: var(--fondo);
+  border: 1px solid var(--borde); border-radius: var(--os-win-radio); box-shadow: var(--os-win-sombra);
+  transition: box-shadow .18s, border-color .18s;
 }
-.os-win.activa { border-color: var(--primario); box-shadow: var(--sombra-alta); }
+.os-win.activa { border-color: var(--os-win-aro); box-shadow: 0 0 0 1px var(--os-win-aro), var(--os-win-sombra-activa); }
 .os-win.min { display: none; }
 .os-win.max, .os-win.encajada { resize: none; }
-.os-win.max { border-radius: 12px; }
+.os-win.encajada { --os-win-radio: 12px; }
+.os-win.max { --os-win-radio: 12px; }
+.os-win::-webkit-resizer { background: transparent; }
+/* Tirador propio en la esquina (el nativo queda debajo y es el que agarra). */
+.os-win::after {
+  content: ''; position: absolute; right: 4px; bottom: 4px; width: 12px; height: 12px; pointer-events: none; opacity: .55;
+  background: var(--texto-suave);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M11 4L4 11M11 8L8 11' stroke='black' stroke-width='1.4' stroke-linecap='round'/></svg>") center / contain no-repeat;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M11 4L4 11M11 8L8 11' stroke='black' stroke-width='1.4' stroke-linecap='round'/></svg>") center / contain no-repeat;
+}
+.os-win.max::after, .os-win.encajada::after { display: none; }
+
 .os-win-cab {
-  height: 44px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 14px;
+  position: relative; z-index: 2; height: 46px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 12px;
+  background: color-mix(in srgb, var(--superficie) 92%, transparent); backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--borde); cursor: default; user-select: none; touch-action: none;
 }
-.os-win-icono { width: 24px; height: auto; flex: none; }
+/* Línea de acento de la ventana de delante: verde de la marca, sin degradado. */
+.os-win-cab::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--verde);
+  transform: scaleX(0); transform-origin: left; transition: transform .22s ease-out;
+}
+:root[data-theme="dark"] .os-win-cab::before { background: var(--lima); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .os-win-cab::before { background: var(--lima); } }
+.os-win.activa .os-win-cab::before { transform: scaleX(1); }
+.os-win.max .os-win-cab::before, .os-win.encajada .os-win-cab::before { height: 2px; }
+.os-win:not(.activa) .os-win-cab { background: color-mix(in srgb, var(--fondo) 70%, var(--superficie)); }
+.os-win-icono { width: 26px; height: auto; flex: none; transition: opacity .18s, filter .18s; }
 .os-win.activa .os-win-icono .os-ico-hex { stroke: var(--verde); stroke-width: 3; }
-.os-win-titulo { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.os-wbtn { width: 28px; height: 28px; border-radius: 999px; border: none; background: none; color: var(--texto-suave); font: inherit; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.os-wbtn:hover { background: var(--primario-suave); color: var(--texto); }
-.os-wbtn.os-wcerrar:hover { background: var(--mal-fondo); color: var(--mal); }
-.os-win-cuerpo { flex: 1; min-height: 0; overflow: auto; padding: 14px 16px 24px; }
+.os-win:not(.activa) .os-win-icono { opacity: .6; filter: grayscale(.7); }
+.os-win-titulo { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.os-win:not(.activa) .os-win-titulo { color: var(--texto-suave); font-weight: 600; }
+.os-wbotones { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+/* Botones: el fondo al pasar es un hexágono (el único motivo de la marca). */
+.os-wbtn {
+  position: relative; width: 30px; height: 32px; padding: 0; border: none; background: none; color: var(--texto-suave);
+  font: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.os-wbtn::before { content: ''; position: absolute; inset: 0; clip-path: var(--hex); background: transparent; transition: background .12s; }
+.os-wbtn:hover { color: var(--texto); }
+.os-wbtn:hover::before { background: var(--primario-suave); }
+.os-wbtn:active::before { background: color-mix(in srgb, var(--verde) 28%, transparent); }
+.os-wbtn.os-wcerrar:hover { color: var(--mal); }
+.os-wbtn.os-wcerrar:hover::before { background: var(--mal-fondo); }
+.os-wbtn:focus-visible { outline: none; }
+.os-wbtn:focus-visible::before { background: var(--primario-suave); box-shadow: inset 0 0 0 2px var(--verde); }
+.os-wico { position: relative; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.os-wico-rest { display: none; }
+.os-win.max .os-wico-max { display: none; }
+.os-win.max .os-wico-rest { display: block; }
+.os-win:not(.activa) .os-wbtn { opacity: .7; }
+.os-win:not(.activa):hover .os-wbtn { opacity: 1; }
+.os-win-cuerpo { flex: 1; min-height: 0; overflow: auto; padding: 16px 18px 28px; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--texto-suave) 40%, transparent) transparent; }
+
+/* Movimiento: abrir crece desde abajo, cerrar se desvanece, minimizar viaja a
+   su icono del dock (--os-min-x/y los pone escritorio.ts) y restaurar vuelve
+   de allí; encajar y maximizar deslizan la ventana a su sitio (.os-anima). */
+.os-win.os-anima { transition: left .22s cubic-bezier(.2, .8, .2, 1), top .22s cubic-bezier(.2, .8, .2, 1), width .22s cubic-bezier(.2, .8, .2, 1), height .22s cubic-bezier(.2, .8, .2, 1), box-shadow .18s, border-color .18s; }
+@keyframes os-win-entra { from { opacity: 0; transform: translateY(14px) scale(.965); } }
+@keyframes os-win-sale { to { opacity: 0; transform: scale(.96); } }
+@keyframes os-win-minimiza { to { opacity: 0; transform: translate(var(--os-min-x, 0), var(--os-min-y, 300px)) scale(.12); } }
+@keyframes os-win-restaura { from { opacity: 0; transform: translate(var(--os-min-x, 0), var(--os-min-y, 300px)) scale(.12); } }
+.os-win.os-entra { animation: os-win-entra .22s cubic-bezier(.2, .8, .2, 1); }
+.os-win.os-sale { animation: os-win-sale .16s ease-in forwards; pointer-events: none; }
+.os-win.os-minimiza { animation: os-win-minimiza .22s cubic-bezier(.5, 0, .75, 0) forwards; pointer-events: none; }
+.os-win.os-restaura { animation: os-win-restaura .24s cubic-bezier(.2, .8, .2, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .os-win, .os-win.os-anima, .os-win-cab::before, #os-escritorio::after { transition: none; }
+  .os-win.os-entra, .os-win.os-sale, .os-win.os-minimiza, .os-win.os-restaura { animation: none; }
+}
+
+/* Menú de disposiciones (ratón sobre Maximizar): miniaturas del escritorio con
+   sus celdas; la de la zona actual va marcada. */
+.os-snap-menu {
+  position: absolute; top: 42px; right: 36px; z-index: 5; padding: 10px 10px 12px; cursor: default;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 14px; box-shadow: var(--sombra-alta);
+  animation: os-win-entra .14s ease-out;
+}
+.os-snap-tit { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--texto-suave); padding: 0 2px 8px; max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.os-snap-disps { display: flex; gap: 8px; }
+.os-snap-disp { display: grid; gap: 3px; width: 64px; height: 42px; padding: 3px; border-radius: 8px; background: var(--fondo); border: 1px solid var(--borde); }
+.os-snap-celda { border: none; border-radius: 4px; padding: 0; cursor: pointer; background: color-mix(in srgb, var(--texto-suave) 22%, var(--superficie)); transition: background .1s; }
+.os-snap-celda:hover, .os-snap-celda:focus-visible { background: var(--verde); outline: none; }
+.os-snap-celda.actual { background: color-mix(in srgb, var(--verde) 50%, var(--superficie)); }
+
+/* Asistente de ajuste: ocupa el hueco y lista las demás ventanas. */
+.os-snap-asistente {
+  position: absolute; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden;
+  background: color-mix(in srgb, var(--fondo) 94%, transparent); backdrop-filter: blur(24px);
+  border: 2px dashed color-mix(in srgb, var(--verde) 60%, var(--borde)); border-radius: 16px;
+  animation: os-win-entra .18s ease-out;
+}
+.os-snap-asistente-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 10px 8px 16px; font-size: 12.5px; font-weight: 700; color: var(--texto-suave); }
+.os-snap-asistente-cab span { display: flex; align-items: center; gap: 8px; }
+.os-snap-asistente-lista {
+  flex: 1; min-height: 0; overflow: auto; padding: 4px 16px 16px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; align-content: start;
+}
+.os-snap-cand {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 14px; box-shadow: var(--sombra);
+  color: var(--texto); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: border-color .12s, transform .12s, box-shadow .12s;
+}
+.os-snap-cand:hover, .os-snap-cand:focus-visible { border-color: var(--verde); box-shadow: var(--sombra-alta); transform: translateY(-1px); outline: none; }
+.os-snap-cand-ico { width: 34px; height: auto; flex: none; }
+.os-snap-cand-titulo { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.os-snap-cand-titulo small { display: block; font-weight: 500; font-size: 11px; }
+
 body.os-modo .os-win-cuerpo.principal { max-width: none; }
 body.os-modo .os-win-cuerpo .wk-lateral { top: 0; max-height: none; }
 body.os-modo .os-win-cuerpo .ma-mapa { height: 60vh; }

@@ -58,6 +58,25 @@ código el 2026-09-28. Convive con el hub clásico y no lo toca.
   **Alt+Mayús+← → ↑ ↓** hace lo mismo con el teclado; doble clic en el título
   maximiza o restaura; redimensionar con la esquina (`resize: both`). Cerrar la
   ventana de la URL actual vuelve a `#/inicio` (el panel).
+- **Aspecto de las ventanas** (2026-10-03, estudiando las de la app): barra de
+  título en `superficie` y cuerpo OPACO en `fondo` (como el hub clásico, para
+  que las tarjetas resalten y no se transparente lo de detrás); la de delante
+  lleva aro verde fino, sombra alta y una línea de acento arriba, y las de
+  detrás apagan título e icono. Botones con iconos SVG de línea y fondo
+  hexagonal al pasar (Maximizar cambia a «Restaurar» maximizada) y tirador
+  propio en la esquina. Movimiento: abrir crece, cerrar se desvanece (la
+  ventana pierde su id AL MOMENTO), minimizar viaja a su icono del dock y
+  restaurar vuelve de allí, y encajar o maximizar la desliza (`.os-anima`,
+  mientras dura el ResizeObserver no apunta tamaños). Todo se apaga con
+  `prefers-reduced-motion`. Los arneses miden la geometría cuando ya no queda
+  `.os-win.os-anima`.
+- **Menú de disposiciones y asistente de ajuste** (los de la app): con el ratón
+  sobre Maximizar sale un menú con cinco miniaturas (dos mitades, cuatro
+  cuartos, izquierda + dos, dos + derecha, pantalla completa) que marca la zona
+  actual; al encajar con el ratón (arrastre o menú) el hueco que queda se
+  ofrece a las demás ventanas del escritorio, sueltas o minimizadas, hueco a
+  hueco (`COMPLEMENTO`). Esc o un clic fuera lo dejan libre. Arrastrar arriba
+  junto a una esquina encaja en ese cuarto.
 - **Dock**: las pantallas del hub (sin las que enlazan a la app actual) con su
   estado (abierta, delante), **Claude** (abre la paleta en modo «Pedir a
   Claude») y **Todas** (lanzador con todo, incluidas las de la app actual).

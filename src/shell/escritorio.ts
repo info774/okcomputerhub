@@ -42,6 +42,34 @@ interface Ventana { id: string; params: string[]; x: number; y: number; w: numbe
 interface Escritorio { nombre: string; ventanas: Ventana[]; widgets?: Record<string, { x: number; y: number }> }
 interface Estado { activo: number; escritorios: Escritorio[] }
 
+// Zonas de ajuste (estilo Windows 11, como el modo escritorio de la app):
+// nombre para el menú de disposiciones y el asistente, y qué huecos quedan por
+// rellenar tras encajar una ventana en cada una (orden del asistente).
+const NOMBRE_ZONA: Record<Exclude<Zona, null>, string> = {
+  max: 'Pantalla completa', izq: 'Mitad izquierda', der: 'Mitad derecha',
+  ai: 'Arriba a la izquierda', ad: 'Arriba a la derecha', bi: 'Abajo a la izquierda', bd: 'Abajo a la derecha',
+};
+const COMPLEMENTO: Partial<Record<Exclude<Zona, null>, Exclude<Zona, null>[]>> = {
+  izq: ['der'], der: ['izq'], ai: ['bi', 'ad', 'bd'], ad: ['bd', 'ai', 'bi'], bi: ['ai', 'bd', 'ad'], bd: ['ad', 'bi', 'ai'],
+};
+// Menú de disposiciones (ratón sobre Maximizar): miniaturas del escritorio.
+const DISPOSICIONES: { nombre: string; celdas: Exclude<Zona, null>[]; cols: number; filas: number; areas?: string }[] = [
+  { nombre: 'Dos mitades', celdas: ['izq', 'der'], cols: 2, filas: 1 },
+  { nombre: 'Cuatro cuartos', celdas: ['ai', 'ad', 'bi', 'bd'], cols: 2, filas: 2 },
+  { nombre: 'Izquierda y dos a la derecha', celdas: ['izq', 'ad', 'bd'], cols: 2, filas: 2, areas: "'izq ad' 'izq bd'" },
+  { nombre: 'Dos a la izquierda y derecha', celdas: ['ai', 'der', 'bi'], cols: 2, filas: 2, areas: "'ai der' 'bi der'" },
+  { nombre: 'Pantalla completa', celdas: ['max'], cols: 1, filas: 1 },
+];
+// Botones de la barra de título: línea de 16 px con el trazo del texto.
+const ICONO_WIN = {
+  min: '<path d="M3.5 8.5h9"/>',
+  max: '<rect x="3" y="3" width="10" height="10" rx="2.2"/>',
+  restaurar: '<rect x="2.8" y="5.2" width="8" height="8" rx="1.8"/><path d="M5.6 5.2V4.6a1.8 1.8 0 0 1 1.8-1.8h4a1.8 1.8 0 0 1 1.8 1.8v4a1.8 1.8 0 0 1-1.8 1.8h-.6"/>',
+  cerrar: '<path d="M4 4l8 8M12 4l-8 8"/>',
+};
+const svgWin = (d: string, clase = '') => `<svg class="os-wico ${clase}" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${d}</svg>`;
+const sinMovimiento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 let _estado: Estado = { activo: 0, escritorios: [{ nombre: 'Principal', ventanas: [] }] };
 let _raiz: HTMLElement | null = null;
 let _z = 1;
@@ -230,12 +258,24 @@ function geometriaZona(z: Zona) {
   }
 }
 
-function aplicarGeometria(v: Ventana) {
+// `animar`: la ventana viaja a su sitio nuevo (encajar, maximizar, restaurar)
+// en vez de saltar. Mientras dura, el ResizeObserver no apunta tamaños.
+function aplicarGeometria(v: Ventana, animar = false) {
   const el = document.getElementById(`os-win-${v.id}`);
   if (!el) return;
+  if (animar && !sinMovimiento()) {
+    el.classList.add('os-anima');
+    clearTimeout(Number(el.dataset.animaT));
+    el.dataset.animaT = String(setTimeout(() => el.classList.remove('os-anima'), 260));
+  }
   const g = v.snap ? geometriaZona(v.snap)! : v;
   el.style.left = `${g.x}px`; el.style.top = `${g.y}px`; el.style.width = `${g.w}px`; el.style.height = `${g.h}px`;
   el.style.zIndex = String(v.z);
+  // Vuelve del dock: el gesto de minimizar al revés.
+  if (el.classList.contains('min') && !v.min && !sinMovimiento()) {
+    el.classList.add('os-restaura');
+    el.addEventListener('animationend', () => el.classList.remove('os-restaura'), { once: true });
+  }
   el.classList.toggle('min', v.min);
   el.classList.toggle('max', v.snap === 'max');
   el.classList.toggle('encajada', !!v.snap && v.snap !== 'max');
@@ -277,16 +317,23 @@ async function abrirVentana(id: string, params: string[], enfocarla = true) {
       <div class="os-win-cab" data-on-dblclick="osMaximizar:${esc(id)}">
         ${iconoHex(id === 'inicio' ? 'oki' : id, m.titulo, `os-win-icono ${id === 'inicio' ? 'os-ico-oki' : ''}`)}
         <span class="os-win-titulo" title="${esc(m.explicacion)}">${esc(m.titulo)}</span>
-        <button class="os-wbtn" data-action="osMinimizar" data-p0="${esc(id)}" aria-label="Minimizar">–</button>
-        <button class="os-wbtn" data-action="osMaximizar" data-p0="${esc(id)}" aria-label="Maximizar o restaurar">▢</button>
-        <button class="os-wbtn os-wcerrar" data-action="osCerrar" data-p0="${esc(id)}" aria-label="Cerrar">✕</button>
+        <div class="os-wbotones">
+          <button class="os-wbtn" data-action="osMinimizar" data-p0="${esc(id)}" aria-label="Minimizar" title="Minimizar">${svgWin(ICONO_WIN.min)}</button>
+          <button class="os-wbtn os-wmax" data-action="osMaximizar" data-p0="${esc(id)}" aria-label="Maximizar o restaurar" title="Maximizar (deja el ratón encima para más disposiciones)">${svgWin(ICONO_WIN.max, 'os-wico-max')}${svgWin(ICONO_WIN.restaurar, 'os-wico-rest')}</button>
+          <button class="os-wbtn os-wcerrar" data-action="osCerrar" data-p0="${esc(id)}" aria-label="Cerrar" title="Cerrar">${svgWin(ICONO_WIN.cerrar)}</button>
+        </div>
       </div>
       <div class="os-win-cuerpo principal"><div class="os-pantalla"></div></div>`;
     document.getElementById('os-ventanas')!.appendChild(el);
     instalarArrastre(el, id);
+    instalarMenuZonas(el, id);
+    if (nueva && enfocarla && !sinMovimiento()) {
+      el.classList.add('os-entra');
+      el.addEventListener('animationend', () => el!.classList.remove('os-entra'), { once: true });
+    }
     new ResizeObserver(() => {
       const w = ventanaDe(id);
-      if (!w || w.snap || !el!.isConnected) return;
+      if (!w || w.snap || !el!.isConnected || el!.classList.contains('os-anima')) return;
       const nw = el!.offsetWidth, nh = el!.offsetHeight;
       if (nw === w.w && nh === w.h) return;
       w.w = nw; w.h = nh; guardarEstado();
@@ -299,10 +346,49 @@ async function abrirVentana(id: string, params: string[], enfocarla = true) {
   await pintarPantalla(el.querySelector('.os-pantalla') as HTMLElement, m, params);
 }
 
+// Minimizar: la ventana se encoge hacia su icono del dock (o el centro del
+// dock si no tiene) y después se esconde.
+function minimizar(id: string) {
+  const v = ventanaDe(id);
+  if (!v) return;
+  cerrarMenuZonas();
+  if (_asistente?.id === id) cerrarAsistente();
+  v.min = true;
+  guardarEstado();
+  const el = document.getElementById(`os-win-${id}`);
+  const fin = () => {
+    el?.classList.remove('os-minimiza');
+    if (ventanaDe(id)?.min) aplicarGeometria(v);
+  };
+  if (el && !sinMovimiento()) {
+    const r = el.getBoundingClientRect();
+    const destino = (document.querySelector(`.os-ditem[data-p0="${CSS.escape(id)}"]`) ?? document.getElementById('os-dock'))?.getBoundingClientRect();
+    if (destino) {
+      el.style.setProperty('--os-min-x', `${Math.round(destino.left + destino.width / 2 - (r.left + r.width / 2))}px`);
+      el.style.setProperty('--os-min-y', `${Math.round(destino.top - (r.top + r.height / 2))}px`);
+    }
+    el.classList.remove('activa');
+    el.classList.add('os-minimiza');
+    setTimeout(fin, 230);
+  } else fin();
+  const f = ventanaFrente();
+  if (f) enfocar(f.id); else pintarDock();
+}
+
+// Cerrar: la ventana deja de existir al momento (sin id, fuera del estado) y
+// se desvanece aparte; así nada la encuentra mientras se va.
 function cerrarVentana(id: string) {
   const e = escritorio();
   e.ventanas = e.ventanas.filter(v => v.id !== id);
-  document.getElementById(`os-win-${id}`)?.remove();
+  if (_asistente?.id === id) cerrarAsistente();
+  cerrarMenuZonas();
+  const el = document.getElementById(`os-win-${id}`);
+  if (el) {
+    el.removeAttribute('id');
+    el.classList.remove('activa');
+    if (sinMovimiento()) el.remove();
+    else { el.classList.add('os-sale'); setTimeout(() => el.remove(), 180); }
+  }
   guardarEstado();
   const f = ventanaFrente();
   if (f) enfocar(f.id); else pintarDock();
@@ -320,7 +406,7 @@ export async function mostrarEnEscritorio(m: Modulo, params: string[]) {
 function zonaEn(x: number, y: number): Zona {
   const { W, H } = areaEscritorio();
   const b = 14;
-  if (y <= b) return 'max';
+  if (y <= b) return x < W * 0.22 ? 'ai' : x > W * 0.78 ? 'ad' : 'max';
   if (x <= b) return y < H * 0.3 ? 'ai' : y > H * 0.7 ? 'bi' : 'izq';
   if (x >= W - b) return y < H * 0.3 ? 'ad' : y > H * 0.7 ? 'bd' : 'der';
   return null;
@@ -333,6 +419,8 @@ function instalarArrastre(el: HTMLElement, id: string) {
     const v = ventanaDe(id);
     if (!v) return;
     enfocar(id);
+    cerrarMenuZonas();
+    if (_asistente) cerrarAsistente();
     const area = document.getElementById('os-escritorio')!.getBoundingClientRect();
     const r = el.getBoundingClientRect();
     // Una ventana encajada se suelta al empezar a arrastrarla, con su tamaño libre.
@@ -360,8 +448,9 @@ function instalarArrastre(el: HTMLElement, id: string) {
         v.x = Math.max(-v.w + 120, Math.min(W - 120, desde.left + ev.clientX - desde.x));
         v.y = Math.max(0, Math.min(H - 44, desde.top + ev.clientY - desde.y));
       }
-      aplicarGeometria(v);
+      aplicarGeometria(v, !!zona);
       guardarEstado();
+      if (zona) abrirAsistente(id, zona);
     };
     cab.addEventListener('pointermove', mover);
     cab.addEventListener('pointerup', soltar);
@@ -370,12 +459,100 @@ function instalarArrastre(el: HTMLElement, id: string) {
   el.addEventListener('pointerdown', () => { if (ventanaFrente()?.id !== id) enfocar(id); }, true);
 }
 
-function encajar(id: string, zona: Zona) {
+// Encaja una ventana en una zona (la misma zona otra vez la suelta). Con
+// `asistente`, se ofrece rellenar el hueco que queda con las demás ventanas.
+function encajar(id: string, zona: Zona, asistente = false) {
   const v = ventanaDe(id);
   if (!v) return;
+  cerrarMenuZonas();
+  if (_asistente) cerrarAsistente();
   v.snap = v.snap === zona ? null : zona;
-  aplicarGeometria(v);
+  v.min = false;
+  aplicarGeometria(v, true);
+  if (ventanaFrente()?.id !== id) enfocar(id);
   guardarEstado();
+  if (asistente && v.snap) abrirAsistente(id, v.snap);
+}
+
+// ── Menú de disposiciones (ratón sobre Maximizar) ───────────────────────────
+let _menuT: number | undefined;
+function instalarMenuZonas(el: HTMLElement, id: string) {
+  const btn = el.querySelector('.os-wmax') as HTMLElement;
+  btn.addEventListener('pointerenter', e => {
+    if (e.pointerType !== 'mouse') return;
+    clearTimeout(_menuT);
+    if (!el.querySelector('.os-snap-menu')) _menuT = window.setTimeout(() => abrirMenuZonas(el, id), 350);
+  });
+  btn.addEventListener('pointerleave', e => {
+    clearTimeout(_menuT);
+    if (!(e.relatedTarget as Element | null)?.closest?.('.os-snap-menu')) _menuT = window.setTimeout(cerrarMenuZonas, 250);
+  });
+}
+
+function abrirMenuZonas(el: HTMLElement, id: string) {
+  cerrarMenuZonas();
+  const v = ventanaDe(id);
+  if (!v || !el.isConnected) return;
+  const m = document.createElement('div');
+  m.className = 'os-snap-menu';
+  m.setAttribute('role', 'menu');
+  m.innerHTML = `<div class="os-snap-tit">Colocar «${esc(modulo(id)?.titulo ?? id)}»</div><div class="os-snap-disps">${DISPOSICIONES.map(d => `
+    <div class="os-snap-disp" title="${esc(d.nombre)}" style="grid-template-columns:repeat(${d.cols},1fr);grid-template-rows:repeat(${d.filas},1fr);${d.areas ? `grid-template-areas:${d.areas}` : ''}">
+      ${d.celdas.map(z => `<button type="button" role="menuitem" class="os-snap-celda${v.snap === z ? ' actual' : ''}" data-action="osEncajar" data-p0="${esc(id)}" data-p1="${z}" title="${esc(NOMBRE_ZONA[z])}" aria-label="${esc(NOMBRE_ZONA[z])}"${d.areas ? ` style="grid-area:${z}"` : ''}></button>`).join('')}
+    </div>`).join('')}</div>`;
+  el.querySelector('.os-win-cab')!.appendChild(m);
+  m.addEventListener('pointerdown', ev => ev.stopPropagation());
+  m.addEventListener('pointerleave', () => { _menuT = window.setTimeout(cerrarMenuZonas, 250); });
+  m.addEventListener('pointerenter', () => clearTimeout(_menuT));
+}
+
+function cerrarMenuZonas() {
+  clearTimeout(_menuT);
+  document.querySelectorAll('.os-snap-menu').forEach(m => m.remove());
+}
+
+// ── Asistente de ajuste: rellenar el hueco con otra ventana ─────────────────
+// Al encajar una ventana con el ratón, el hueco que queda se ofrece a las
+// demás ventanas del escritorio (sueltas o minimizadas), uno tras otro.
+let _asistente: { id: string; pendientes: Exclude<Zona, null>[]; zona?: Exclude<Zona, null> } | null = null;
+
+function abrirAsistente(id: string, zona: Exclude<Zona, null>) {
+  cerrarAsistente();
+  const ocupada = (z: Zona) => escritorio().ventanas.some(x => x.snap === z && !x.min);
+  _asistente = { id, pendientes: (COMPLEMENTO[zona] ?? []).filter(z => !ocupada(z)) };
+  siguienteHueco();
+}
+
+function siguienteHueco() {
+  document.getElementById('os-asistente')?.remove();
+  if (!_asistente) return;
+  const zona = _asistente.pendientes.shift();
+  const candidatas = escritorio().ventanas.filter(x => x.id !== _asistente!.id && !(x.snap && !x.min));
+  if (!zona || !candidatas.length) { _asistente = null; return; }
+  _asistente.zona = zona;
+  const g = geometriaZona(zona)!;
+  const el = document.createElement('section');
+  el.id = 'os-asistente';
+  el.className = 'os-snap-asistente';
+  el.setAttribute('aria-label', 'Elegir qué ventana va en el hueco');
+  Object.assign(el.style, { left: `${g.x}px`, top: `${g.y}px`, width: `${g.w}px`, height: `${g.h}px`, zIndex: String(++_z) });
+  el.innerHTML = `
+    <div class="os-snap-asistente-cab"><span><i class="hex-punto"></i>${esc(NOMBRE_ZONA[zona])} · elige qué ventana va aquí</span>
+      <button type="button" class="os-wbtn" data-action="osAsistenteCerrar" title="Dejar el hueco libre (Esc)" aria-label="Dejar el hueco libre">${svgWin(ICONO_WIN.cerrar)}</button></div>
+    <div class="os-snap-asistente-lista">
+      ${candidatas.map(x => {
+        const m = modulo(x.id);
+        return `<button type="button" class="os-snap-cand" data-action="osAsistenteElegir" data-p0="${esc(x.id)}">
+          ${iconoHex(x.id === 'inicio' ? 'oki' : x.id, m?.titulo ?? x.id, `os-snap-cand-ico ${x.id === 'inicio' ? 'os-ico-oki' : ''}`)}
+          <span class="os-snap-cand-titulo">${esc(m?.titulo ?? x.id)}${x.min ? '<small>minimizada</small>' : ''}</span></button>`;
+      }).join('')}
+    </div>`;
+  document.getElementById('os-ventanas')!.appendChild(el);
+}
+
+function cerrarAsistente() {
+  _asistente = null;
+  document.getElementById('os-asistente')?.remove();
 }
 
 // Alt+Mayús+flechas mueve la ventana de delante entre zonas; Alt+Mayús+↓ la restaura.
@@ -388,10 +565,19 @@ export function instalarAtajosEscritorio() {
     if (!(e.key in mapa)) return;
     e.preventDefault();
     const v = ventanaDe(f.id)!;
+    cerrarMenuZonas();
+    if (_asistente) cerrarAsistente();
     v.snap = mapa[e.key];
-    aplicarGeometria(v);
+    aplicarGeometria(v, true);
     guardarEstado();
   });
+  // Esc cierra el asistente de ajuste; un clic fuera de él, también.
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && _asistente) { e.preventDefault(); cerrarAsistente(); }
+  });
+  document.addEventListener('pointerdown', e => {
+    if (_asistente && !(e.target as Element).closest?.('#os-asistente')) cerrarAsistente();
+  }, true);
   addEventListener('resize', () => {
     if (!document.body.classList.contains('os-modo')) return;
     if (innerWidth < ANCHO_MINIMO) { quitarEscritorio(); ir(rutaActual().id, ...rutaActual().params); return; }
@@ -674,8 +860,20 @@ registrarAcciones({
     if (v) { enfocar(id); ir(id, ...v.params); return; }
     ir(id);
   },
-  osMinimizar(id: string) { const v = ventanaDe(id); if (!v) return; v.min = true; aplicarGeometria(v); guardarEstado(); const f = ventanaFrente(); if (f) enfocar(f.id); else pintarDock(); },
+  osMinimizar(id: string) { minimizar(id); },
   osMaximizar(id: string) { encajar(id, 'max'); },
+  osEncajar(id: string, zona: string) { encajar(id, zona as Zona, true); },
+  osAsistenteElegir(id: string) {
+    const zona = _asistente?.zona;
+    const v = ventanaDe(id);
+    if (!zona || !v) return;
+    v.snap = zona; v.min = false;
+    aplicarGeometria(v, true);
+    enfocar(id);
+    guardarEstado();
+    siguienteHueco();
+  },
+  osAsistenteCerrar() { cerrarAsistente(); },
   osCerrar(id: string) { cerrarVentana(id); },
   osEscritorio(i: string) {
     const n = Number(i);
