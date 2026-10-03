@@ -86,6 +86,7 @@ export async function pintarFormulario(el: HTMLElement, numero?: string) {
         <label>Materiales <textarea id="tf-materiales" rows="2">${esc(t?.materiales ?? '')}</textarea></label>
         <label>Observaciones <textarea id="tf-observaciones" rows="2">${esc(t?.observaciones ?? '')}</textarea></label>
       </details>
+      ${t ? '' : `<label class="check"><input type="checkbox" id="tf-lista"> Añadir a la lista del día de los técnicos</label>`}
       <div class="acciones"><button class="btn" type="submit" ${escribe ? '' : 'disabled'}>${t ? 'Guardar cambios' : 'Crear trabajo'}</button>
         <a class="btn secundario" href="${atras}">Cancelar</a></div>
     </form>`;
@@ -167,6 +168,11 @@ registrarAcciones({
       cuerpo.estado = estado === 'Completado' ? 'Pendiente' : estado;
       const r = await API.post<any[]>('trabajos', cuerpo);
       if (r.error || !r.data?.[0]) { toast(`No se pudo crear: ${r.error?.message ?? 'sin respuesta'}`, 'error'); return; }
+      // Lo recién creado entra directo en la lista de quien lo va a hacer, el día en que toca (_aListaDia de la app).
+      if ((document.getElementById('tf-lista') as HTMLInputElement | null)?.checked && tecnicos.length) {
+        const { anadirALista } = await import('../lista-dia/vista');
+        for (const persona of tecnicos) await anadirALista({ tipo: 'trabajo', refId: r.data[0].id, persona, fecha: fecha || undefined, asignarlo: false });
+      }
       toast(`Trabajo #${r.data[0].numero} creado`);
       ir('trabajos', String(r.data[0].numero));
       return;

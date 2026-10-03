@@ -451,6 +451,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   bloque lo crea la base; mover/reasignar va por `hub.agenda_mover`. Citas
   sueltas y días de un trabajo: `cita.ts` (`#/calendario/cita`,
   `#/calendario/dia/<trabajo>` y `dia/b:<bloque>`). Arnés `verify-calendario.mjs`.
+- **Lista del día** (`src/modulos/lista-dia/`, `#/lista-dia`, 2026-10-03,
+  paridad bloque 1): espejo de `lista_dia` (área propia, dueño `app`); una fila
+  = una cosa de UNA persona para UN día, `usuario` por NOMBRE. Meterla en la
+  lista de alguien es ASIGNÁRSELA (al trabajo se le AÑADE el técnico; tarea y
+  ticket cambian de `tecnico_id`); marcar va SIEMPRE por `hub.lista_dia_marcar`
+  (cierra el origen guardando `estado_previo`; trabajo y tarea sin fichaje se
+  marcan en la lista y no se cierran). `anadirALista()` es la única entrada
+  (pantalla y casilla del alta de trabajo). «Planificar» (`#/lista-dia/planificar`)
+  mueve fecha Y hora del trabajo juntas. Arnés `verify-lista-dia.mjs`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

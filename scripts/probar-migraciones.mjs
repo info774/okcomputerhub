@@ -665,6 +665,21 @@ commit;`);
   ok(psql(`select count(*) from cron.job where jobname in ('hub-sync-app', 'hub-sync-app-completo')`) === '0', 'corte final: el sync con la app se apaga');
   const nt = psql(como('authenticated', 'ana@ok.test', `insert into hub.trabajos (descripcion) values ('Nuevo tras el corte') returning numero;`)).split('\n').pop();
   ok(Number(nt) > 700, `corte final: los trabajos nuevos siguen la numeración (${nt})`);
+  // Paridad (20261018): marcar en la lista del día cierra el origen con las reglas de la app.
+  const tl = psql(como('authenticated', 'ana@ok.test', `insert into hub.trabajos (titulo, estado) values ('Sin fichar', 'Pendiente') returning id;`)).split('\n').pop();
+  const tkl = psql(como('authenticated', 'ana@ok.test', `insert into hub.tickets (titulo, estado) values ('Lista', 'En curso') returning id;`)).split('\n').pop();
+  const l1 = psql(como('authenticated', 'ana@ok.test', `insert into hub.lista_dia (usuario, tipo, ref_id) values ('Tito', 'trabajo', '${tl}') returning id;`)).split('\n').pop();
+  const l2 = psql(como('authenticated', 'ana@ok.test', `insert into hub.lista_dia (usuario, tipo, ref_id) values ('Tito', 'ticket', '${tkl}') returning id;`)).split('\n').pop();
+  const av = psql(como('authenticated', 'tito@ok.test', `select hub.lista_dia_marcar('${l1}', true);`)).split('\n').pop();
+  ok(av.includes('fichar') && psql(`select estado from hub.trabajos where id = '${tl}'`) === 'Pendiente' && psql(`select completado from hub.lista_dia where id = '${l1}'`) === 't',
+    'lista del día: sin fichaje se marca en la lista pero el trabajo no se cierra (y avisa)');
+  psql(como('authenticated', 'tito@ok.test', `select hub.lista_dia_marcar('${l2}', true);`));
+  ok(psql(`select estado from hub.tickets where id = '${tkl}'`) === 'Cerrado' && psql(`select estado_previo from hub.lista_dia where id = '${l2}'`) === 'En curso', 'lista del día: marcar cierra el ticket y guarda su estado');
+  psql(como('authenticated', 'tito@ok.test', `select hub.lista_dia_marcar('${l2}', false);`));
+  ok(psql(`select estado from hub.tickets where id = '${tkl}'`) === 'En curso', 'lista del día: desmarcar lo devuelve a como estaba');
+  psql(como('authenticated', 'ana@ok.test', `delete from hub.tickets where id = '${tkl}';`));
+  ok(psql(`select count(*) from hub.lista_dia where ref_id = '${tkl}'`) === '0', 'lista del día: borrar el origen se lleva su fila');
+
   // Paridad (20261017): el trabajo manda su fecha a la agenda y la agenda la devuelve.
   const ta = psql(como('authenticated', 'ana@ok.test', `insert into hub.trabajos (titulo, fecha_programada, hora_llegada, duracion_teorica, tecnicos)
     values ('Cámaras', '2026-11-02', '2026-11-02 10:00+00', 90, '{Tito}') returning id;`)).split('\n').pop();

@@ -33,6 +33,16 @@ const srv = await servidor(PUERTO);
 const browser = await navegador();
 const filas = page => page.$$eval('#co-tabla tbody tr', trs => trs.map(t => t.textContent.replace(/\s+/g, ' ').trim()));
 const cuantas = (page, n) => page.waitForFunction(k => document.querySelectorAll('#co-tabla tbody tr:not(:has(.vacio))').length === k, n);
+// Buscar repinta la pantalla entera a los 250 ms: se marca la tabla de antes y
+// se espera a una NUEVA con el texto puesto. Contar filas a secas daba el paso
+// por bueno antes del repintado cuando el número no cambiaba, y el siguiente
+// fill caía en el campo viejo.
+async function buscar(page, q, n) {
+  await page.$eval('#co-tabla', t => t.setAttribute('data-viejo', '1'));
+  await page.fill('#co-filtro', q);
+  await page.waitForFunction(([v, k]) => !document.querySelector('#co-tabla[data-viejo]') && document.getElementById('co-filtro')?.value === v
+    && document.querySelectorAll('#co-tabla tbody tr:not(:has(.vacio))').length === k, [q, n]);
+}
 
 try {
   const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 900 } });
@@ -67,14 +77,11 @@ try {
   ok((await filas(page))[0].includes('Distribuidora'), 'filtro por etiqueta');
   await page.selectOption('#co-etiqueta', '');
   await cuantas(page, 3);
-  await page.fill('#co-filtro', '611222');
-  await cuantas(page, 1);
+  await buscar(page, '611222', 1);
   ok((await filas(page))[0].includes('Ana'), 'buscar por teléfono sin espacios');
-  await page.fill('#co-filtro', 'polinesia');
-  await cuantas(page, 1);
+  await buscar(page, 'polinesia', 1);
   ok((await filas(page))[0].includes('Ana'), 'buscar por el nombre del cliente');
-  await page.fill('#co-filtro', '');
-  await cuantas(page, 3);
+  await buscar(page, '', 3);
   await page.click('[data-action="coBaja"]');
   await cuantas(page, 1);
   ok((await filas(page))[0].includes('Antiguo'), '«De baja» enseña los dados de baja');

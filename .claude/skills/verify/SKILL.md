@@ -145,6 +145,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   Día (soltar en otra columna reasigna y a esa hora), Por técnico, Agenda, Mes,
   filtros guardados, citas sueltas y días de un trabajo. Sin corte: nada se
   arrastra ni se planifica. Fecha fija (martes de la semana que viene).
+- `verify-lista-dia.mjs`: lista del día por persona (título leído del origen),
+  marcar por `hub.lista_dia_marcar` con su aviso de fichaje, pasar a otra
+  persona (reasigna), recado, añadir de lo pendiente (asigna), traer lo ya
+  asignado, quitar, Planificar (atrasado; «Mañana» mueve fecha y hora), la
+  casilla del alta de trabajo y el técnico que solo ve lo suyo.
 
 `npm run verify` pasa todos los de la lista.
 

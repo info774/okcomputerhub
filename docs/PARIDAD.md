@@ -30,9 +30,10 @@ Fran, 2026-10-03).
 1. **Trabajos y calendario completos** — tanda 1 HECHA (2026-10-03: alta y
    edición Simple/Completa, duplicar, continuación, kanban, Excel y espejo
    trabajo ⇄ agenda) y tanda 2 HECHA (calendario planificador: vistas, carga,
-   solapes, traslados, pendientes, «Sugerir hueco», citas y días). Falta: firma del cliente y PDF del parte, plantillas, planificador del
-   calendario (vistas, pendientes, «Sugerir hueco», traslados, solapes), lista
-   del día, chat por ficha. Es lo que más usan los técnicos.
+   solapes, traslados, pendientes, «Sugerir hueco», citas y días) y tanda 3
+   HECHA (lista del día con su espejo y el planificador hoy/mañana). Falta:
+   firma del cliente y PDF del parte, plantillas (tanda 4), chat por ficha y
+   tablero de notas (tanda 5). Es lo que más usan los técnicos.
 2. **Clientes, sedes y contactos con escritura**: alta y edición (NIF, Google
    Maps), baja/reactivar, pestañas Software, Hardware y Cámaras, teléfonos con
    rol, Excel; y lo que escribe en Zoho (alta de cliente).
@@ -82,7 +83,7 @@ Fran, 2026-10-03).
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
 | Lista de trabajos, filtros, kanban, Excel (`modules/trabajos.js`) | Preparado | `#/trabajos` (lista, kanban y Excel ya hoy; arrastrar en el kanban cambia el estado tras el corte) | Corte. |
-| Crear y editar trabajo (Simple/Completa), duplicar, continuación | Preparado | `#/trabajos/nuevo`, `#/trabajos/<n>/editar`, `trabajos/formulario.ts`; espejo trabajo ⇄ agenda en `20261017_trabajos_paridad.sql` | Crear cliente o sede al vuelo (bloque 2), plantillas (tanda 4), «añadir a la lista del día» (tanda 3). |
+| Crear y editar trabajo (Simple/Completa), duplicar, continuación | Preparado | `#/trabajos/nuevo`, `#/trabajos/<n>/editar`, `trabajos/formulario.ts`; espejo trabajo ⇄ agenda en `20261017_trabajos_paridad.sql` | Crear cliente o sede al vuelo (bloque 2), plantillas (tanda 4). |
 | Ficha: estado, comentarios, material con stock (`saveWdLineas`); completar cierra sus tickets y propone «Para facturar» | Preparado | `#/trabajos`, `hub.trabajo_estado`, `hub.trabajo_guardar_lineas` | Se enciende con el corte. |
 | Material con escáner de código de barras | Falta | — | Escáner. |
 | Fichajes del trabajo con edición en línea | Solo lectura | `#/trabajos` | Correcciones por `hub.jornada_ajustes`. |
@@ -97,8 +98,8 @@ Fran, 2026-10-03).
 | Calendario: Mes, Día, Agenda, filtros guardados, alta rápida | Preparado | `#/calendario` (Día con rejilla por técnico; «+ Cita»; ir a fecha en vez de mini-mes) | Zoom, redimensionar arrastrando el borde, colores por estado. |
 | Calendario: pendientes, «Sugerir hueco», traslados, solapes, carga del día | Preparado | `calendario/motor.ts` (mismas constantes que la app) y panel de pendientes | Origen de los traslados: oficina con coordenadas fijas (la app geocodifica la dirección de la empresa). |
 | Capa de Google Calendar (`google-calendar-read.js`, `google-token`) | Falta | — | — |
-| Lista del día (`modules/lista-dia.js`, `lista_dia`) | Falta | — | Espejo y pantalla. |
-| Planificador hoy/mañana (`ui/plan-dia.js`) | Falta | — | — |
+| Lista del día (`modules/lista-dia.js`, `lista_dia`) | Preparado | `#/lista-dia`, `lista-dia/vista.ts`; espejo, `hub.lista_dia_marcar` y limpieza al borrar el origen en `20261018_lista_dia.sql`; casilla en el alta de trabajo | — |
+| Planificador hoy/mañana (`ui/plan-dia.js`) | Preparado | `#/lista-dia/planificar` (hoy, mañana, +7 d; la hora se mueve con la fecha) | — |
 | Modo calle (`ui/calle.js`) | Preparado | `#/hoy`, `hub.fichar`, `trabajo-foto` | Se enciende con el corte. |
 | Fichaje traslado → inicio → fin (`ui/fichaje.js`) | Preparado | `#/hoy` (y Enlace «Fichaje y horas») | Botón + global; fichar tareas y tickets. |
 | Tablero de notas de texto y voz (`modules/tablero.js`) | Falta | (lo indexa `#/buscar`) | Pantalla. |
@@ -220,7 +221,7 @@ Fran, 2026-10-03).
 
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
-| Dashboard / Mi jornada | Hecho | `#/inicio` (Oki), `#/direccion`, `#/hoy` | Chip «Mi lista de hoy». |
+| Dashboard / Mi jornada | Hecho | `#/inicio` (Oki), `#/direccion`, `#/hoy`; «Mi lista de hoy» es la baldosa de `#/lista-dia` | — |
 | Búsqueda global | Hecho | Ctrl+K | Los trabajos se abren en la app. |
 | Auditoría por ficha y registro de cambios | Falta | (`#/direccion`, lo último) | Historial por ficha. |
 | Deshacer (Ctrl+Z) | Falta | — | — |

@@ -670,3 +670,19 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 /* En el móvil las cuatro cifras van de dos en dos, más bajas. */
 @media (max-width: 520px) { .pp-cifras .di-valor { font-size: 1.35rem; } .pp-cifras .di-cifra { padding: .75rem; } }
 .tabla .chip { white-space: nowrap; }
+
+/* Lista del día (paridad bloque 1, tanda 3) */
+.ld-personas { flex-wrap: wrap; }
+.ld-lista { list-style: none; margin: 0; padding: 0; }
+.ld-fila { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .7rem; padding: .55rem 0; border-top: 1px solid var(--borde); }
+.ld-fila.hecho .ld-txt strong { text-decoration: line-through; color: var(--texto-suave); }
+.ld-check input { width: 22px; height: 22px; accent-color: var(--verde); }
+.ld-check { display: grid; place-items: center; min-width: 44px; min-height: 44px; margin: 0; }
+.ld-ico { font-size: 1.1rem; }
+.ld-txt { flex: 1 1 220px; min-width: 0; display: grid; }
+.ld-mover { max-width: 11rem; }
+.ld-panel { margin-top: .75rem; }
+.ld-cands { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .35rem; max-height: 22rem; overflow-y: auto; }
+.ld-cand { display: flex; align-items: center; gap: .6rem; width: 100%; min-height: 44px; padding: .35rem .6rem; border: 1px solid var(--borde); border-radius: 9px; background: var(--superficie); color: var(--texto); font: inherit; text-align: left; cursor: pointer; }
+.ld-cand > span:nth-child(2) { flex: 1; display: grid; min-width: 0; }
+.ld-cand.dentro { border-color: var(--verde); background: var(--primario-suave); }

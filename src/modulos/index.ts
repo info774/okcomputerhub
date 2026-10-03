@@ -20,6 +20,7 @@ import { moduloOportunidades } from './oportunidades';
 import { moduloPresupuestos } from './presupuestos';
 import { moduloMantenimientos } from './mantenimientos';
 import { moduloTickets } from './tickets';
+import { moduloListaDia } from './lista-dia';
 import { moduloPortal } from './portal';
 import { moduloFirmas } from './firmas';
 import { moduloFacturacion } from './facturacion';
@@ -56,6 +57,7 @@ export const MODULOS: Modulo[] = [
   moduloFacturacion,
   moduloMapa,
   moduloHoy,
+  moduloListaDia,
   moduloTrabajos,
   moduloCalendario,
   moduloMonitorizacion,
