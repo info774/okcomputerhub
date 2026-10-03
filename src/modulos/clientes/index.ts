@@ -188,8 +188,9 @@ async function tabSedes(c: Cliente): Promise<string> {
 async function tabContactos(c: Cliente): Promise<string> {
   const { data } = await API.get<any[]>('contactos', { select: 'id,nombre,cargo,telefono,telefono2,email,local_id,favorito', cliente_id: `eq.${c.id}`, activo: 'eq.true', order: 'favorito.desc.nullslast,nombre' });
   const cs = data ?? [];
-  if (!cs.length) return '<p class="vacio">Sin contactos en la app.</p>';
-  return `<div class="cl-contactos">${cs.map(p => {
+  const nuevo = await esDelHub('contactos') ? `<p class="acciones"><a class="btn" href="#/contactos/nuevo/c/${esc(c.id)}">+ Nuevo contacto</a></p>` : '';
+  if (!cs.length) return `${nuevo}<p class="vacio">Sin contactos todavía.</p>`;
+  return `${nuevo}<div class="cl-contactos">${cs.map(p => {
     const wa = telWhatsApp(p.telefono);
     return `<article class="tarjeta"><h3><a href="#/contactos/${esc(p.id)}">${p.favorito ? '⭐ ' : ''}${esc(p.nombre)}</a></h3>${p.cargo ? `<p class="nota">${esc(p.cargo)}</p>` : ''}
       <div class="acciones">${p.telefono ? `<a class="btn secundario" href="tel:${esc(p.telefono)}">📞 ${esc(p.telefono)}</a>` : ''}

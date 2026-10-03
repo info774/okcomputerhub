@@ -419,6 +419,25 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   desde la fila) y ficha con datos, trabajos y tickets donde figura. Espejo en
   SOLO LECTURA; los contactos de las fichas de cliente y sitio enlazan aquí.
   Arnés `verify-contactos.mjs`.
+  Desde el 2026-10-03 (paridad bloque 2, tanda 4) con escritura PREPARADA para
+  el corte: `contactos/formulario.ts` (prefijo `ctf-`; `#/contactos/nuevo`,
+  `/nuevo/c/<cliente>`, `/nuevo/l/<sede>`, `/<id>/editar`); los EMPLEADOS solo
+  los toca un admin; «eliminar» es baja (`activo = false`). Arnés
+  `verify-contactos-escritura.mjs` (que prueba también lo de abajo).
+- **Google Maps** (`src/ui/maps.ts`, 2026-10-03): `buscadorMaps(prefijo)` +
+  `alElegirLugar(prefijo, fn)`, portado de `google-places.js` de la app: SOLO
+  Tenerife (`locationRestriction` sin `locationBias`, que Google rechaza junto) y
+  aviso si la ficha cae fuera; un fallo de Google se dice, no se vende como «sin
+  resultados». La clave es la de NAVEGADOR de la app (`PLACES_API_KEY` en
+  `config.ts`, no es secreta; la protege su lista de webs permitidas en Google
+  Cloud, PENDIENTE_FRAN §2 bis). Lo usan el formulario de sede
+  (`rellenarConLugar`) y la sede rápida del trabajo. Antes de crear una sede se
+  pregunta si hay otra de nombre parecido (`confirmarSedeNoDuplicada`, ≥ 80 %).
+- **Cliente y sede al vuelo** en el alta de trabajo (2026-10-03): «+ Nuevo
+  cliente» (mini formulario `tf-nc-`, decisión de Fran) y «+ Nueva sede»
+  (`tf-nl-`, con Google Maps) solo si el área `clientes` está cortada; se crean
+  al momento y quedan elegidos. El alta de cliente pasa SIEMPRE por
+  `crearCliente()` de `clientes/formulario.ts` (NIF repetido no, alta en Zoho).
 - **Tareas** (`src/modulos/tareas/`, `#/tareas`, 2026-09-28): las tareas de la
   app (ya no es un enlace): filtros de la app, por persona, lista y tablero, y
   ficha con lo que enlaza. Espejo en SOLO LECTURA (área `tareas`); NO son las
