@@ -12,7 +12,10 @@
 // recuerdan al recargar; centro de avisos; lanzador «Todas»; paleta en modo
 // Datos, Preguntar y Claude; volver a la app clásica; un técnico sin Cobros;
 // que por debajo de 1024 px no entra; tema noche; Accept-Profile: hub; sin
-// on*= inline; sin errores JS.
+// on*= inline; sin errores JS. Desde el 2026-10-03: el escritorio es la
+// entrada por defecto (sin preferencia guardada), lleva las piezas de Oki como
+// widgets (voz, Oki dice, estadísticas, órdenes), «Oki» en el dock abre la
+// portada en su ventana y el chat de WhatsApp plegado es solo un botón.
 import { servidor, navegador, baseMemoria, preparar, contador, CAPTURAS } from './comun.mjs';
 
 const PUERTO = 4186;
@@ -79,10 +82,10 @@ const RPC = {
 
 const srv = await servidor(PUERTO);
 const browser = await navegador();
-const nuevo = async ({ email = 'admin@ok.test', ancho = 1440, os = true } = {}) => {
+const nuevo = async ({ email = 'admin@ok.test', ancho = 1440, os = true, defecto = false } = {}) => {
   const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: ancho, height: 900 } });
   const base = baseMemoria(FIX, RPC);
-  await preparar(ctx, { email, base });
+  await preparar(ctx, { email, base, escritorio: defecto ? 'defecto' : 'clasico' });
   if (os) await ctx.addInitScript(() => localStorage.setItem('hub_escritorio', '1'));
   const page = await ctx.newPage();
   const errores = [];
@@ -258,7 +261,7 @@ try {
     await page.click('[data-action="osMenu"]');
     await page.click('[data-action="osSalir"]');
     await page.waitForSelector('.cabecera', { state: 'visible' });
-    ok(!(await page.$('#os-root')) && await page.evaluate(() => localStorage.getItem('hub_escritorio')) === null, 'volver a la app clásica apaga el modo y lo olvida');
+    ok(!(await page.$('#os-root')) && await page.evaluate(() => localStorage.getItem('hub_escritorio')) === '0', 'volver a la app clásica apaga el modo y se recuerda');
     await page.waitForSelector('#pantalla .pestanas');
     ok(true, 'la pantalla actual se repinta en el hub clásico');
 
@@ -266,6 +269,48 @@ try {
     ok(base.reg.escrituras.filter(e => e.metodo !== 'RPC').length === 0, 'el escritorio no escribe nada');
     const inline = await page.evaluate(() => [...document.querySelectorAll('*')].filter(e => [...e.attributes].some(a => /^on[a-z]+$/.test(a.name))).length);
     ok(inline === 0, 'ningún on*= inline en el DOM');
+    ok(errores.length === 0, `sin errores JS${errores.length ? ': ' + errores.join(' | ') : ''}`);
+    await ctx.close();
+  }
+
+  // 2 bis. Entrada por defecto y piezas de Oki
+  {
+    const { ctx, page, errores } = await nuevo({ os: false, defecto: true });
+    await page.goto(srv.base);
+    await page.waitForSelector('#os-root');
+    ok(true, 'sin preferencia guardada, a 1440 px se entra al modo escritorio');
+    for (const [id, que] of [['os-w-voz', 'Voz de Oki'], ['os-w-dice', 'Oki dice'], ['os-w-stats', 'Estadísticas'], ['os-w-ordenes', 'Órdenes rápidas']]) {
+      ok(await page.isVisible(`#${id}`), `widget ${que}`);
+    }
+    await page.waitForFunction(() => document.querySelector('#os-dice .ok-dice-txt p')?.textContent.includes('3 cosas'));
+    ok((await page.textContent('#os-dice')).includes('F26-0891') && await page.locator('#os-dice a[href="#/direccion"]').count() >= 1,
+      'Oki dice: lo más urgente (la factura vencida) desde el mismo motor de avisos');
+    await page.waitForSelector('#os-w-stats .ok-titular');
+    ok((await page.textContent('#os-w-stats')).includes('Trabajos completados'), 'widget Estadísticas con trabajos completados');
+    ok(await page.locator('#os-w-ordenes .ok-orden').count() === 6, 'widget Órdenes rápidas: 6 atajos');
+    // Los widgets nuevos también se arrastran y se recuerdan
+    const caja = await page.locator('#os-w-voz').boundingBox();
+    await page.mouse.move(caja.x + caja.width / 2, caja.y + 12);
+    await page.mouse.down();
+    await page.mouse.move(caja.x + caja.width / 2 + 200, caja.y + 160, { steps: 8 });
+    await page.mouse.up();
+    const pos = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.startsWith('hub_os_')))).escritorios[0].widgets ?? {}).length);
+    ok(pos >= 4, `arrastrar el widget de voz congela y guarda el sitio de todos (${pos})`);
+    // «Oki» en el dock: la portada en su ventana
+    await page.click('[data-action="osOki"]');
+    await page.waitForSelector('#os-win-inicio .ok-portada');
+    ok(await page.isVisible('#os-win-inicio .ok-escena') && await page.locator('#os-win-inicio .ok-voz[data-voz="portada"]').count() === 1, '«Oki» abre la portada de Oki como ventana');
+    ok(await page.locator('#os-dock .os-oki.abierta').count() === 1, 'el dock marca la ventana de Oki abierta');
+    // WhatsApp plegado: solo el botón
+    const wa = await page.locator('#wa.cerrado').boundingBox();
+    ok(wa && wa.width <= 64 && wa.height <= 64, `chat de WhatsApp plegado como botón (${Math.round(wa?.width)}×${Math.round(wa?.height)})`);
+    await page.screenshot({ path: `${CAPTURAS}/escritorio-oki.png` });
+    // Volver al clásico se recuerda al recargar
+    await page.click('[data-action="osMenu"]');
+    await page.click('[data-action="osSalir"]');
+    await page.reload();
+    await page.waitForSelector('#menu .menu-item');
+    ok(!(await page.$('#os-root')), 'quien vuelve a la app clásica se queda en ella al recargar');
     ok(errores.length === 0, `sin errores JS${errores.length ? ': ' + errores.join(' | ') : ''}`);
     await ctx.close();
   }

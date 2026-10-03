@@ -1,13 +1,18 @@
 // Modo escritorio: el hub como un escritorio con ventanas (propuesta 6 del
-// lienzo «Hub OS»). Convive con el shell clásico y no lo toca: se enciende
-// por persona (botón al pie del menú, `?os=1` / `?os=0` en la URL) y solo a
-// partir de 1024 px; quien no lo activa ve el hub de siempre.
+// lienzo «Hub OS»). Convive con el shell clásico y no lo toca. Desde el
+// 2026-10-03 (decisión de Fran) es la ENTRADA POR DEFECTO a partir de 1024 px;
+// quien pulsa «Volver a la app clásica» (o entra con `?os=0`) se queda en el
+// clásico hasta que vuelva a pulsar «Modo escritorio» (`?os=1`). En el móvil,
+// siempre el clásico con la portada de Oki.
 //
 // Cómo funciona: cada módulo se pinta en el cuerpo de SU ventana (una por
 // módulo; navegar a #/proyectos/12 repinta la de Proyectos), con la misma
 // `pintarPantalla` del shell clásico. El escritorio es el panel: widgets de
-// Hoy, Avisos, Cobros (admin), Equipos y Agenda, refrescados cada 5 min, que
-// se arrastran a cualquier punto del escritorio (sitio guardado por escritorio).
+// Hoy, Voz de Oki, Oki dice, Avisos, Agenda, Estadísticas, Equipos, Cobros
+// (admin) y Órdenes rápidas, que se arrastran a cualquier punto del escritorio
+// (sitio guardado por escritorio). Las piezas de Oki salen de
+// modulos/inicio/piezas.ts, las mismas que la portada; la portada entera se
+// abre como una ventana más con «Oki» en el dock.
 // Barra con escritorios (varios, con nombre), Ctrl+K, sync, avisos, tema y
 // reloj; dock con las pantallas del hub, Claude y «Todas». La disposición
 // (ventanas, tamaño, sitio, zona de ajuste) se guarda por persona y por
@@ -21,6 +26,7 @@ import { API } from '../core/api';
 import { esc, hace, toast } from '../ui/dom';
 import { visibles, hrefDe } from '../modulos/inicio';
 import { avisos as cargarAvisos, GRUPOS, esMio, type Aviso } from '../modulos/direccion';
+import { urgentesDe, diceHTML, pintarEstadisticas, vozHTML, ordenesHTML } from '../modulos/inicio/piezas';
 import { pintarPantalla } from './pantalla';
 import { abrirBuscador } from './buscador';
 
@@ -45,15 +51,16 @@ const guardar = (k: string, v: string | null) => { try { if (v == null) localSto
 const claveDisposicion = () => `hub_os_${usuario()?.id ?? 'anon'}`;
 
 // ── Activación ──────────────────────────────────────────────────────────────
+// Por defecto, encendido; '0' = la persona eligió el clásico.
 export function escritorioActivo(): boolean {
-  return leer(CLAVE_ACTIVO) === '1' && innerWidth >= ANCHO_MINIMO;
+  return leer(CLAVE_ACTIVO) !== '0' && innerWidth >= ANCHO_MINIMO;
 }
 
 // `?os=1` enciende el modo y `?os=0` lo apaga (y la URL se limpia).
 export function leerParametroOs() {
   const v = new URLSearchParams(location.search).get('os');
   if (v === null) return;
-  guardar(CLAVE_ACTIVO, v === '1' ? '1' : null);
+  guardar(CLAVE_ACTIVO, v === '1' ? '1' : '0');
   history.replaceState(null, '', location.pathname + location.hash);
 }
 
@@ -112,6 +119,7 @@ export function pintarEscritorio(raiz: HTMLElement) {
   reloj();
   for (const v of escritorio().ventanas) void abrirVentana(v.id, v.params, false);
   clearInterval(_timer);
+  _vuelta = 0;
   _timer = window.setInterval(() => { refrescarDatos(); reloj(); }, 60_000);
   void refrescarDatos();
 }
@@ -143,6 +151,8 @@ function pintarDock() {
   const fijas = hub.slice(0, DOCK_FIJAS);
   const enDock = [...fijas, ...hub.filter(m => abiertas.has(m.id) && !fijas.includes(m))];
   document.getElementById('os-dock')!.innerHTML = item({ id: 'inicio', titulo: 'Panel', icono: '▦' } as Modulo)
+    + `<button class="os-ditem os-oki ${abiertas.has('inicio') ? 'abierta' : ''} ${frente === 'inicio' ? 'activa' : ''}" data-action="osOki" title="Oki · centro de mando">
+        <span class="hex" aria-hidden="true">OKI</span><span class="os-dlabel">Oki</span><span class="os-dpunto"></span></button>`
     + enDock.map(m => item(m)).join('')
     + '<span class="os-dsep"></span>'
     + `<button class="os-ditem os-claude" data-action="osClaude" title="Pedir a Claude"><span class="hex" aria-hidden="true">✨</span><span class="os-dlabel">Claude</span><span class="os-dpunto"></span></button>`
@@ -374,18 +384,23 @@ const PESO = { mal: 0, aviso: 1, info: 2 } as const;
 
 function pintarWidgets() {
   const admin = esAdmin();
+  // El orden es el de las columnas (se rellenan de arriba abajo).
   document.getElementById('os-widgets')!.innerHTML = `
     <article class="os-widget os-w-hoy" id="os-w-hoy"><div class="os-wtit"><i class="hex-punto"></i>Hoy · ${esc(new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric' }))}</div>
       <p class="os-saludo">Hola, ${esc(usuario()?.nombre?.split(' ')[0] ?? '')}.<br><span id="os-hoy-frase">Cargando…</span></p>
       <div class="os-cifras" id="os-hoy-cifras"></div></article>
     <article class="os-widget" id="os-w-avisos"><div class="os-wtit"><i class="hex-punto mal"></i>Avisos<span id="os-w-avisos-n"></span></div><div class="os-wcuerpo" id="os-avisos-lista"><p class="cargando">Cargando…</p></div>
       <a class="os-wenlace" href="#/direccion">Abrir el puesto de mando →</a></article>
-    ${admin ? `<article class="os-widget" id="os-w-cobros"><div class="os-wtit"><i class="hex-punto"></i>Cobros<span>mantenimiento</span></div><div class="os-wcuerpo" id="os-cobros"><p class="cargando">Cargando…</p></div>
-      <a class="os-wenlace" href="#/cobros">Recordatorios de cobro →</a></article>` : ''}
     <article class="os-widget" id="os-w-equipos"><div class="os-wtit"><i class="hex-punto"></i>Equipos<span id="os-equipos-cuando">Breeze</span></div><div class="os-wcuerpo" id="os-equipos"><p class="cargando">Cargando…</p></div>
       <a class="os-wenlace" href="#/monitorizacion">Monitorización →</a></article>
+    <article class="os-widget os-w-voz ok-voz" id="os-w-voz" data-voz="escritorio">${vozHTML('escritorio', '<div class="os-wtit"><i class="hex-punto"></i>Voz de Oki</div>')}</article>
     <article class="os-widget os-w-agenda" id="os-w-agenda"><div class="os-wtit"><i class="hex-punto"></i>Agenda de hoy<span id="os-agenda-n"></span></div><div class="os-wcuerpo" id="os-agenda"><p class="cargando">Cargando…</p></div>
-      <a class="os-wenlace" href="#/calendario">Calendario en la app ↗</a></article>`;
+      <a class="os-wenlace" href="#/calendario">Calendario en la app ↗</a></article>
+    ${admin ? `<article class="os-widget" id="os-w-cobros"><div class="os-wtit"><i class="hex-punto"></i>Cobros<span>mantenimiento</span></div><div class="os-wcuerpo" id="os-cobros"><p class="cargando">Cargando…</p></div>
+      <a class="os-wenlace" href="#/cobros">Recordatorios de cobro →</a></article>` : ''}
+    <article class="os-widget os-w-dice" id="os-w-dice"><div class="os-wtit"><i class="hex-punto"></i>Oki dice</div><div class="ok-dice os-dice" id="os-dice"><p class="cargando">Cargando…</p></div></article>
+    <article class="os-widget os-w-stats ok-stats" id="os-w-stats"><div class="os-wtit"><i class="hex-punto"></i>Estadísticas<span>esta semana</span></div><p class="cargando">Cargando…</p></article>
+    <article class="os-widget os-w-ordenes" id="os-w-ordenes"><div class="os-wtit"><i class="hex-punto"></i>Órdenes rápidas</div><div class="os-ordenes">${ordenesHTML()}</div></article>`;
   colocarWidgets();
   for (const w of document.querySelectorAll<HTMLElement>('#os-widgets > .os-widget')) instalarArrastreWidget(w);
 }
@@ -466,9 +481,17 @@ function instalarArrastreWidget(w: HTMLElement) {
   });
 }
 
+let _vuelta = 0;
 async function refrescarDatos() {
   if (!document.getElementById('os-root')) return;
-  await Promise.all([widgetHoy(), widgetAvisos(), esAdmin() ? widgetCobros() : Promise.resolve(), widgetEquipos(), widgetAgenda(), chipSync()]);
+  // Las estadísticas leen 30 días de tickets: cada 5 vueltas (≈ 5 min).
+  const stats = _vuelta++ % 5 === 0 ? widgetEstadisticas() : Promise.resolve();
+  await Promise.all([widgetHoy(), widgetAvisos(), esAdmin() ? widgetCobros() : Promise.resolve(), widgetEquipos(), widgetAgenda(), chipSync(), stats]);
+}
+
+async function widgetEstadisticas() {
+  const el = document.getElementById('os-w-stats');
+  if (el) await pintarEstadisticas(el, el.querySelector('.os-wtit')!.outerHTML);
 }
 
 async function chipSync() {
@@ -507,6 +530,8 @@ async function widgetAvisos() {
   const lista = [..._avisos].sort((a, b) => PESO[a.gravedad] - PESO[b.gravedad]);
   const n = lista.filter(a => a.gravedad !== 'info').length;
   document.getElementById('os-w-avisos-n')!.innerHTML = n ? `<span class="chip ${lista.some(a => a.gravedad === 'mal') ? 'mal' : 'aviso'}">${n}</span>` : '';
+  const dice = document.getElementById('os-dice');
+  if (dice && !error) dice.innerHTML = diceHTML(urgentesDe(_avisos));
   const badge = document.getElementById('os-bell-n')!;
   badge.textContent = String(n); badge.hidden = !n;
   el.innerHTML = error && !lista.length ? `<p class="nota mal">No se pudieron leer: ${esc(error.message)}</p>`
@@ -606,10 +631,17 @@ registrarAcciones({
     if (id !== 'inicio') ir(id, ...params);
   },
   osSalir() {
-    guardar(CLAVE_ACTIVO, null);
+    guardar(CLAVE_ACTIVO, '0');
     quitarEscritorio();
     const { id, params } = rutaActual();
     ir(id, ...params);
+  },
+  // La portada de Oki en su ventana (#/inicio sigue siendo el escritorio).
+  osOki() {
+    const v = ventanaDe('inicio');
+    if (v && !v.min && ventanaFrente()?.id === 'inicio') { v.min = true; aplicarGeometria(v); guardarEstado(); pintarDock(); return; }
+    if (v) { v.min = false; aplicarGeometria(v); enfocar('inicio'); return; }
+    void abrirVentana('inicio', []);
   },
   osAbrir(id: string) {
     if (id === 'inicio') { ir('inicio'); return; }
