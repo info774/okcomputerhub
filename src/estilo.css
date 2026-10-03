@@ -764,3 +764,18 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .tf-rapido { margin: .25rem 0; }
 #cf-nif-estado:empty { display: none; }
 #cf-nif-estado.mal { color: var(--mal); }
+
+/* Editor de líneas de presupuesto y plantillas (presupuestos/lineas.ts). */
+.pl-tabla input { width: 100%; min-width: 0; }
+.pl-tabla td.num input { max-width: 7rem; text-align: right; }
+.pl-tabla td:first-child { min-width: 14rem; }
+.pl-anadir input[type="search"] { flex: 1 1 18rem; width: auto; min-width: 0; }
+.pf-plantillas { border: 1px solid var(--borde); border-radius: 9px; padding: .5rem .75rem; margin: .5rem 0; }
+.pf-plantillas legend { padding: 0 .3rem; font-size: .85rem; color: var(--texto-suave); }
+/* Facturar trabajos (trabajos/facturar.ts). */
+.ft-destino { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; border: 1px solid var(--borde); border-radius: 9px; padding: .5rem .75rem; margin: .5rem 0; }
+.ft-destino legend { padding: 0 .3rem; font-size: .85rem; color: var(--texto-suave); }
+.ft-tabla textarea { width: 100%; margin-top: .3rem; font: inherit; font-size: .85rem; }
+#ft-form [hidden] { display: none; }
+.pl-tabla td.num { vertical-align: top; padding-top: .9rem; }
+.tr-sel { position: sticky; top: 0; z-index: 2; background: var(--fondo); padding: .4rem 0; }

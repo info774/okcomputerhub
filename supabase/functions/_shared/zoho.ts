@@ -1,11 +1,16 @@
 // Cliente de Zoho Books para el hub (organización «Dalmon Sistemas S.L.»,
 // región eu). Es un cliente propio del hub, con su «Self Client»: no comparte
 // credenciales con la app actual. Casi todo es LECTURA (el espejo de dinero);
-// la única escritura es la de la paridad con la app (decisión de Fran,
-// 2026-10-03): dar de alta y quitar CONTACTOS al crear o eliminar un cliente
-// (`zohoEnviar`, función `clientes`), y solo con el área `clientes` cortada.
-// Permisos del Self Client: los de lectura + ZohoBooks.contacts.CREATE y
-// ZohoBooks.contacts.DELETE (docs/PENDIENTE_FRAN.md).
+// las escrituras son las de la paridad con la app (decisión de Fran,
+// 2026-10-03), cada una solo con su área cortada (`zohoEnviar`):
+//   · CONTACTOS al crear o eliminar un cliente (función `clientes`, área `clientes`);
+//   · PRESUPUESTOS (estimates) al mandar uno a Zoho (función `zoho-ventas`,
+//     área `presupuestos`);
+//   · FACTURAS de trabajos, nuevas o añadiendo a un borrador (función
+//     `zoho-ventas`, área `trabajos`).
+// Permisos del Self Client: los de lectura + ZohoBooks.contacts.CREATE/DELETE,
+// ZohoBooks.estimates.CREATE/UPDATE y ZohoBooks.invoices.CREATE/UPDATE
+// (docs/PENDIENTE_FRAN.md §5).
 //
 // Secrets de la función (Supabase del hub → Edge Functions → Secrets):
 //   ZOHO_HUB_CLIENT_ID, ZOHO_HUB_CLIENT_SECRET   del Self Client (api-console.zoho.eu)
@@ -74,11 +79,11 @@ export async function zohoGet(db: Db, ruta: string, params: Record<string, strin
   return j
 }
 
-// Escribir en Zoho (POST/DELETE). Devuelve la respuesta; NO lanza si Zoho
+// Escribir en Zoho (POST/PUT/DELETE). Devuelve la respuesta; NO lanza si Zoho
 // contesta con un código de error (quien llama decide, p. ej. desactivar en
 // vez de borrar).
 // deno-lint-ignore no-explicit-any
-export async function zohoEnviar(db: Db, metodo: 'POST' | 'DELETE', ruta: string, cuerpo?: unknown): Promise<any> {
+export async function zohoEnviar(db: Db, metodo: 'POST' | 'PUT' | 'DELETE', ruta: string, cuerpo?: unknown): Promise<any> {
   const q = new URLSearchParams({ organization_id: ORG() })
   const res = await fetch(`${API}/${ruta}?${q}`, {
     method: metodo,

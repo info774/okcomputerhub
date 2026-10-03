@@ -191,6 +191,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   SIMULADO (solo Tenerife, rellena, aviso fuera de la isla, fallo dicho), aviso
   de sede de nombre parecido, y cliente y sede al vuelo en el alta de trabajo
   (con Zoho y NIF repetido); el mundo sin corte.
+- `verify-presupuestos-escritura.mjs`: presupuestos (alta con plantillas que se
+  juntan, catálogo y a mano; desde una oportunidad; editar, duplicar, Zoho, a
+  trabajo, imprimible con IGIC, plantillas, eliminar solo admin) y facturar
+  trabajos (casillas en «Por facturar», líneas como la app, factura nueva,
+  añadir a un borrador, presupuesto desde trabajos, sede sin cliente); Zoho
+  SIMULADO; el mundo sin corte.
 - `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
   producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
   por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de

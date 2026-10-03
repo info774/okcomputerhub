@@ -1,9 +1,13 @@
-// Vista de Presupuestos (ver index.ts). Solo lectura mientras el área sea de la app.
+// Vista de Presupuestos (ver index.ts). Solo lectura mientras el área sea de la
+// app; con el área cortada: crear y editar (formulario.ts), plantillas
+// (plantillas.ts), imprimible y a trabajo (documento.ts), duplicar y eliminar.
 import { API } from '../../core/api';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
-import { esc, hace } from '../../ui/dom';
+import { esc, hace, toast } from '../../ui/dom';
+import { esAdmin } from '../../core/estado';
+import { llamarFuncion } from '../../core/funciones';
 import { barras } from '../../ui/barras';
 import { enApp, eur } from '../ventas/datos';
 import { esMio } from '../direccion';
@@ -33,6 +37,9 @@ let _q = '';
 let _filtro = 'abiertos';
 let _persona = '';      // '' todas · '__mios' · un nombre
 let _actual: string | null = null;
+
+/** Olvida la lista en caché (tras crear, editar, duplicar o eliminar). */
+export function olvidarPresupuestos() { _lista = []; _listaAt = 0; }
 
 const dia = (p: Presupuesto) => (p.fecha ?? p.created_at ?? '').slice(0, 10);
 // Días de calendario (los dos a mediodía): contar desde «ahora» restaba uno por la mañana.
@@ -109,6 +116,8 @@ async function pintarLista(el: HTMLElement) {
     <div class="pp-cabeza">${cifras()}${reparto()}</div>
     <div class="acciones mo-barra">
       <input id="pp-filtro" type="search" placeholder="Buscar por número, título, cliente o persona…" value="${esc(_q)}" data-on-input="ppFiltrar:$value" aria-label="Buscar presupuesto">
+      ${delHub ? '<a class="btn" href="#/presupuestos/nuevo">+ Nuevo presupuesto</a>' : ''}
+      <a class="btn secundario" href="#/presupuestos/plantillas">Plantillas</a>
       <select id="pp-persona" data-on-change="ppPersona:$value" aria-label="Persona">
         <option value="">Todo el equipo</option><option value="__mios" ${_persona === '__mios' ? 'selected' : ''}>Los míos</option>
         ${personas.map(p => `<option ${p === _persona ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>
@@ -134,12 +143,12 @@ async function pintarFicha(el: HTMLElement, id: string) {
   const { data: p, error } = await API.single<Presupuesto>('presupuestos', { select: COLS, id: `eq.${id}` });
   if (error || !p) { el.innerHTML = '<p class="aviso mal">No se encontró el presupuesto.</p><p><a href="#/presupuestos">← Presupuestos</a></p>'; return; }
   const uno = async (tabla: string, idv: string | null, cols: string) => idv ? (await API.single<any>(tabla, { select: cols, id: `eq.${idv}` })).data : null;
-  const [cli, loc, con, opo, lin, tra, delHub] = await Promise.all([
+  const [cli, loc, con, opo, lin, tra, delHub, delTrabajos] = await Promise.all([
     uno('clientes', p.cliente_id, 'id,nombre'), uno('locales', p.local_id, 'id,nombre'), uno('contactos', p.contacto_id, 'id,nombre,telefono'),
     uno('oportunidades', p.oportunidad_id, 'id,titulo'),
     API.fetchAll<Linea>('documento_lineas', { select: 'id,nombre,cantidad,precio,descuento,subtotal,orden,categoria', presupuesto_id: `eq.${id}`, order: 'orden.nullslast,id' }),
     API.fetchAll<{ id: string; numero: number | null; titulo: string | null; estado: string | null }>('trabajos', { select: 'id,numero,titulo,estado', presupuesto_id: `eq.${id}` }),
-    esDelHub('presupuestos'),
+    esDelHub('presupuestos'), esDelHub('trabajos'),
   ]);
   if (_actual !== id) return;
   const lineas = lin.data ?? [];
@@ -148,7 +157,14 @@ async function pintarFicha(el: HTMLElement, id: string) {
   el.innerHTML = `<p><a href="#/presupuestos">← Presupuestos</a></p>
     ${delHub ? '' : avisoSoloLectura('Presupuestos')}
     <div class="tarjeta-cab"><h2>${esc(nombre(p))}</h2>
-      <div class="acciones">${botonChatFicha('presupuesto', p.id, nombre(p), `#/presupuestos/${p.id}`)}<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los presupuestos se cambian y se mandan a Zoho en la app actual">Abrir en la app ↗</a></div></div>
+      <div class="acciones">${botonChatFicha('presupuesto', p.id, nombre(p), `#/presupuestos/${p.id}`)}
+        <a class="btn secundario" href="#/presupuestos/${esc(p.id)}/pdf">🖨 PDF</a>
+        ${delHub ? `<a class="btn secundario" href="#/presupuestos/${esc(p.id)}/editar">✎ Editar</a>
+          <button class="btn secundario" data-action="ppDuplicar" data-p0="${esc(p.id)}">⧉ Duplicar</button>
+          <button class="btn secundario" data-action="ppZoho" data-p0="${esc(p.id)}" title="${p.zoho_estimate_id ? 'Ya está en Zoho: se actualiza' : 'Crea el presupuesto en Zoho Books y lo deja «Enviado»'}">📤 ${p.zoho_estimate_id ? 'Actualizar en Zoho' : 'Enviar a Zoho'}</button>
+          ${p.estado === 'Aceptado' && delTrabajos ? `<a class="btn" href="#/presupuestos/${esc(p.id)}/trabajo">🛠 Convertir en trabajo</a>` : ''}
+          ${esAdmin() ? `<button class="btn peligro" data-action="ppEliminar" data-p0="${esc(p.id)}">Eliminar</button>` : ''}`
+        : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los presupuestos se cambian y se mandan a Zoho en la app actual">Abrir en la app ↗</a>`}</div></div>
     <p>${chipEstado(p.estado)} ${sinRespuesta(p) ? `<span class="chip mal">Enviado hace ${diasDesde(p)} días, sin respuesta</span>` : ''} ${p.zoho_estimate_id ? '<span class="chip">En Zoho Books</span>' : ''}</p>
     <div class="me-grid">
       <section class="tarjeta pp-total"><h3>💶 Total</h3><p class="di-valor">${eur(p.total, 2)}</p>
@@ -173,13 +189,57 @@ async function pintarFicha(el: HTMLElement, id: string) {
 }
 
 export async function pintarPresupuestos(el: HTMLElement, params: string[]) {
-  if (params[0]) await pintarFicha(el, params[0]);
+  const [a, b, c] = params;
+  if (a === 'nuevo') {
+    const desde = b === 'c' ? { cliente: c } : b === 'o' ? { oportunidad: c } : undefined;
+    return (await import('./formulario')).pintarFormulario(el, undefined, desde);
+  }
+  if (a === 'plantillas') return (await import('./plantillas')).pintarPlantillas(el, b);
+  if (a && b === 'editar') return (await import('./formulario')).pintarFormulario(el, a);
+  if (a && b === 'pdf') return (await import('./documento')).pintarDocumento(el, a);
+  if (a && b === 'trabajo') return (await import('./documento')).pintarATrabajo(el, a);
+  if (a) await pintarFicha(el, a);
   else await pintarLista(el);
 }
 
 let _timer: number | undefined;
 registrarAcciones({
   ppAbrir(id: string) { ir('presupuestos', id); },
+  // duplicarPresupuesto de la app: copia con sus líneas, en Borrador, con fecha
+  // de hoy y sin número, sin Zoho y sin oportunidad.
+  async ppDuplicar(id: string) {
+    const [{ data: p }, { data: ls }] = await Promise.all([
+      API.single<any>('presupuestos', { select: '*', id: `eq.${id}` }),
+      API.get<any[]>('documento_lineas', { select: 'nombre,cantidad,precio,descuento', presupuesto_id: `eq.${id}`, order: 'orden.nullslast,created_at' }),
+    ]);
+    if (!p) { toast('No se pudo leer el presupuesto', 'error'); return; }
+    const r = await API.post<{ id: string }[]>('presupuestos', {
+      cliente_id: p.cliente_id, local_id: p.local_id, contacto_id: p.contacto_id, titulo: `${p.titulo || 'Presupuesto'} (copia)`,
+      exigencias: p.exigencias, tecnico_id: p.tecnico_id, estado: 'Borrador', total: 0, fecha: new Date().toLocaleDateString('sv-SE'),
+    });
+    const nuevo = r.data?.[0]?.id;
+    if (r.error || !nuevo) { toast(`No se pudo duplicar: ${r.error?.message ?? 'sin respuesta'}`, 'error'); return; }
+    const l = await API.rpc('presupuesto_guardar_lineas', { p_presupuesto: nuevo, p_lineas: ls ?? [] });
+    if (l.error) toast(`Duplicado, pero las líneas no: ${l.error.message}`, 'error');
+    else toast(`Presupuesto duplicado${ls?.length ? ` con ${ls.length} líneas` : ''}`);
+    olvidarPresupuestos();
+    ir('presupuestos', nuevo);
+  },
+  // sendPresupuestoToZoho de la app: crea (o actualiza) el estimate y lo deja «Enviado».
+  async ppZoho(id: string) {
+    toast('Enviando a Zoho Books…');
+    const r = await llamarFuncion<{ numero: string | null; actualizado: boolean }>('zoho-ventas', { accion: 'presupuesto', presupuesto_id: id }, 45000);
+    if (r.error) { toast(`Zoho: ${r.error}`, 'error'); return; }
+    olvidarPresupuestos();
+    toast(`${r.data?.actualizado ? 'Actualizado' : 'Creado'} en Zoho Books${r.data?.numero ? ` (${r.data.numero})` : ''}`);
+    resolver();
+  },
+  async ppEliminar(id: string) {
+    if (!esAdmin() || !confirm('¿Eliminar este presupuesto con sus líneas? No se puede deshacer.')) return;
+    const r = await API.delete('presupuestos', { id: `eq.${id}` });
+    if (r.error) { toast(`No se pudo eliminar: ${r.error.message}`, 'error'); return; }
+    olvidarPresupuestos(); toast('Presupuesto eliminado'); ir('presupuestos');
+  },
   ppFiltro(k: string) { _filtro = k; resolver(); },
   ppPersona(v: string) { _persona = v; resolver(); },
   ppFiltrar(v: string) {

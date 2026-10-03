@@ -657,6 +657,21 @@ try {
   ok(psql(`select count(*) from hub.areas, unnest(tablas) t where area = 'clientes' and t in ('local_software', 'local_hardware', 'local_camaras', 'rmm_despliegues', 'plan_tareas', 'sitio_tarea_seguimiento')`) === '6'
     && !psql(como('authenticated', 'ana@ok.test', `insert into hub.local_hardware (nombre) values ('TPV');`), { esperaError: true }).ok,
     'equipamiento de la sede (20261022): en el área clientes y sin el corte no se escribe');
+  const pres = psql(`insert into hub.presupuestos (titulo, estado, cliente_id) values ('Cámaras bar', 'Aceptado', '00000000-0000-0000-0000-0000000000c1') returning id;`).split('\n').pop();
+  ok(!psql(como('authenticated', 'ana@ok.test', `select hub.presupuesto_guardar_lineas('${pres}', '[{"nombre":"Cámara","cantidad":2,"precio":100}]');`), { esperaError: true }).ok
+    && !psql(como('authenticated', 'ana@ok.test', `insert into hub.presupuesto_plantillas (nombre) values ('x');`), { esperaError: true }).ok,
+    'presupuestos (20261023): sin el corte, ni líneas ni plantillas');
+  psql(`update hub.areas set dueno = 'hub' where area = 'presupuestos';`);
+  const tot = psql(como('authenticated', 'tito@ok.test', `select hub.presupuesto_guardar_lineas('${pres}', '[{"nombre":"Cámara","cantidad":2,"precio":100,"descuento":10},{"nombre":"Instalación","precio":50},{"nombre":"  "}]');`)).split('\n').pop();
+  ok(Number(tot) === 230 && psql(`select total from hub.presupuestos where id = '${pres}'`) === '230.00' && psql(`select count(*) from hub.documento_lineas where presupuesto_id = '${pres}'`) === '2',
+    `presupuestos: con su área, las líneas se guardan (sin las vacías) y el total sale de ellas (${tot})`);
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_desde_presupuesto('${pres}', '{"descripcion":"Instalar"}');`), { esperaError: true }).ok,
+    'presupuesto a trabajo: sin el área de trabajos, no');
+  psql(como('authenticated', 'tito@ok.test', `delete from hub.presupuestos where id = '${pres}';`));
+  ok(psql(`select count(*) from hub.presupuestos where id = '${pres}'`) === '1', 'presupuestos: un técnico no los borra');
+  psql(como('authenticated', 'ana@ok.test', `delete from hub.presupuestos where id = '${pres}';`));
+  ok(psql(`select count(*) from hub.documento_lineas where presupuesto_id = '${pres}'`) === '0', 'presupuestos: borrar uno (admin) se lleva sus líneas');
+  psql(`update hub.areas set dueno = 'app' where area = 'presupuestos';`);
 
   // ── Reloj: vinculación por código, huella del token y fichar a nombre de la persona ──
   const [rtok, rcod] = psql(como('service_role', null, `select token || '|' || codigo from hub.reloj_iniciar();`)).split('\n').pop().split('|');
@@ -751,6 +766,13 @@ commit;`);
   psql(como('authenticated', 'tito@ok.test', `insert into hub.sitio_tarea_seguimiento (local_id, tarea_id, periodo) values ('00000000-0000-0000-0000-0000000000c1', '${pt}', '2026-10');`));
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.sitio_tarea_seguimiento (local_id, tarea_id, periodo) values ('00000000-0000-0000-0000-0000000000c1', '${pt}', '2026-10');`), { esperaError: true }).ok,
     'seguimiento: una marca por sede, tarea y periodo');
+  const pres2 = psql(`insert into hub.presupuestos (titulo, cliente_id, local_id) values ('Alarma', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000c1') returning id;`).split('\n').pop();
+  psql(como('authenticated', 'tito@ok.test', `select hub.presupuesto_guardar_lineas('${pres2}', '[{"nombre":"Hub alarma","precio":180}]');`));
+  const nuevoT = psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_desde_presupuesto('${pres2}', '{"descripcion":"Instalar alarma","tipo":"Instalación","fecha":"2026-11-02","tecnicos":["Tito"]}');`)).split('\n').pop();
+  const tidP = JSON.parse(nuevoT).id;
+  ok(psql(`select presupuesto_id || '|' || tipo || '|' || array_to_string(tecnicos, ',') || '|' || fecha_programada from hub.trabajos where id = '${tidP}'`) === `${pres2}|Instalación|Tito|2026-11-02`
+    && psql(`select count(*) from hub.documento_lineas where trabajo_id = '${tidP}' and nombre = 'Hub alarma'`) === '1' && JSON.parse(nuevoT).numero > 0,
+    'presupuesto a trabajo: tras el corte, el trabajo nace con el presupuesto, sus datos y una copia de las líneas');
   const nota = psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${titoId}', 'Comprar bridas') returning id;`)).split('\n').pop();
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${anaId}', 'A nombre de otra');`), { esperaError: true }).ok, 'tablero: nadie apunta notas a nombre de otro');
   psql(como('authenticated', 'ana@ok.test', `update hub.tablero_notas set titulo = 'Pisada' where id = '${nota}'; delete from hub.tablero_notas where id = '${nota}';`));

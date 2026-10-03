@@ -1,8 +1,9 @@
 // Presupuestos (los de «Presupuestos» de la app actual): #/presupuestos (cifras,
 // reparto por estado y lista con filtros) y #/presupuestos/<id> (ficha con sus
 // líneas y lo que salió de él). Es ESPEJO de la app (área `presupuestos`, dueño
-// `app`): aquí se consultan; se crean, se cambian y se mandan a Zoho allí.
-// Vista bajo demanda. Prefijo de ids: pp-.
+// `app`) y, con el área cortada, se crean y editan aquí (con líneas del
+// catálogo y plantillas), se imprimen, se duplican, se convierten en trabajo y
+// se mandan a Zoho. Vista bajo demanda. Prefijos de ids: pp-, pf-, ppl-, ppd-, pat-.
 import type { Modulo, Contador } from '../../core/modulo';
 import { API } from '../../core/api';
 
@@ -20,7 +21,7 @@ export const moduloPresupuestos: Modulo = {
   titulo: 'Presupuestos',
   grupo: 'Clientes',
   icono: '📄',
-  explicacion: 'Los presupuestos de la app: cuánto hay abierto, cuánto se acepta y lo que lleva días enviado sin respuesta; cada uno con sus líneas, su cliente, su sede y el trabajo que salió de él. Es la copia de la app (se refresca cada 15 min): se crean, se cambian y se mandan a Zoho allí.',
+  explicacion: 'Los presupuestos de la app: cuánto hay abierto, cuánto se acepta y lo que lleva días enviado sin respuesta; cada uno con sus líneas, su cliente, su sede y el trabajo que salió de él. Mientras se lleven en la app es su copia (se refresca cada 15 min); al hacer el cambio se crean aquí con líneas del catálogo y plantillas, se imprimen, se convierten en trabajo y se mandan a Zoho.',
   async pintar(el, params) {
     const { pintarPresupuestos } = await import('./vista');
     await pintarPresupuestos(el, params);

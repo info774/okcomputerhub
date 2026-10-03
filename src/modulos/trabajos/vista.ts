@@ -36,6 +36,8 @@ let _nombres = new Map<string, string>();
 let _t: Trabajo | null = null;
 let _lineas: Linea[] = [];
 let _arrastrado = '';
+// Trabajos marcados para facturarlos juntos (lista «Por facturar»).
+const _sel = new Set<string>();
 
 function filas(): Trabajo[] {
   const q = norm(leer('hub_tr_q', ''));
@@ -43,8 +45,11 @@ function filas(): Trabajo[] {
   return _lista.filter(t => (!tec || (tec === '__yo' ? esMio(t.tecnicos) : (t.tecnicos ?? []).includes(tec)))
     && (!q || norm(`${t.numero} ${t.titulo ?? ''} ${t.descripcion ?? ''} ${_nombres.get(t.cliente_id ?? '') ?? ''}`).includes(q)));
 }
-const tabla = () => { const fs = filas(); return fs.length ? `<div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>#</th><th>Trabajo</th><th>Cliente</th><th>Técnicos</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
-  ${fs.map(t => `<tr class="fila-clic" data-action="trAbrir" data-p0="${t.numero}"><td>${t.numero}</td><td><strong>${esc(t.titulo ?? '')}</strong><br><small class="nota">${esc((t.descripcion ?? '').slice(0, 90))}</small></td>
+const facturando = () => _escribe && leer('hub_tr_filtro', 'abiertos') === 'facturar';
+const barraSel = () => facturando() ? `<div class="acciones tr-sel" id="tr-sel"><span class="nota">${_sel.size ? `${_sel.size} ${_sel.size === 1 ? 'trabajo marcado' : 'trabajos marcados'}` : 'Marca los trabajos que van en la misma factura.'}</span>
+  <button class="btn" data-action="trFacturarSel" ${_sel.size ? '' : 'disabled'}>💶 Facturar ${_sel.size ? `(${_sel.size})` : ''}</button></div>` : '';
+const tabla = () => { const fs = filas(); return fs.length ? `${barraSel()}<div class="tarjeta mo-scroll"><table class="tabla"><thead><tr>${facturando() ? '<th><span class="sr">Marcar</span></th>' : ''}<th>#</th><th>Trabajo</th><th>Cliente</th><th>Técnicos</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
+  ${fs.map(t => `<tr class="fila-clic" data-action="trAbrir" data-p0="${t.numero}">${facturando() ? `<td><input type="checkbox" aria-label="Marcar #${t.numero}" data-action="trSel" data-p0="${t.id}" data-p1="$this" ${_sel.has(t.id) ? 'checked' : ''}></td>` : ''}<td>${t.numero}</td><td><strong>${esc(t.titulo ?? '')}</strong><br><small class="nota">${esc((t.descripcion ?? '').slice(0, 90))}</small></td>
     <td>${esc(_nombres.get(t.cliente_id ?? '') ?? '')}</td><td>${esc((t.tecnicos ?? []).join(', '))}</td><td>${esc(t.fecha_programada ?? '')}${t.hora_llegada ? ` ${esc(t.hora_llegada.slice(0, 5))}` : ''}</td>
     <td><span class="chip ${TONO[t.estado] ?? ''}">${esc(t.estado)}</span></td></tr>`).join('')}</tbody></table></div>` : '<p class="vacio">Ningún trabajo con ese filtro.</p>'; };
 
@@ -114,7 +119,10 @@ function editorLineas(): string {
 }
 
 async function vistaFicha(numero: string): Promise<string> {
-  const { data: t } = await API.single<Trabajo>('trabajos', { select: '*', numero: `eq.${Number(numero) || 0}` });
+  // Por número (#/trabajos/151) o por id: las fichas de sede, contacto, tarea y
+  // presupuesto enlazan con el id del trabajo.
+  const filtro: Record<string, string> = /^[0-9a-f-]{36}$/i.test(numero) ? { id: `eq.${numero}` } : { numero: `eq.${Number(numero) || 0}` };
+  const { data: t } = await API.single<Trabajo>('trabajos', { select: '*', ...filtro });
   if (!t) return '<p class="aviso mal">No existe ese trabajo.</p><p><a href="#/trabajos">← Trabajos</a></p>';
   _t = t;
   const [cli, loc, con, bloques, ses, lin, coms, fotos, tks, personas, escribe] = await Promise.all([
@@ -144,6 +152,7 @@ async function vistaFicha(numero: string): Promise<string> {
       ${botonChatFicha('trabajo', t.id, `#${t.numero} ${t.titulo ?? ''}`.trim(), `#/trabajos/${t.numero}`)}
       ${escribe ? `<a class="btn secundario" href="#/trabajos/${t.numero}/editar">✎ Editar</a>
         <button class="btn secundario" data-action="trDuplicar">⧉ Duplicar</button>
+        ${['Facturado', 'No facturar', 'Cancelado'].includes(t.estado) ? '' : `<a class="btn" href="#/trabajos/facturar/${esc(t.id)}">💶 Facturar</a>`}
         ${['Completado', 'Cancelado', 'Facturado', 'No facturar'].includes(t.estado) ? '' : '<button class="btn secundario" data-action="trContinuacion" title="Otro trabajo que sigue a este (otra visita)">↪ Continuación</button>'}` : ''}</div>
     <div class="op-ficha"><div>
       <section class="tarjeta"><h3>Qué hay que hacer</h3><div class="md">${markdown(t.descripcion) || '<p class="nota">Sin descripción.</p>'}</div>
@@ -170,6 +179,7 @@ export async function pintar(el: HTMLElement, params: string[]) {
   if (params[0] === 'nuevo') { await pintarFormulario(el); return; }
   if (params[0] && params[1] === 'editar') { await pintarFormulario(el, params[0]); return; }
   if (params[0] === 'plantillas') { await (await import('./plantillas')).pintarPlantillas(el, params[1]); return; }
+  if (params[0] === 'facturar') { await (await import('./facturar')).pintarFacturar(el, params[1]); return; }
   if (params[0] && params[1] === 'parte') { await (await import('./parte')).pintarParte(el, params[0]); return; }
   el.innerHTML = params[0] ? await vistaFicha(params[0]) : await vistaLista();
 }
@@ -178,7 +188,14 @@ const val = (id: string) => (document.getElementById(id) as HTMLInputElement | n
 let _timer = 0;
 registrarAcciones({
   trAbrir(n: string) { ir('trabajos', n); },
-  trFiltro(f: string) { guardar('hub_tr_filtro', f); resolver(); },
+  trFiltro(f: string) { guardar('hub_tr_filtro', f); _sel.clear(); resolver(); },
+  // Marcar sin abrir la ficha: la casilla es su propia acción (la más cercana gana).
+  trSel(id: string, el: HTMLInputElement) {
+    if (el.checked) _sel.add(id); else _sel.delete(id);
+    const b = document.getElementById('tr-sel');
+    if (b) b.outerHTML = barraSel();
+  },
+  trFacturarSel() { if (_sel.size) { const ids = [..._sel]; _sel.clear(); ir('trabajos', 'facturar', ids.join(',')); } },
   trTecnico(v: string) { guardar('hub_tr_tecnico', v); const c = document.getElementById('tr-lista'); if (c) c.innerHTML = cuerpoLista(); },
   trBuscar(q: string) { guardar('hub_tr_q', q); const c = document.getElementById('tr-lista'); if (c) c.innerHTML = cuerpoLista(); },
   trVista(v: string) { guardar('hub_tr_vista', v); resolver(); },
