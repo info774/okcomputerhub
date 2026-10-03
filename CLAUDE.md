@@ -422,7 +422,20 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   persona» desde `panorama_direccion` y, debajo, las baldosas de siempre. El
   diagrama es un lienzo de 860 × 620 que escala por `cqw`. Sin colores fuera de
   los tokens; el movimiento se apaga con `prefers-reduced-motion`. El menú
-  lateral se anima desde `oki.css`. Arnés `verify-oki.mjs`.
+  lateral se anima desde `oki.css`. Arnés `verify-oki.mjs`. Desde el
+  2026-10-03 lleva el resto del tablero: cabecera con «Estado» (última pasada
+  buena de `sync_estado`) y campana de avisos, «Voz de Oki» y órdenes rápidas
+  (columna a la izquierda solo si la portada pasa de 1250 px; si no, en fila
+  arriba), «Trabajos completados» (completados cuyo fichaje acabó esta semana:
+  la app no guarda cuándo se completa), «Sí, contéstalo» cuando lo más urgente
+  es un ticket (`#/tickets/<n>/responder`: la función `oki` lo redacta y una
+  persona lo manda) y el pie con «Hablar con Oki» y el repaso de la mañana
+  (`informes-enviar`, `vista_previa`). La voz (`grabarYTranscribir` de
+  `ui/dictado.ts`): lo que suena a pregunta (`esPregunta`) va a `#/buscar`; un
+  encargo se reparte como comanda SOLO tras confirmarlo (avisa al equipo). OJO:
+  el despachador desactiva el botón mientras dura una acción asíncrona; una
+  acción que espera a que la persona vuelva a pulsar (grabar) tiene que volver
+  al momento y seguir aparte.
 - **Chat de WhatsApp fijo** (`src/shell/whatsapp.ts`, función `whatsapp`,
   2026-10-02, con el OK de Fran a escribir en la app para esto): ventana abajo a
   la derecha en TODAS las pantallas, plegada al entrar. Las conversaciones son
@@ -434,9 +447,12 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `wa_conversaciones`. Son las ÚNICAS escrituras del hub en `okcomputer`; nada
   más se le escribe. El comentario del ticket va a `hub.ticket_comentarios`
   (`tipo = respuesta`, canal whatsapp). Regla de Meta: texto libre solo dentro
-  de las 24 h desde el último mensaje del CLIENTE (la caja se bloquea fuera; la
-  plantilla se manda desde la app). Oki PROPONE (`proponer`, Claude) y una
+  de las 24 h desde el último mensaje del CLIENTE (la caja se bloquea fuera).
+  Oki PROPONE (`proponer`, Claude) y una
   persona manda. Si cambian las tablas `wa_*` de la app, cambiar la función.
+  Fuera de las 24 h, «📨 Mandar plantilla» manda `WHATSAPP_PLANTILLA_TEXTO`
+  (plantilla de Meta con UNA variable, `{{1}}` = nombre) y se apunta como
+  `tipo = template`, igual que las de la app.
 - **Trabajos: alta y edición** (`src/modulos/trabajos/formulario.ts`,
   2026-10-03, paridad bloque 1): UN formulario para crear y editar
   (`#/trabajos/nuevo`, `#/trabajos/<n>/editar`, prefijo `tf-`) con caras Simple

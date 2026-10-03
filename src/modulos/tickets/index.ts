@@ -165,7 +165,9 @@ async function pintarFicha(el: HTMLElement, numero: string) {
               <option value="otro" ${porDefecto === 'otro' ? 'selected' : ''}>📞 Ya se lo he dicho (teléfono, en persona)</option></select></label>
           </div>
           <textarea id="tk-texto" rows="5" required placeholder="Escribe…"></textarea>
-          <div class="acciones"><button class="btn" type="submit" id="tk-enviar">Enviar</button></div>
+          <div id="tk-oki"></div>
+          <div class="acciones"><button class="btn" type="submit" id="tk-enviar">Enviar</button>
+            <button type="button" class="btn secundario" data-action="tkOki">✨ Que Oki lo redacte</button></div>
         </form>
       </div>
       <div>
@@ -286,7 +288,23 @@ async function pintar(el: HTMLElement, params: string[]) {
   if (a === 'nuevo') return pintarNuevo(el);
   if (a === 'bandeja') return pintarBandeja(el);
   if (a === 'ajustes') return pintarAjustes(el);
-  return pintarFicha(el, a);
+  await pintarFicha(el, a);
+  // #/tickets/<n>/responder («Sí, contéstalo» de la portada): Oki redacta y la persona manda.
+  if (params[1] === 'responder' && _actual) await proponerOki();
+}
+
+async function proponerOki() {
+  const caja = document.getElementById('tk-oki'), ta = document.getElementById('tk-texto') as HTMLTextAreaElement | null;
+  if (!_actual || !caja || !ta) return;
+  const id = _actual.id;
+  caja.innerHTML = '<p class="nota"><span class="hex-punto pulso" aria-hidden="true"></span> Oki está redactando la respuesta…</p>';
+  const r = await llamarFuncion<{ propuesta: string | null; motivo?: string }>('oki', { accion: 'proponer_ticket', ticket_id: id }, 60000);
+  if (_actual?.id !== id || !document.getElementById('tk-oki')) return;
+  if (r.data?.propuesta) {
+    ta.value = r.data.propuesta;
+    ta.focus();
+    caja.innerHTML = '<p class="nota">✨ Lo ha redactado Oki: repásalo antes de enviarlo.</p>';
+  } else caja.innerHTML = `<p class="nota">${esc(r.error ? `Oki no ha podido redactarla: ${r.error}` : r.data?.motivo ?? 'Oki no ha propuesto nada.')}</p>`;
 }
 
 // ── Acciones ───────────────────────────────────────────────────────────────
@@ -362,6 +380,7 @@ registrarAcciones({
     if (via) via.hidden = v === 'nota';
     if (b) b.textContent = v === 'nota' ? 'Guardar nota' : 'Enviar';
   },
+  tkOki: proponerOki,
   tkPlantilla(id: string) {
     const p = _plantillas.find(x => x.id === id), ta = document.getElementById('tk-texto') as HTMLTextAreaElement | null;
     if (p && ta && _actual) { ta.value = rellenar(p.texto, _actual, _ctx); ta.focus(); }

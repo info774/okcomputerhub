@@ -33,8 +33,88 @@
 .ok-portada > * { animation: ok-entra .6s cubic-bezier(.2,.8,.2,1) both; }
 .ok-portada > *:nth-child(2) { animation-delay: 80ms; } .ok-portada > *:nth-child(3) { animation-delay: 160ms; }
 .ok-portada > *:nth-child(4) { animation-delay: 240ms; }
-.ok-saludo { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1rem; }
-.ok-saludo h2 { margin: 0; font-size: 1.9rem; font-weight: 500; letter-spacing: -.035em; }
+/* Cabecera: saludo, estado del sync, reloj y campana de avisos */
+.ok-cab { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; }
+.ok-cab h2 { flex: 1 1 260px; margin: 0; font-size: 1.9rem; font-weight: 500; letter-spacing: -.035em; }
+.ok-estado { display: inline-flex; align-items: center; gap: .45rem; height: 36px; padding: 0 .9rem; border: 1px solid var(--borde); border-radius: 999px; background: var(--superficie); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.ok-estado b { color: var(--primario); }
+.ok-estado.mal .hex-punto { background: var(--mal); }
+.ok-estado.mal b { color: var(--mal); }
+.ok-campana { position: relative; }
+.ok-campana summary { list-style: none; position: relative; width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--borde); border-radius: 9px; background: var(--superficie); cursor: pointer; transition: border-color .2s; }
+.ok-campana summary::-webkit-details-marker { display: none; }
+.ok-campana summary:hover, .ok-campana[open] summary { border-color: var(--verde); }
+.ok-campana summary svg { fill: none; stroke: var(--texto); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ok-campana-n { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: var(--mal); color: #fff; font-size: .7rem; font-weight: 700; display: grid; place-items: center; }
+.ok-campana-n[hidden] { display: none; }
+.ok-campana-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 50; width: min(340px, calc(100vw - 32px)); padding: .5rem; background: var(--superficie); border: 1px solid var(--borde); border-radius: 12px; box-shadow: var(--sombra); animation: ok-entra .25s cubic-bezier(.2,.8,.2,1) both; }
+.ok-campana-cab { display: flex; justify-content: space-between; align-items: center; padding: .3rem .5rem .6rem; border-bottom: 1px solid var(--borde); margin-bottom: .3rem; }
+.ok-campana-cab b { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--primario); }
+.ok-campana-op { display: flex; gap: .6rem; align-items: flex-start; padding: .55rem .5rem; border-radius: 8px; color: var(--texto); text-decoration: none; }
+.ok-campana-op:hover { background: var(--fondo); }
+.ok-campana-op .hex-punto { flex: none; margin-top: .3rem; }
+.ok-campana-op.mal .hex-punto { background: var(--mal); }
+.ok-campana-op span:last-child { display: flex; flex-direction: column; }
+.ok-campana-op small { color: var(--texto-suave); }
+
+/* Cuerpo: voz y órdenes a la izquierda (abajo del todo, en fila, si no cabe) */
+.ok-cuerpo { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.ok-lateral { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; align-content: start; }
+.ok-principal { container-type: inline-size; display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+@container (min-width: 1250px) {
+  .ok-cuerpo { grid-template-columns: 250px minmax(0, 1fr); }
+  .ok-lateral { grid-template-columns: 1fr; }
+}
+
+/* Voz de Oki */
+@keyframes ok-ola { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+.ok-voz { display: flex; flex-direction: column; align-items: center; gap: .7rem; background: var(--palido); }
+.ok-voz .ok-ph { align-self: stretch; margin-bottom: 0; }
+.ok-ola { display: flex; align-items: center; gap: 3px; height: 42px; }
+.ok-ola span { width: 3px; height: var(--h); background: var(--verde); border-radius: 2px; transform: scaleY(.25); transform-origin: center; transition: transform .3s; }
+.escuchando .ok-ola span { animation: ok-ola .9s ease-in-out infinite; }
+.pensando .ok-ola span { animation: ok-latido 1.2s ease-in-out infinite; transform: scaleY(.5); }
+.ok-voz-estado { margin: 0; font-size: .9rem; color: var(--tinta); }
+.ok-voz-hex { position: relative; width: 104px; height: 120px; display: grid; place-items: center; }
+.ok-anillo { position: absolute; inset: 0; clip-path: var(--hex); background: var(--verde); opacity: 0; }
+.escuchando .ok-anillo { animation: ok-anillo 2.4s ease-out infinite; }
+.escuchando .ok-anillo.d2 { animation-delay: 1.2s; }
+.ok-voz-btn { position: relative; width: 96px; height: 110px; clip-path: var(--hex); border: 0; padding: 0; background: var(--accion); display: grid; place-items: center; cursor: pointer; transition: transform .2s; }
+.ok-voz-btn:hover:not(:disabled) { transform: scale(1.05); }
+.ok-voz-btn:disabled { opacity: .45; cursor: default; }
+.ok-voz-btn svg, .ok-dice-btn svg { stroke: var(--accion-texto); }
+.ok-voz-btn svg { fill: none; stroke-width: 2; stroke-linecap: round; }
+.escuchando .ok-voz-btn { background: var(--noche); }
+.escuchando .ok-voz-btn svg { stroke: var(--lima); }
+.ok-voz-res { align-self: stretch; }
+.ok-voz-res:empty { display: none; }
+.ok-dicho { margin: 0 0 .3rem; font-size: 1rem; font-weight: 600; color: var(--tinta); overflow-wrap: anywhere; }
+
+/* Órdenes rápidas */
+.ok-ordenes { display: flex; flex-direction: column; gap: .45rem; }
+.ok-ordenes .ok-ph { margin-bottom: .3rem; }
+.ok-orden { display: flex; align-items: center; gap: .6rem; min-height: 44px; padding: 0 .8rem; border: 1px solid var(--borde); border-radius: 9px; background: var(--superficie); color: var(--texto); font: inherit; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer; transition: border-color .2s, transform .3s cubic-bezier(.2,.85,.2,1); }
+.ok-orden span { color: var(--verde); font-size: 1.2rem; transition: transform .3s cubic-bezier(.2,.85,.2,1); }
+.ok-orden:hover { border-color: var(--verde); transform: translateX(3px); }
+.ok-orden:hover span { transform: translateX(3px); }
+
+/* Pie: último sync, «Hablar con Oki» y el repaso */
+.ok-pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1.2rem; background: var(--superficie); border: 1px solid var(--borde); border-radius: 16px; }
+.ok-pie-datos { display: flex; flex-wrap: wrap; gap: .6rem; }
+.ok-con { display: flex; flex-direction: column; padding: .4rem .8rem; border: 1px solid var(--borde); border-radius: 9px; }
+.ok-con small { font-size: .7rem; color: var(--texto-suave); }
+.ok-con b { font-size: .85rem; }
+.ok-hablar { display: flex; align-items: center; gap: 1rem; padding: .6rem 1.8rem; border-radius: 999px; border: 2px solid var(--verde); background: var(--noche); color: #fff; font: inherit; cursor: pointer; transition: transform .2s, box-shadow .3s; }
+.ok-hablar:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 22px rgb(1 191 97 / .25); }
+.ok-hablar:disabled { opacity: .5; cursor: default; }
+.ok-hablar .ok-ola { height: 26px; gap: 2px; }
+.ok-hablar .ok-ola span { background: var(--lima); }
+.ok-hablar-txt { display: flex; flex-direction: column; text-align: center; }
+.ok-hablar-txt b { font-size: 1rem; letter-spacing: .12em; text-transform: uppercase; }
+.ok-hablar-txt small { font-size: .75rem; color: #b9cfc3; }
+@media (max-width: 600px) { .ok-hablar .ok-ola { display: none; } .ok-hablar { flex: 1 1 100%; justify-content: center; } }
+.ok-repaso[hidden] { display: none; }
+.ok-repaso-txt { line-height: 1.5; overflow-wrap: anywhere; }
 .ok-reloj { display: flex; align-items: baseline; gap: .6rem; color: var(--texto-suave); }
 .ok-reloj b { font-size: 1.6rem; font-weight: 500; letter-spacing: -.03em; color: var(--texto); font-variant-numeric: tabular-nums; }
 
@@ -139,7 +219,7 @@
 /* Oki dice y lo que necesita a una persona */
 .ok-dice { display: flex; flex-wrap: wrap; align-items: center; gap: 1.2rem; padding: 1.4rem; background: var(--palido); border: 1px solid var(--borde); border-radius: 16px; }
 .ok-dice-btn { position: relative; clip-path: var(--hex); width: 64px; height: 74px; flex: none; border: 0; padding: 0; background: var(--accion); display: grid; place-items: center; cursor: pointer; transition: transform .2s; }
-.ok-dice-btn svg { fill: var(--accion-texto); }
+.ok-dice-btn svg { fill: var(--accion-texto); stroke: none; }
 .ok-dice-btn:hover { transform: scale(1.06); }
 .ok-dice-txt { flex: 1 1 300px; display: flex; flex-direction: column; gap: .4rem; }
 .ok-dice-et { font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--primario); }
@@ -156,6 +236,9 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ok-dice { background: var(--superficie); } :root:not([data-theme="light"]) .ok-dice-txt p { color: var(--texto); } }
 :root[data-theme="dark"] .ok-dice { background: var(--superficie); }
 :root[data-theme="dark"] .ok-dice-txt p { color: var(--texto); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ok-voz { background: var(--superficie); } :root:not([data-theme="light"]) :is(.ok-voz-estado, .ok-dicho) { color: var(--texto); } }
+:root[data-theme="dark"] .ok-voz { background: var(--superficie); }
+:root[data-theme="dark"] :is(.ok-voz-estado, .ok-dicho) { color: var(--texto); }
 
 /* ---- Chat de WhatsApp fijo ---- */
 .wa {
@@ -228,6 +311,8 @@
 .wa-err { margin: 0 .75rem .5rem; font-size: .8rem; color: var(--mal); }
 .wa-err:empty { display: none; }
 .wa-vacio { padding: 1rem; color: var(--texto-suave); text-align: center; font-size: .9rem; }
+.wa-plantilla { margin: .6rem .6rem 0; display: flex; flex-direction: column; gap: .4rem; }
+.wa-plantilla .wa-nota { margin: 0; }
 @media (max-width: 600px) { .wa { right: 12px; bottom: 12px; } .wa.cerrado { width: 230px; } }
 /* En el modo escritorio el dock va abajo: el chat sube por encima. */
 body.os-modo .wa { bottom: 84px; }
@@ -235,7 +320,7 @@ body.os-modo .wa { bottom: 84px; }
 @media (prefers-reduced-motion: reduce) {
   .menu-grupo, .ok-portada > *, .ok-flujo path, .ok-giro, .ok-halo, .ok-nodos polygon, .ok-celdas polygon,
   .ok-med-ticks, .ok-med-valor, .ok-barra span, .pulso, .wa-num, .wa-msg, .wa-oki, .ok-aviso .hex-punto,
-  .menu-item.activo::after { animation: none !important; }
+  .menu-item.activo::after, .ok-ola span, .ok-anillo, .ok-campana-menu { animation: none !important; }
   .ok-flujo path { display: none; }
-  .wa, .menu-item, .menu-item > span:first-child, .ok-area, .ok-panel, .ok-panel::before, .ok-panel::after { transition: none !important; }
+  .wa, .menu-item, .menu-item > span:first-child, .ok-area, .ok-panel, .ok-panel::before, .ok-panel::after, .ok-orden, .ok-hablar, .ok-voz-btn { transition: none !important; }
 }

@@ -28,6 +28,7 @@ let actual: Conv | null = null;
 let mensajes: Msg[] = [];
 let envio = true;
 let claude = false;
+let plantilla = false;
 let enviando = false;
 let tLista: number | undefined, tHilo: number | undefined;
 let cargandoLista: Promise<void> | null = null;
@@ -73,7 +74,7 @@ function programarLista() {
 
 function cargarLista(): Promise<void> {
   return (cargandoLista ??= (async () => {
-    const { data, error } = await llamarFuncion<{ conversaciones: Conv[]; envio: boolean }>('whatsapp', { accion: 'conversaciones' }, 20000);
+    const { data, error } = await llamarFuncion<{ conversaciones: Conv[]; envio: boolean; plantilla?: boolean }>('whatsapp', { accion: 'conversaciones' }, 20000);
     if (!$id('wa')) return;
     if (error || !Array.isArray(data?.conversaciones)) {
       $id('wa-resumen')!.textContent = 'Sin conexión con WhatsApp';
@@ -81,6 +82,7 @@ function cargarLista(): Promise<void> {
     } else {
       convs = data!.conversaciones;
       envio = data!.envio !== false;
+      plantilla = !!data!.plantilla;
       if (actual) actual = convs.find(c => c.id === actual!.id) ?? actual;
       pintarResumen();
       if (abierto && !actual) pintarLista();
@@ -158,12 +160,12 @@ function pintarCabConv() {
     <button type="button" class="wa-volver" data-action="waVolver" aria-label="Volver a las conversaciones">‹</button>
     <span class="wa-convcab-txt"><b>${esc(c.nombre)}</b><small>${esc([c.sede, '+' + c.telefono].filter(Boolean).join(' · '))}</small></span>
     <span class="wa-ventana ${c.ventana ? 'abierta' : 'cerrada'}"><span class="hex-punto" aria-hidden="true"></span>${c.ventana ? `Quedan ${restante(c.ultimo_entrante_at)}` : 'Fuera de 24 h'}</span>
-    ${c.ticket ? `<a class="wa-ticket" href="#/tickets/${esc(c.ticket.id)}">#${esc(c.ticket.numero)}</a>` : ''}`;
+    ${c.ticket ? `<a class="wa-ticket" href="#/tickets/${esc(c.ticket.numero)}">#${esc(c.ticket.numero)}</a>` : ''}`;
   const bloqueado = !c.ventana || !envio;
   const campo = $id('wa-in') as HTMLTextAreaElement;
   campo.disabled = bloqueado;
   campo.placeholder = !envio ? 'Falta conectar el envío de WhatsApp en el hub'
-    : !c.ventana ? 'Fuera de las 24 h: contesta desde la app con la plantilla' : 'Escribe la respuesta…';
+    : !c.ventana ? 'Fuera de las 24 h: primero hay que mandar la plantilla' : 'Escribe la respuesta…';
   ($id('wa-env') as HTMLButtonElement).disabled = bloqueado;
   pintarOki();
 }
@@ -171,7 +173,16 @@ function pintarCabConv() {
 function pintarOki(propuesta?: string | null, motivo?: string) {
   const el = $id('wa-oki')!;
   const c = actual;
-  if (!c || !c.ventana || !envio) { el.innerHTML = ''; return; }
+  if (!c || !envio) { el.innerHTML = ''; return; }
+  // Fuera de las 24 h Meta solo deja mandar una plantilla aprobada: la de
+  // retomar la conversación; cuando el cliente conteste, se vuelve a escribir.
+  if (!c.ventana) {
+    el.innerHTML = plantilla
+      ? `<div class="wa-plantilla"><p class="wa-nota">Han pasado más de 24 h desde su último mensaje: WhatsApp solo deja mandarle la plantilla para retomar la conversación.</p>
+         <button type="button" class="btn secundario" data-action="waPlantilla">📨 Mandar plantilla</button></div>`
+      : '<p class="wa-nota">Fuera de las 24 h hace falta una plantilla de Meta, y aún no está puesta en el hub (WHATSAPP_PLANTILLA_TEXTO).</p>';
+    return;
+  }
   if (propuesta) {
     el.innerHTML = `<div class="wa-oki">
       <div class="wa-oki-et"><span class="hex-punto" aria-hidden="true"></span>OKI PROPONE</div>
@@ -248,6 +259,18 @@ async function proponer() {
   pintarOki(data?.propuesta ?? null, error ? `Oki no ha podido proponer nada: ${error}` : data?.motivo);
 }
 
+async function mandarPlantilla() {
+  const c = actual;
+  if (!c || enviando || !confirm(`¿Mandar a ${c.nombre} la plantilla para retomar la conversación?`)) return;
+  enviando = true;
+  $id('wa-err')!.textContent = '';
+  const { data, error } = await llamarFuncion<{ ok: boolean; mensaje: Msg }>('whatsapp', { accion: 'plantilla', conversacion_id: c.id }, 30000);
+  enviando = false;
+  if (error || !data?.ok) { $id('wa-err')!.textContent = `No se ha enviado: ${error ?? 'error desconocido'}`; void cargarHilo(); return; }
+  if (actual?.id === c.id && data.mensaje) { mensajes = [...mensajes, data.mensaje]; pintarMensajes(); }
+  $id('wa-oki')!.innerHTML = '<p class="wa-nota">Plantilla enviada. Cuando conteste, se le podrá escribir con normalidad.</p>';
+}
+
 async function alternar() {
   abierto = !abierto;
   const caja = $id('wa')!;
@@ -255,9 +278,9 @@ async function alternar() {
   caja.classList.toggle('cerrado', !abierto);
   $id('wa-cab')!.setAttribute('aria-expanded', String(abierto));
   if (abierto) {
-    void llamarFuncion<{ envio: boolean; claude: boolean }>('whatsapp', { accion: 'estado' }).then(({ data }) => {
+    void llamarFuncion<{ envio: boolean; claude: boolean; plantilla?: boolean }>('whatsapp', { accion: 'estado' }).then(({ data }) => {
       if (!data) return;
-      envio = data.envio !== false; claude = !!data.claude;
+      envio = data.envio !== false; claude = !!data.claude; plantilla = !!data.plantilla;
       if (actual) pintarCabConv();
     });
     if (actual) void cargarHilo(); else pintarLista();
@@ -294,6 +317,7 @@ registrarAcciones({
     if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); void enviar(); }
   },
   waProponer: proponer,
+  waPlantilla: mandarPlantilla,
   waUsar() {
     const p = $id('wa-propuesta')?.textContent ?? '';
     const campo = $id('wa-in') as HTMLTextAreaElement;
