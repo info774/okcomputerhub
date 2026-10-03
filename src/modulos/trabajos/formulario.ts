@@ -14,6 +14,7 @@ import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
 import { buscarClientes } from '../ventas/datos';
 import type { Plantilla } from './plantillas';
+import { buscadorMaps, alElegirLugar } from '../../ui/maps';
 
 export const TIPOS = ['Instalación', 'Asistencia', 'Mantenimiento', 'Visita comercial'];
 export const ESTADOS = ['Pendiente', 'En progreso', 'Completado', 'Para facturar', 'Facturado', 'No facturar', 'Cancelado'];
@@ -38,7 +39,7 @@ function horaIso(fecha: string, hora: string): string | null {
 const horaDe = (iso: string | null) => (iso ? new Date(iso).toTimeString().slice(0, 5) : '');
 
 export async function pintarFormulario(el: HTMLElement, numero?: string) {
-  const [personas, escribe] = await Promise.all([equipo(), esDelHub('trabajos')]);
+  const [personas, escribe, escribeCli] = await Promise.all([equipo(), esDelHub('trabajos'), esDelHub('clientes', 'locales')]);
   let t: any = null;
   if (numero) {
     const r = await API.single<any>('trabajos', { select: '*', numero: `eq.${Number(numero) || 0}` });
@@ -74,6 +75,22 @@ export async function pintarFormulario(el: HTMLElement, numero?: string) {
         <label class="tf-completa">Contacto <select id="tf-contacto"><option value="">—</option>${(cons.data ?? []).map(k => opt(k.id, k.nombre, k.id === t?.contacto_id)).join('')}</select></label>
       </div>
       <input type="hidden" id="tf-cliente" value="${esc(t?.cliente_id ?? '')}"><ul id="tf-cliente-res" class="resultados"></ul>
+      ${escribeCli ? `<div class="acciones tf-rapido">
+        <button type="button" class="btn secundario" data-action="tfRapido" data-p0="nc" aria-expanded="false">+ Nuevo cliente</button>
+        <button type="button" class="btn secundario" data-action="tfRapido" data-p0="nl" aria-expanded="false">+ Nueva sede</button></div>
+      <fieldset id="tf-nc" class="tf-rapida" hidden><legend>Cliente nuevo</legend>
+        <div class="cf-nif"><input id="tf-nc-nif" autocomplete="off" placeholder="NIF / CIF" aria-label="NIF / CIF">
+          <button type="button" class="btn secundario" data-action="tfNcNif">🔎 Buscar el nombre</button></div>
+        <p class="nota" id="tf-nc-estado" aria-live="polite"></p>
+        <div class="in-campos"><label>Nombre <input id="tf-nc-nombre" maxlength="200"></label>
+          <label>Teléfono <input id="tf-nc-telefono" type="tel"></label><label>Correo <input id="tf-nc-email" type="email"></label></div>
+        <p class="nota">Se da de alta también en Zoho Books, como desde Clientes.</p>
+        <div class="acciones"><button type="button" class="btn" data-action="tfNcCrear">Crear cliente y elegirlo</button></div></fieldset>
+      <fieldset id="tf-nl" class="tf-rapida" hidden><legend>Sede nueva <span class="nota">(del cliente elegido, si lo hay)</span></legend>
+        ${buscadorMaps('tf-nl')}
+        <div class="in-campos"><label>Nombre <input id="tf-nl-nombre" maxlength="200"></label><label>Dirección <input id="tf-nl-direccion"></label></div>
+        <input type="hidden" id="tf-nl-maps">
+        <div class="acciones"><button type="button" class="btn" data-action="tfNlCrear">Crear sede y elegirla</button></div></fieldset>` : ''}
       <label>Título <span class="nota">(obligatorio)</span> <input id="tf-titulo" required maxlength="200" value="${esc(t?.titulo ?? '')}" placeholder="Ej: Instalación cámaras, Revisión alarma…"></label>
       <label class="tf-completa">Descripción <textarea id="tf-descripcion" rows="4" placeholder="Detalles del trabajo…">${esc(t?.descripcion ?? '')}</textarea></label>
       <div class="in-campos">
@@ -111,7 +128,62 @@ export async function ofrecerFacturar(id: string): Promise<boolean> {
 const val = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value.trim() ?? '';
 let _timerCli = 0;
 
-registrarAcciones({
+// Lo traído de Google Maps a la sede rápida.
+alElegirLugar('tf-nl', l => {
+  const pon = (k: string, v: string) => { const e = document.getElementById(`tf-nl-${k}`) as HTMLInputElement | null; if (e && v) e.value = v; };
+  pon('nombre', l.nombre); pon('direccion', l.direccion); pon('maps', l.mapsUrl);
+});
+
+const acciones = {
+  // Cliente y sede «al vuelo» (openNuevoClienteDesde / toggleNuevoLocalInline de
+  // la app): se crean sin salir del trabajo y quedan elegidos.
+  tfRapido(cual: 'nc' | 'nl') {
+    const caja = document.getElementById(`tf-${cual}`);
+    if (!caja) return;
+    caja.hidden = !caja.hidden;
+    document.querySelector(`[data-action="tfRapido"][data-p0="${cual}"]`)?.setAttribute('aria-expanded', String(!caja.hidden));
+    if (!caja.hidden) (document.getElementById(`tf-${cual}-${cual === 'nc' ? 'nif' : 'nombre'}`) as HTMLInputElement | null)?.focus();
+  },
+  async tfNcNif() {
+    const nif = val('tf-nc-nif');
+    const est = document.getElementById('tf-nc-estado');
+    if (!nif) { if (est) est.textContent = 'Escribe primero el NIF.'; return; }
+    if (est) est.textContent = 'Buscando…';
+    const [{ clientePorNif }, { llamarFuncion }] = await Promise.all([import('../clientes/formulario'), import('../../core/funciones')]);
+    const [dup, r] = await Promise.all([clientePorNif(nif), llamarFuncion<{ nombre: string }>('clientes', { accion: 'nif', nif }, 25000)]);
+    const n = document.getElementById('tf-nc-nombre') as HTMLInputElement;
+    if (r.data?.nombre && !n.value.trim()) n.value = r.data.nombre;
+    if (est) est.innerHTML = dup ? `⚠️ Ese NIF ya lo tiene <strong>${esc(dup.nombre)}</strong>: elígelo en el buscador de arriba.`
+      : r.error ? `No se pudo buscar: ${esc(r.error)}` : r.data?.nombre ? `Encontrado: <strong>${esc(r.data.nombre)}</strong>` : 'No se ha encontrado el nombre en la web: escríbelo a mano.';
+  },
+  async tfNcCrear() {
+    const nombre = val('tf-nc-nombre');
+    if (!nombre) { toast('El nombre del cliente es obligatorio', 'error'); return; }
+    const { crearCliente } = await import('../clientes/formulario');
+    const r = await crearCliente({ nombre, nif: val('tf-nc-nif') || null, telefono: val('tf-nc-telefono') || null, email: val('tf-nc-email') || null });
+    if (!r.id) { toast(r.error ?? 'No se pudo crear el cliente', 'error'); return; }
+    toast(`Cliente creado (${r.zoho})`, r.zoho?.startsWith('no ') ? 'error' : 'info');
+    (document.getElementById('tf-nc') as HTMLElement).hidden = true;
+    await acciones.tfElegirCliente(r.id, nombre);
+  },
+  async tfNlCrear() {
+    const nombre = val('tf-nl-nombre');
+    if (!nombre) { toast('El nombre de la sede es obligatorio', 'error'); return; }
+    const { confirmarSedeNoDuplicada, mapaDeDireccion } = await import('../sitios/formulario');
+    if (!(await confirmarSedeNoDuplicada(nombre))) return;
+    const dir = val('tf-nl-direccion');
+    const clienteId = val('tf-cliente') || null;
+    const r = await API.post<{ id: string }[]>('locales', {
+      cliente_id: clienteId, nombre, direccion: dir || null, activo: true,
+      maps_url: val('tf-nl-maps') || (dir ? mapaDeDireccion(dir) : null),
+    });
+    const nueva = r.data?.[0];
+    if (r.error || !nueva) { toast(`No se pudo crear la sede: ${r.error?.message ?? 'sin respuesta'}`, 'error'); return; }
+    const sel = document.getElementById('tf-local') as HTMLSelectElement | null;
+    if (sel) { sel.insertAdjacentHTML('beforeend', `<option value="${esc(nueva.id)}">${esc(nombre)}</option>`); sel.value = nueva.id; }
+    (document.getElementById('tf-nl') as HTMLElement).hidden = true;
+    toast(`Sede «${nombre}» creada y elegida`);
+  },
   tfModo(m: Modo) {
     guardar(CLAVE_MODO, m);
     const f = document.getElementById('tf-form');
@@ -205,4 +277,5 @@ registrarAcciones({
     toast('Trabajo guardado');
     ir('trabajos', String(_editando.numero));
   },
-});
+};
+registrarAcciones(acciones);

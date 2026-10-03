@@ -30,6 +30,24 @@ export async function clientePorNif(nif: string, salvo?: string | null): Promise
   return (data ?? []).find(c => c.id !== salvo) ?? null;
 }
 
+/**
+ * Alta de un cliente con las reglas de la app: con NIF repetido NO se crea, y
+ * el nuevo se da de alta en Zoho Books (si Zoho falla, queda creado y se avisa).
+ * La usan este formulario y el cliente rápido del alta de trabajo.
+ */
+export async function crearCliente(cuerpo: Record<string, unknown>): Promise<{ id?: string; error?: string; duplicado?: { id: string; nombre: string }; zoho?: string }> {
+  const nif = String(cuerpo.nif ?? '').trim();
+  if (nif) {
+    const dup = await clientePorNif(nif);
+    if (dup) return { error: 'Ese NIF ya existe: no se crea otro', duplicado: dup };
+  }
+  const r = await API.post<{ id: string }[]>('clientes', { plan: 'Sin mantenimiento', estado: 'activo', tipo: 'empresa', ...cuerpo, activo: true });
+  const nuevo = r.data?.[0];
+  if (r.error || !nuevo) return { error: `No se pudo crear: ${r.error?.message ?? 'sin respuesta'}` };
+  const z = await llamarFuncion<{ zoho_id: string; reutilizado?: boolean }>('clientes', { accion: 'zoho_alta', cliente_id: nuevo.id }, 40000);
+  return { id: nuevo.id, zoho: z.error ? `no se dio de alta en Zoho: ${z.error}` : z.data?.reutilizado ? 'enlazado con su contacto de Zoho' : 'dado de alta en Zoho' };
+}
+
 export async function pintarFormulario(el: HTMLElement, id?: string) {
   const escribe = await esDelHub('clientes');
   let c: any = null;
@@ -111,13 +129,9 @@ registrarAcciones({
       return;
     }
     cuerpo.plan = val('cf-plan') || 'Sin mantenimiento';
-    cuerpo.activo = true;
-    const r = await API.post<{ id: string }[]>('clientes', cuerpo);
-    const nuevo = r.data?.[0];
-    if (r.error || !nuevo) { toast(`No se pudo crear: ${r.error?.message ?? 'sin respuesta'}`, 'error'); return; }
-    const z = await llamarFuncion<{ zoho_id: string; reutilizado?: boolean }>('clientes', { accion: 'zoho_alta', cliente_id: nuevo.id }, 40000);
-    if (z.error) toast(`Cliente creado, pero no se dio de alta en Zoho: ${z.error}`, 'error');
-    else toast(z.data?.reutilizado ? 'Cliente creado y enlazado con su contacto de Zoho' : 'Cliente creado (y dado de alta en Zoho)');
-    ir('clientes', nuevo.id);
+    const r = await crearCliente(cuerpo);
+    if (!r.id) { if (r.duplicado) estado(avisoDuplicado(r.duplicado), true); toast(r.error ?? 'No se pudo crear', 'error'); return; }
+    toast(`Cliente creado (${r.zoho})`, r.zoho?.startsWith('no ') ? 'error' : 'info');
+    ir('clientes', r.id);
   },
 });

@@ -3,8 +3,9 @@
 import { API } from '../../core/api';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
-import { avisoSoloLectura } from '../../core/areas';
-import { esc, hace, fechaHora } from '../../ui/dom';
+import { esDelHub, avisoSoloLectura } from '../../core/areas';
+import { esAdmin } from '../../core/estado';
+import { esc, hace, fechaHora, toast } from '../../ui/dom';
 import { enApp, telWhatsApp } from '../ventas/datos';
 
 interface Contacto {
@@ -28,6 +29,9 @@ let _tipo = '';
 let _etiqueta = '';
 let _baja = false;
 let _actual: Contacto | null = null;
+
+/** Olvida la lista en caché (tras crear, editar o dar de baja). */
+export function olvidarContactos() { _lista = []; _listaAt = 0; }
 
 const botones = (c: Contacto) => {
   const wa = telWhatsApp(c.telefono);
@@ -54,7 +58,7 @@ async function cargar() {
 
 async function pintarLista(el: HTMLElement) {
   el.innerHTML = '<p class="cargando">Cargando…</p>';
-  const error = await cargar();
+  const [error, escribe] = await Promise.all([cargar(), esDelHub('contactos')]);
   if (error && !_lista.length) { el.innerHTML = `<p class="aviso mal">No se pudieron leer los contactos: ${esc(error.message)}</p>`; return; }
   const q = _q.toLowerCase();
   const etiquetas = [...new Set(_lista.flatMap(c => c.etiquetas ?? []))].sort((a, b) => a.localeCompare(b));
@@ -63,11 +67,12 @@ async function pintarLista(el: HTMLElement) {
     (!_etiqueta || (c.etiquetas ?? []).includes(_etiqueta)) &&
     (!q || [c.nombre, c.empresa, c.cargo, c.email, _clientes.get(c.cliente_id ?? ''), _locales.get(c.local_id ?? '')].some(x => (x ?? '').toLowerCase().includes(q))
       || (q.replace(/\D/g, '').length >= 3 && [c.telefono, c.telefono2].some(t => (t ?? '').replace(/\D/g, '').includes(q.replace(/\D/g, ''))))));
-  el.innerHTML = `${avisoSoloLectura('Contactos')}
+  el.innerHTML = `${escribe ? '' : avisoSoloLectura('Contactos')}
     <div class="acciones mo-barra">
       <input id="co-filtro" type="search" placeholder="Buscar por nombre, empresa, teléfono, email, cliente o sitio…" value="${esc(_q)}" data-on-input="coFiltrar:$value" aria-label="Buscar contacto">
       ${etiquetas.length ? `<select id="co-etiqueta" data-on-change="coEtiqueta:$value" aria-label="Etiqueta"><option value="">Todas las etiquetas</option>${etiquetas.map(e => `<option ${e === _etiqueta ? 'selected' : ''}>${esc(e)}</option>`).join('')}</select>` : ''}
       <button class="chip-boton ${_baja ? 'activo' : ''}" data-action="coBaja" aria-pressed="${_baja}">De baja</button>
+      ${escribe ? '<a class="btn" href="#/contactos/nuevo">+ Nuevo contacto</a>' : ''}
     </div>
     <div class="acciones mo-barra">${TIPOS.map(([k, n]) => `<button class="chip-boton ${_tipo === k ? 'activo' : ''}" data-action="coTipo" data-p0="${k}">${n}</button>`).join('')}</div>
     <p class="nota">${_baja ? 'Contactos DE BAJA. ' : ''}Mostrando ${Math.min(filtrados.length, 200)} de ${filtrados.length}.</p>
@@ -120,10 +125,14 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'datos') {
   if (error || !c) { el.innerHTML = '<p class="aviso mal">No se encontró el contacto.</p><p><a href="#/contactos">← Contactos</a></p>'; return; }
   _actual = c;
   const p = PESTANAS.some(([k]) => k === pestana) ? pestana : 'datos';
+  const escribe = await esDelHub('contactos');
+  const puede = escribe && (c.tipo !== 'empleado' || esAdmin());
   el.innerHTML = `<p><a href="#/contactos">← Contactos</a></p>
     <div class="tarjeta-cab"><h2>${c.favorito ? '⭐ ' : ''}${esc(c.nombre)}${c.activo === false ? ' <span class="chip mal">De baja</span>' : ''}</h2>
       <div class="acciones">${botones(c)}
-        <a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los contactos se editan en la app actual">Editar en la app ↗</a></div></div>
+        ${puede ? `<a class="btn secundario" href="#/contactos/${esc(c.id)}/editar">✎ Editar</a>
+          ${c.activo === false ? `<button class="btn secundario" data-action="coReactivar" data-p0="${esc(c.id)}">Reactivar</button>` : '<button class="btn secundario" data-action="coDarBaja">Dar de baja</button>'}`
+        : escribe ? '' : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los contactos se editan en la app actual">Editar en la app ↗</a>`}</div></div>
     <p class="nota">${esc([NOMBRE_TIPO[c.tipo ?? 'otro'] ?? c.tipo, c.empresa, c.cargo].filter(Boolean).join(' · '))}</p>
     <nav class="pestanas" role="tablist">${PESTANAS.map(([k, n]) =>
       `<button role="tab" aria-selected="${k === p}" class="${k === p ? 'activo' : ''}" data-action="coPestana" data-p0="${esc(id)}" data-p1="${k}">${n}</button>`).join('')}</nav>
@@ -134,6 +143,12 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'datos') {
 }
 
 export async function pintarContactos(el: HTMLElement, params: string[]) {
+  if (params[0] === 'nuevo') {
+    const desde = params[1] === 'c' ? { cliente: params[2] } : params[1] === 'l' ? { sede: params[2] } : undefined;
+    await (await import('./formulario')).pintarFormulario(el, undefined, desde);
+    return;
+  }
+  if (params[0] && params[1] === 'editar') { await (await import('./formulario')).pintarFormulario(el, params[0]); return; }
   if (params[0]) await pintarFicha(el, params[0], params[1]);
   else await pintarLista(el);
 }
@@ -142,6 +157,18 @@ let _timer: number | undefined;
 registrarAcciones({
   coNada() { /* un enlace dentro de una fila clicable: que la fila no se dispare */ },
   coAbrir(id: string) { ir('contactos', id); },
+  // «Eliminar» de la app: baja (activo = false), no se borra nada.
+  async coDarBaja() {
+    if (!_actual || !confirm('¿Dar de baja este contacto? Deja de salir en la agenda y en los buscadores; no se borra y se puede reactivar.')) return;
+    const r = await API.patch('contactos', { id: `eq.${_actual.id}` }, { activo: false });
+    if (r.error) { toast(`No se pudo dar de baja: ${r.error.message}`, 'error'); return; }
+    olvidarContactos(); toast('Contacto dado de baja'); resolver();
+  },
+  async coReactivar(id: string) {
+    const r = await API.patch('contactos', { id: `eq.${id}` }, { activo: true });
+    if (r.error) { toast(`No se pudo reactivar: ${r.error.message}`, 'error'); return; }
+    olvidarContactos(); toast('Contacto reactivado'); resolver();
+  },
   coPestana(id: string, p: string) { ir('contactos', id, p); },
   coTipo(k: string) { _tipo = k; resolver(); },
   coEtiqueta(v: string) { _etiqueta = v; resolver(); },

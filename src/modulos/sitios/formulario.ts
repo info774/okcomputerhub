@@ -5,6 +5,9 @@
 // - Sin enlace de mapa, se pone el de la dirección (como la app).
 // - Al crear, el teléfono (si se escribe) entra como «Principal» en
 //   local_telefonos, igual que el alta de la app.
+// - «Buscar en Google Maps» (ui/maps.ts) rellena nombre, dirección, enlace,
+//   horario y teléfono. Antes de crear, si ya hay una sede con un nombre
+//   parecido (≥ 80 %), se pregunta (confirmarLocalNoDuplicado de la app).
 // Escribe en hub.locales solo con el área `clientes` cortada (RLS + esDelHub).
 import { API } from '../../core/api';
 import { registrarAcciones } from '../../core/dispatcher';
@@ -12,6 +15,7 @@ import { ir } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
 import { buscarClientes } from '../ventas/datos';
+import { buscadorMaps, alElegirLugar, type Lugar } from '../../ui/maps';
 import { olvidarSitios } from './vista';
 
 export const TIPOS_SITIO = ['Local', 'Vivienda'];
@@ -21,6 +25,39 @@ let _id: string | null = null;
 let _timerCli: number | undefined;
 
 export const mapaDeDireccion = (dir: string) => `https://maps.google.com/?q=${encodeURIComponent(dir)}`;
+
+/** Parecido entre dos nombres (0..1), Levenshtein sobre los nombres sin acentos ni signos (similitudNombres de la app). */
+export function similitudNombres(a: string, b: string): number {
+  const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  a = norm(a); b = norm(b);
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return 1 - prev[b.length] / Math.max(a.length, b.length);
+}
+
+/** true si se puede crear: no hay sedes de nombre parecido, o se confirma que es otra. */
+export async function confirmarSedeNoDuplicada(nombre: string): Promise<boolean> {
+  const { data } = await API.fetchAll<{ nombre: string; cliente_id: string | null }>('locales', { select: 'nombre,cliente_id', activo: 'neq.false' });
+  const parecidos = (data ?? []).map(l => ({ l, sim: similitudNombres(nombre, l.nombre) })).filter(x => x.sim >= 0.8).sort((x, y) => y.sim - x.sim).slice(0, 3);
+  if (!parecidos.length) return true;
+  return confirm(`Ya ${parecidos.length === 1 ? 'existe una sede' : 'existen sedes'} con un nombre parecido:\n\n${parecidos.map(x => `• ${x.l.nombre}`).join('\n')}\n\n¿Crear «${nombre}» de todas formas? (Cancela y elige la que ya existe)`);
+}
+
+/** Rellena los campos <prefijo>-nombre/-direccion/-maps/-horario/-telefono que existan con lo traído de Google Maps. */
+export function rellenarConLugar(prefijo: string, l: Lugar) {
+  const pon = (k: string, v: string) => { const e = document.getElementById(`${prefijo}-${k}`) as HTMLInputElement | null; if (e && v) e.value = v; };
+  pon('nombre', l.nombre); pon('direccion', l.direccion); pon('maps', l.mapsUrl); pon('horario', l.horario);
+  if (l.telefono) {
+    if (document.getElementById(`${prefijo}-telefono`)) pon('telefono', l.telefono.replace(/\s/g, ''));
+    else toast(`Teléfono de Google Maps: ${l.telefono} (añádelo en la pestaña Teléfonos)`);
+  }
+}
 
 export async function pintarFormulario(el: HTMLElement, id?: string, clienteId?: string) {
   const escribe = await esDelHub('locales');
@@ -39,6 +76,7 @@ export async function pintarFormulario(el: HTMLElement, id?: string, clienteId?:
     <h2>${l ? 'Editar sitio' : 'Nuevo sitio'}</h2>
     ${escribe ? '' : avisoSoloLectura('Los sitios')}
     <form class="tarjeta" id="sf-form" data-on-submit="sfGuardar" data-prevent="1">
+      <fieldset class="sf-maps"><legend>Traer los datos de Google Maps</legend>${buscadorMaps('sf')}</fieldset>
       <label>Cliente <input id="sf-cliente-q" autocomplete="off" placeholder="Buscar por nombre o NIF…" value="${esc(cli?.nombre ?? '')}" data-on-input="sfBuscarCliente:$value"></label>
       <input type="hidden" id="sf-cliente" value="${esc(cli?.id ?? '')}"><ul id="sf-cliente-res" class="resultados"></ul>
       ${campo('sf-nombre', 'Nombre <span class="nota">(obligatorio)</span>', l?.nombre, 'required maxlength="200"')}
@@ -112,6 +150,7 @@ registrarAcciones({
       ir('sitios', _id);
       return;
     }
+    if (!(await confirmarSedeNoDuplicada(nombre))) return;
     cuerpo.activo = true;
     const r = await API.post<{ id: string }[]>('locales', cuerpo);
     const nuevo = r.data?.[0];
@@ -126,3 +165,5 @@ registrarAcciones({
     ir('sitios', nuevo.id);
   },
 });
+
+alElegirLugar('sf', l => rellenarConLugar('sf', l));

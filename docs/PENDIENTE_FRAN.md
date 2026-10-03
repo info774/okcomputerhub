@@ -121,6 +121,38 @@ persona del equipo. Nada sale solo hacia un cliente.
 4. En el hub: **Buscar** → abajo, «Carpeta de Google Drive» → pega el enlace
    → **Guardar** → **Leer Drive ahora**.
 
+## 2 bis · Google Maps en el hub (una vez, ~2 minutos)
+
+**Desbloquea**: el botón «🔎 Buscar en Google Maps» del alta de sede, de su
+edición y de la «Sede nueva» del alta de trabajo (trae nombre, dirección,
+enlace, horario y teléfono del negocio). Usa la MISMA clave que la app (decisión
+tuya, 2026-10-03); solo hay que decirle a esa clave que el hub también puede
+usarla. No hay que copiar ni pegar ninguna clave.
+
+1. Entra en **https://console.cloud.google.com** con `info@okcomputertenerife.com`.
+2. Arriba, en el selector de proyecto, elige **okcomputerclaude** (número
+   `508620194342`).
+3. Menú ☰ → **APIs y servicios** → **Credenciales**.
+4. En el apartado **Claves de API**, busca la clave que empieza por
+   **`AIzaSyCVo9`** (si no se ve entera, pulsa **Mostrar clave** en su fila) y
+   pulsa su **nombre** (el texto azul de la izquierda).
+5. En **Restricciones de aplicaciones** estará marcado **Sitios web**. Debajo,
+   en **Restricciones de sitios web**, pulsa **AÑADIR** y pega exactamente:
+   ```
+   https://okhub-tenerife.web.app/*
+   ```
+   (Si más adelante el hub estrena dominio propio, se añade igual, por ejemplo
+   `https://hub.okcomputertenerife.com/*`.)
+6. No toques **Restricciones de API**. Pulsa **GUARDAR** abajo del todo.
+7. Google tarda hasta 5 minutos en aplicarlo. Para probarlo: en el hub,
+   **Sitios** → **+ Nuevo sitio** → escribe el nombre de un bar conocido en
+   «Buscar en Google Maps» → **🔎 Buscar en Google Maps**. Si sale la lista, ya
+   está. Mientras no se haga, el hub dice «No se ha podido consultar Google
+   Maps» y todo lo demás funciona igual (los datos se escriben a mano).
+
+> Ojo: el botón de crear sedes en el hub está preparado pero apagado hasta el
+> cambio de clientes; la búsqueda en Maps ya se puede probar en el formulario.
+
 ## 3 · Clave de Groq (notas de voz → comandas)
 
 **Desbloquea**: dictar comandas en #/comandas y mandarle notas de voz al bot.

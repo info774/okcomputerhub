@@ -41,7 +41,10 @@ Fran, 2026-10-03).
    (2026-10-03): Zoho igual que la app; Google Maps en la tanda 4. Tandas:
    1 clientes (HECHA 2026-10-03), 2 sedes (HECHA 2026-10-03), 3 Software/Hardware/Cámaras (HECHA 2026-10-03; decisiones de Fran:
    RustDesk con la contraseña de la sede como la app, contraseñas de cámaras tras «Ver», seguimiento solo marcar),
-   4 contactos y Google Maps.
+   4 contactos y Google Maps (HECHA 2026-10-03; decisiones de Fran: la MISMA clave de
+   Places que la app, con okhub-tenerife.web.app en sus webs permitidas, y cliente
+   rápido como mini formulario dentro del trabajo). **Bloque 2 HECHO** (2026-10-03),
+   preparado para el corte del área `clientes`.
 3. **Presupuestos y facturar trabajos**: crear con líneas del catálogo,
    plantillas, PDF, a Zoho, convertir en trabajo; facturar trabajos en Zoho.
 4. **Mantenimiento y cobros**: Stripe (domiciliar, enlace de pago, cambiar plan,
@@ -66,7 +69,7 @@ Fran, 2026-10-03).
 | Eliminar cliente y quitarlo de Zoho (`delete-cliente-from-zoho`) | Preparado | Ficha → «Eliminar» (admin), función `clientes` (`zoho_quitar`) | Ídem. |
 | Dar de baja y reactivar cliente o sede | Preparado | Ficha → «Dar de baja» / «Reactivar»; «De baja» en la lista (clientes y sitios) | Corte del área `clientes`. |
 | Empresa por NIF y NIF duplicado (`lookup-nif`) | Hecho | «🔎 Buscar el nombre» del formulario (función `clientes`, acción `nif`); con NIF repetido no se crea | — |
-| Cliente o sede desde Google Maps (`google-places.js`) | Falta | — | Places en el alta. |
+| Cliente o sede desde Google Maps (`google-places.js`) | Preparado | «🔎 Buscar en Google Maps» (`src/ui/maps.ts`, solo Tenerife) en el alta/edición de sede y en la sede rápida del trabajo; aviso de sede de nombre parecido (≥ 80 %) | Que Fran añada el hub a las webs de la clave (PENDIENTE_FRAN §2 bis). Corte. |
 | Sync de clientes y presupuestos desde Zoho (`sync-zoho*`, `sync-auto.js`) | Falta | — | Hoy entra por la app y el hub copia. |
 | Ficha del cliente (General, Locales, Contactos, Historial) | Solo lectura | `#/clientes` (ficha 360) | Editar datos. |
 | Suscripción de Zoho Billing a una sede (`list-zoho-subscriptions`) | Falta | — | Cartera vieja. |
@@ -78,7 +81,7 @@ Fran, 2026-10-03).
 | Teléfonos de la sede con rol (`local_telefonos`) | Preparado | Ficha del sitio → «Teléfonos» (añadir, rol en la fila, editar, quitar); espejo `20261021_local_telefonos.sql` (pasada nocturna) | Corte. |
 | Ficha del sitio: Historial | Solo lectura | `#/sitios` | — |
 | Seguimiento de tareas de la sede (`loadSeguimientoLocal`) | Preparado | Pestaña Seguimiento (rejilla por periodo; marcar/desmarcar) sobre los espejos `plan_tareas` y `sitio_tarea_seguimiento` | Corte. Editar el catálogo de tareas por plan (bloque 4). |
-| Agenda de contactos (`modules/contactos.js`) | Solo lectura | `#/contactos` | Alta y edición. |
+| Agenda de contactos (`modules/contactos.js`) | Preparado | `#/contactos` (+ Nuevo contacto, ✎ Editar, Dar de baja/Reactivar); `#/contactos/nuevo[/c/<cliente>|/l/<sede>]` y `#/contactos/<id>/editar` (`contactos/formulario.ts`); empleados solo admin | Corte. Renombrar al usuario si es empleado, favoritos por persona (`user_favoritos`) y Google Contactos (bloque 7). |
 | Google Contacts (`google-contacts.js`) | Falta | — | — |
 | Mapa de sedes con estado RMM (`modules/mapa.js`) | Hecho | `#/mapa` | — |
 | Mapa: Día, Semana (planificador), Ruta, técnicos por GPS | Falta | — | Planificar y rutas. |
@@ -88,7 +91,7 @@ Fran, 2026-10-03).
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
 | Lista de trabajos, filtros, kanban, Excel (`modules/trabajos.js`) | Preparado | `#/trabajos` (lista, kanban y Excel ya hoy; arrastrar en el kanban cambia el estado tras el corte) | Corte. |
-| Crear y editar trabajo (Simple/Completa), duplicar, continuación | Preparado | `#/trabajos/nuevo`, `#/trabajos/<n>/editar`, `trabajos/formulario.ts`; espejo trabajo ⇄ agenda en `20261017_trabajos_paridad.sql` | Crear cliente o sede al vuelo (bloque 2), — |
+| Crear y editar trabajo (Simple/Completa), duplicar, continuación | Preparado | `#/trabajos/nuevo`, `#/trabajos/<n>/editar`, `trabajos/formulario.ts`; espejo trabajo ⇄ agenda en `20261017_trabajos_paridad.sql`; «+ Nuevo cliente» y «+ Nueva sede» al vuelo (con el área `clientes` cortada) | — |
 | Ficha: estado, comentarios, material con stock (`saveWdLineas`); completar cierra sus tickets y propone «Para facturar» | Preparado | `#/trabajos`, `hub.trabajo_estado`, `hub.trabajo_guardar_lineas` | Se enciende con el corte. |
 | Material con escáner de código de barras | Falta | — | Escáner. |
 | Fichajes del trabajo con edición en línea | Solo lectura | `#/trabajos` | Correcciones por `hub.jornada_ajustes`. |
