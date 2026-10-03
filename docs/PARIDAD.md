@@ -29,7 +29,8 @@ Fran, 2026-10-03).
 
 1. **Trabajos y calendario completos** — tanda 1 HECHA (2026-10-03: alta y
    edición Simple/Completa, duplicar, continuación, kanban, Excel y espejo
-   trabajo ⇄ agenda). Falta: firma del cliente y PDF del parte, plantillas, planificador del
+   trabajo ⇄ agenda) y tanda 2 HECHA (calendario planificador: vistas, carga,
+   solapes, traslados, pendientes, «Sugerir hueco», citas y días). Falta: firma del cliente y PDF del parte, plantillas, planificador del
    calendario (vistas, pendientes, «Sugerir hueco», traslados, solapes), lista
    del día, chat por ficha. Es lo que más usan los técnicos.
 2. **Clientes, sedes y contactos con escritura**: alta y edición (NIF, Google
@@ -91,10 +92,10 @@ Fran, 2026-10-03).
 | Plantillas de trabajo (`modules/plantillas.js`) | Falta | — | — |
 | Chat de grupo por trabajo/ticket/tarea | Falta | — | Salas por ficha en `#/chat`. |
 | Borrar trabajo devolviendo el material | Preparado | trigger de `20261016_final.sql` | — |
-| Agenda por bloques y eventos libres (`modules/agenda.js`) | Solo lectura | `#/calendario` | Crear, editar y borrar bloques. |
-| Calendario semanal con fichajes reales (`modules/calendario.js`) | Preparado | `#/calendario` | Tras el corte solo mueve bloques. |
-| Calendario: Mes, Día, Agenda, mini-mes, filtros guardados, alta rápida | Falta | — | — |
-| Calendario: pendientes, «Sugerir hueco», traslados, solapes, carga del día | Falta | — | El motor de planificación. |
+| Agenda por bloques y eventos libres (`modules/agenda.js`) | Preparado | `#/calendario/cita`, `#/calendario/dia/<trabajo>` (días de la ficha del trabajo), `calendario/cita.ts` | Corte. |
+| Calendario semanal con fichajes reales (`modules/calendario.js`) | Preparado | `#/calendario` (Semana y Por técnico; mover y reasignar arrastrando) | Corte. |
+| Calendario: Mes, Día, Agenda, filtros guardados, alta rápida | Preparado | `#/calendario` (Día con rejilla por técnico; «+ Cita»; ir a fecha en vez de mini-mes) | Zoom, redimensionar arrastrando el borde, colores por estado. |
+| Calendario: pendientes, «Sugerir hueco», traslados, solapes, carga del día | Preparado | `calendario/motor.ts` (mismas constantes que la app) y panel de pendientes | Origen de los traslados: oficina con coordenadas fijas (la app geocodifica la dirección de la empresa). |
 | Capa de Google Calendar (`google-calendar-read.js`, `google-token`) | Falta | — | — |
 | Lista del día (`modules/lista-dia.js`, `lista_dia`) | Falta | — | Espejo y pantalla. |
 | Planificador hoy/mañana (`ui/plan-dia.js`) | Falta | — | — |

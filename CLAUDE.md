@@ -441,6 +441,16 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `hub.trabajo_espejo_agenda` (y la agenda devuelve la del primer bloque),
   disparadores que se apartan mientras la agenda sea de la app o escriba el
   sync (`hub.espejo_agenda_activo()`). Arnés `verify-trabajos.mjs`.
+- **Calendario planificador** (`src/modulos/calendario/`, 2026-10-03, paridad
+  bloque 1): las reglas del calendario de la app viven en `motor.ts`, puro y sin
+  DOM (solapes por técnico con nombre de pila, traslados a 40 km/h × 1,3 + 5 min
+  y 30 min sin coordenadas, carga de 8 h por técnico, «Sugerir hueco» en 14
+  días de 9 a 19): si cambian en la app, cambiarlas ahí. Vistas Semana · Día
+  (rejilla por técnico; soltar en otra columna reasigna) · Por técnico ·
+  Agenda (la del móvil) · Mes. PLANIFICAR escribe la fecha en el trabajo y el
+  bloque lo crea la base; mover/reasignar va por `hub.agenda_mover`. Citas
+  sueltas y días de un trabajo: `cita.ts` (`#/calendario/cita`,
+  `#/calendario/dia/<trabajo>` y `dia/b:<bloque>`). Arnés `verify-calendario.mjs`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

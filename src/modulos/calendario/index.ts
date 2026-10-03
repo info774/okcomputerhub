@@ -15,6 +15,6 @@ export const moduloCalendario: Modulo = {
   grupo: 'Operaciones',
   icono: '📅',
   explicacion: 'La semana de cada técnico: los días de trabajo programados y, encima, lo que de verdad se fichó. Hasta el cambio se planifica en la app; después se arrastra aquí.',
-  pintar: async el => (await import('./vista')).pintar(el),
+  pintar: async (el, p) => (await import('./vista')).pintar(el, p),
   contador,
 };

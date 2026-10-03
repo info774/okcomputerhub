@@ -566,7 +566,7 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .tf-mas summary { cursor: pointer; font-weight: 600; min-height: 40px; display: flex; align-items: center; }
 .tr-kanban .pr-tarjeta { display: grid; gap: .15rem; cursor: pointer; }
 .ca-semana { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .5rem; }
-.ca-dia { padding: .6rem; min-height: 8rem; } .ca-dia h3 { font-size: .9rem; margin: 0 0 .4rem; text-transform: capitalize; }
+.ca-dia { padding: .6rem; min-height: 8rem; } .ca-dia h3 { font-size: .9rem; margin: 0 0 .4rem; }
 .ca-hoy { outline: 2px solid var(--primario); }
 .ca-bloque { border-left: 4px solid var(--primario); background: var(--fondo); border-radius: 6px; padding: .35rem .5rem; margin-bottom: .35rem; font-size: .85rem; overflow-wrap: anywhere; }
 .ca-bloque[draggable="true"] { cursor: grab; }
@@ -574,6 +574,55 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .ca-real { font-size: .78rem; background: repeating-linear-gradient(45deg, var(--fondo), var(--fondo) 4px, var(--superficie) 4px, var(--superficie) 8px); border-radius: 6px; padding: .2rem .4rem; margin-bottom: .25rem; }
 .ca-tabla td { vertical-align: top; min-width: 7rem; }
 @media (max-width: 1023px) { .ca-semana { grid-template-columns: 1fr; } }
+/* Calendario planificador (paridad bloque 1, tanda 2) */
+.ca-barra { flex-wrap: wrap; }
+.ca-titulo { display: inline-block; }
+.ca-titulo::first-letter, .ca-ir-dia::first-letter { text-transform: uppercase; }
+.ca-ir-dia { display: inline-block; border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.ca-ir-dia:hover { color: var(--primario); text-decoration: underline; }
+.ca-cuerpo.con-panel { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: .75rem; align-items: start; }
+.ca-principal { min-width: 0; }
+@media (max-width: 1100px) { .ca-cuerpo.con-panel { grid-template-columns: 1fr; } }
+.ca-dia.sobre, .ca-col-cuerpo.sobre { outline: 2px dashed var(--primario); }
+.ca-carga { display: grid; gap: .15rem; margin: 0 0 .4rem; }
+.ca-carga small { font-size: .72rem; color: var(--texto-suave); }
+.ca-carga-barra { display: block; height: 5px; border-radius: 999px; background: var(--borde); overflow: hidden; }
+.ca-carga-barra span { display: block; height: 100%; background: var(--verde); }
+.ca-carga.aviso .ca-carga-barra span { background: var(--aviso); }
+.ca-carga.mal .ca-carga-barra span { background: var(--mal); }
+.ca-solapa { outline: 2px solid var(--mal); outline-offset: -1px; }
+.ca-tras { display: block; font-size: .72rem; color: var(--texto-suave); }
+.ca-pendientes { position: sticky; top: .5rem; max-height: calc(100vh - 1rem); overflow-y: auto; }
+.ca-pendientes h4 { margin: .6rem 0 .3rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--texto-suave); }
+.ca-pend-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.ca-pend { display: grid; gap: .2rem; border: 1px solid var(--borde); border-radius: 9px; padding: .45rem .55rem; background: var(--superficie); }
+.ca-pend[draggable="true"] { cursor: grab; }
+.ca-pend .btn { justify-self: start; min-height: 32px; font-size: .8rem; }
+.ca-hueco-banner { border: 1.5px dashed var(--verde); background: var(--primario-suave); margin-bottom: .75rem; }
+.ca-hueco-banner small { display: block; }
+.ca-rejilla-caja { padding: .6rem; }
+.ca-rejilla { display: grid; grid-template-columns: 52px repeat(var(--cols), minmax(150px, 1fr)); gap: 0 .35rem; }
+.ca-col-cab { height: 2.4rem; display: flex; flex-direction: column; justify-content: center; font-size: .82rem; line-height: 1.2; }
+.ca-hora { font-size: .72rem; color: var(--texto-suave); text-align: right; padding-right: .3rem; box-sizing: border-box; }
+.ca-col-cuerpo { position: relative; border-left: 1px solid var(--borde); }
+.ca-franja { border-top: 1px solid var(--borde); box-sizing: border-box; }
+.ca-bloque.en-rejilla { position: absolute; margin: 0; overflow: hidden; font-size: .78rem; z-index: 1; box-sizing: border-box; padding: .2rem .35rem; }
+.ca-tras-banda { position: absolute; left: 3px; right: 3px; border-left: 2px dashed var(--texto-suave); padding-left: .3rem; font-size: .68rem; color: var(--texto-suave); overflow: hidden; z-index: 0; }
+.ca-tras-banda.tarde { border-left-color: var(--mal); color: var(--mal); font-weight: 700; }
+.ca-real.en-rejilla { position: absolute; left: 50%; right: 3px; margin: 0; z-index: 2; opacity: .9; overflow: hidden; }
+.ca-hueco { position: absolute; left: 3px; right: 3px; border: 2px dashed var(--verde); border-radius: 6px; background: var(--primario-suave); font-size: .75rem; padding: .2rem .4rem; z-index: 0; color: var(--primario); font-weight: 600; }
+.ca-agenda-dia h3 { margin: 0 0 .4rem; }
+.ca-agenda-dia h3::first-letter { text-transform: uppercase; }
+.ca-agenda { list-style: none; margin: 0; padding: 0; }
+.ca-agenda li { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .75rem; padding: .5rem 0; border-top: 1px solid var(--borde); }
+.ca-ag-hora { font-weight: 600; min-width: 6.5rem; font-variant-numeric: tabular-nums; }
+.ca-ag-txt { flex: 1 1 200px; display: grid; min-width: 0; }
+.ca-mes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.ca-mes-cab { text-align: center; font-size: .75rem; color: var(--texto-suave); font-weight: 700; }
+.ca-mes-dia { display: grid; align-content: start; gap: 2px; min-height: 5.5rem; padding: .25rem; border: 1px solid var(--borde); border-radius: 6px; background: var(--superficie); color: var(--texto); font: inherit; text-align: left; cursor: pointer; overflow: hidden; }
+.ca-mes-dia.fuera { opacity: .5; }
+.ca-mes-num { font-weight: 700; font-size: .8rem; }
+.ca-mes-ev { font-size: .7rem; border-left: 3px solid var(--primario); padding-left: .25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ch-marco { display: grid; grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
 .ch-lista ul { list-style: none; padding: 0; margin: 0 0 .75rem; display: grid; gap: .15rem; }
 .ch-lista a { display: grid; grid-template-columns: 1fr auto; gap: 0 .4rem; padding: .45rem .5rem; border-radius: 8px; text-decoration: none; color: var(--texto); }

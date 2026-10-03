@@ -138,6 +138,13 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   recuerda; el móvil arranca en Simple), editar (estado por RPC y «¿Para
   facturar?»), duplicar, continuación, kanban (soltar cambia el estado) y
   Excel (CSV con BOM). `comun.mjs` numera los `trabajos` que se crean.
+- `verify-calendario.mjs`: calendario planificador. Semana (carga del día,
+  solapes por nombre de pila, traslados con «llega tarde» y salida de la
+  oficina), pendientes y «Sugerir hueco» (salta al Día con el hueco marcado,
+  «Otro hueco», «Planificar aquí» escribe la fecha en el TRABAJO), rejilla del
+  Día (soltar en otra columna reasigna y a esa hora), Por técnico, Agenda, Mes,
+  filtros guardados, citas sueltas y días de un trabajo. Sin corte: nada se
+  arrastra ni se planifica. Fecha fija (martes de la semana que viene).
 
 `npm run verify` pasa todos los de la lista.
 
