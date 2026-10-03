@@ -90,11 +90,14 @@ body.os-modo { overflow: hidden; }
 
 /* ── Escritorio, widgets y ventanas ────────────────────────────────────── */
 #os-escritorio { position: relative; z-index: 1; flex: 1; min-height: 0; margin-bottom: var(--os-dock); }
+/* En columnas que se rellenan de arriba abajo (caben los nueve widgets sin
+   salirse por debajo); al mover uno, pasan a ir sueltos (.libre). */
 #os-widgets {
-  position: absolute; left: 24px; top: 24px; width: min(900px, calc(100% - 48px)); z-index: 0;
-  display: grid; grid-template-columns: 300px 260px 300px; grid-auto-rows: min-content; gap: 20px; align-items: start;
+  position: absolute; left: 24px; top: 24px; width: min(1180px, calc(100% - 48px)); z-index: 0;
+  columns: 4 260px; column-gap: 20px;
 }
-@media (max-width: 1279px) { #os-widgets { grid-template-columns: 280px 260px; width: 560px; } }
+#os-widgets > .os-widget { break-inside: avoid; margin-bottom: 20px; }
+@media (max-width: 1279px) { #os-widgets { columns: 2 260px; width: 560px; } }
 .os-widget {
   display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; min-height: 120px;
   background: color-mix(in srgb, var(--superficie) 88%, transparent); backdrop-filter: blur(18px);
@@ -107,7 +110,6 @@ body.os-modo { overflow: hidden; }
 :root[data-theme="dark"] .os-w-hoy .os-wtit { color: var(--tinta); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .os-w-hoy .os-wtit { color: var(--tinta); } }
 .os-w-hoy .hex-punto { background: currentColor; }
-.os-w-agenda { grid-row: span 2; }
 .os-wtit { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--texto-suave); }
 .os-wtit > span:last-child { margin-left: auto; letter-spacing: 0; text-transform: none; font-weight: 600; }
 .hex-punto.mal { background: #d64545; }
@@ -257,7 +259,43 @@ body.os-modo .os-win-cuerpo .ma-mapa { height: 60vh; }
    punto que no sea un enlace o un botón). */
 .os-widget { cursor: grab; touch-action: none; user-select: none; }
 .os-widget a, .os-widget button { cursor: pointer; }
-#os-widgets.libre { inset: 0; width: auto; display: block; pointer-events: none; }
+#os-widgets.libre { inset: 0; width: auto; display: block; columns: auto; pointer-events: none; }
+#os-widgets.libre > .os-widget { margin-bottom: 0; }
 #os-widgets.libre > .os-widget { position: absolute; pointer-events: auto; }
 #os-widgets.libre > .os-w-agenda { max-height: calc(100% - 24px); overflow: auto; }
 .os-widget.arrastrando { cursor: grabbing; user-select: none; box-shadow: 0 18px 40px rgb(0 0 0 / .22); }
+
+/* ── Piezas de Oki como widgets (2026-10-03) ───────────────────────────── */
+/* Las mismas de la portada (oki.css), en tamaño de widget. */
+.os-widget.ok-voz { align-items: center; gap: 6px; background: color-mix(in srgb, var(--superficie) 88%, transparent); }
+.os-widget.ok-voz .os-wtit { align-self: stretch; }
+.os-widget.ok-voz .ok-ola { height: 28px; }
+.os-widget.ok-voz .ok-voz-estado { font-size: 12px; }
+.os-widget.ok-voz .ok-voz-hex { width: 72px; height: 83px; }
+.os-widget.ok-voz .ok-voz-btn { width: 66px; height: 76px; }
+.os-widget.ok-voz .ok-voz-btn svg { width: 22px; height: 22px; }
+.os-widget.ok-voz .ok-voz-res .acciones { flex-wrap: wrap; }
+.os-dice.ok-dice { padding: 0; gap: 10px; background: transparent; border: 0; border-radius: 0; flex-wrap: nowrap; align-items: flex-start; }
+.os-dice .ok-dice-btn { width: 40px; height: 46px; }
+.os-dice .ok-dice-btn svg { width: 16px; height: 16px; }
+.os-dice .ok-dice-et { display: none; }
+.os-dice .ok-dice-txt { flex: 1; min-width: 0; }
+.os-dice .ok-dice-txt p { font-size: 13px; color: var(--texto); }
+.os-dice .acciones { gap: 6px; }
+.os-dice .btn { min-height: 34px; padding: 0 .7rem; font-size: 12px; }
+.os-widget.ok-stats { gap: 8px; }
+.os-widget.ok-stats .ok-titular b { font-size: 1.8rem; }
+.os-widget.ok-stats .ok-medidor { width: 112px; }
+.os-widget.ok-stats .ok-dato-cerrados { display: none; }
+.os-widget.ok-stats .ok-barras-tit { display: none; }
+.os-widget.ok-stats .ok-barras { padding-bottom: 1.2rem; }
+.os-widget.ok-stats .ok-med-txt b { font-size: 1.4rem; }
+.os-widget.ok-stats .ok-med-txt span { font-size: 10px; }
+.os-widget.ok-stats .ok-med-txt small { display: none; }
+.os-widget.ok-stats .ok-fila-dato { padding: .35rem .6rem; }
+.os-widget.ok-stats .ok-fila-dato b { font-size: 1rem; }
+.os-widget.ok-stats .ok-barras-fila { height: 64px; }
+.os-ordenes { display: flex; flex-direction: column; gap: 6px; }
+.os-ordenes .ok-orden { min-height: 36px; font-size: 12.5px; }
+/* El panel de widgets, mientras va en rejilla, no se sale por debajo. */
+#os-widgets:not(.libre) { max-height: calc(100% - 48px); overflow-y: auto; scrollbar-width: thin; }

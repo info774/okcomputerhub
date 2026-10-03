@@ -367,10 +367,19 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   ventanas (una por módulo, pintadas con `shell/pantalla.ts`, la misma pieza
   que usa el shell clásico), widgets (Hoy, Avisos de `panorama_direccion`,
   Cobros solo admin, Equipos, Agenda), dock, escritorios con nombre y centro
-  de avisos. Se enciende por persona (botón al pie del menú, `?os=1`) y solo
-  a partir de 1024 px; la disposición va en `localStorage.hub_os_<usuario>`;
-  no escribe nada en la base. Un módulo nuevo entra solo en el dock y el
-  lanzador (sale de `visibles()`). Arnés `verify-escritorio.mjs`.
+  de avisos. Desde el 2026-10-03 (decisión de Fran) es la ENTRADA POR DEFECTO
+  a partir de 1024 px (`hub_escritorio` sin valor o `'1'`); «Volver a la app
+  clásica» (o `?os=0`) guarda `'0'` y se respeta hasta volver a pulsar «Modo
+  escritorio». En el móvil, siempre el clásico con la portada de Oki. Lleva
+  también las piezas de Oki como widgets (Voz, Oki dice, Estadísticas, Órdenes
+  rápidas: `modulos/inicio/piezas.ts`, las MISMAS de la portada, sin ids: la
+  voz se agrupa con `data-voz`) y «Oki» en el dock abre la portada entera en su
+  ventana (`#/inicio` sigue siendo el escritorio). Los widgets van en columnas
+  que se rellenan de arriba abajo hasta que se mueve uno. La disposición va en
+  `localStorage.hub_os_<usuario>`; no escribe nada en la base. Un módulo nuevo
+  entra solo en el dock y el lanzador (sale de `visibles()`). Los arneses usan
+  el clásico salvo que pidan `preparar(…, { escritorio: 'defecto' })`. Arnés
+  `verify-escritorio.mjs`.
 - **Sitios** (`src/modulos/sitios/`, `#/sitios`, 2026-09-28): las sedes como
   en «Sitios» de la app (lista con filtros y ficha con resumen, contactos,
   trabajos, tickets y equipos). Espejo en SOLO LECTURA (área `clientes`); la

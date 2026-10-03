@@ -314,8 +314,13 @@
 .wa-plantilla { margin: .6rem .6rem 0; display: flex; flex-direction: column; gap: .4rem; }
 .wa-plantilla .wa-nota { margin: 0; }
 @media (max-width: 600px) { .wa { right: 12px; bottom: 12px; } .wa.cerrado { width: 230px; } }
-/* En el modo escritorio el dock va abajo: el chat sube por encima. */
-body.os-modo .wa { bottom: 84px; }
+/* En el modo escritorio el dock va abajo: el chat sube por encima y, plegado,
+   es solo el botón con el número (para no tapar las ventanas). */
+body.os-modo .wa { bottom: 108px; }
+body.os-modo .wa.cerrado { width: 60px; height: 60px; border-radius: 16px; }
+body.os-modo .wa.cerrado .wa-cab { justify-content: center; padding: 0; }
+body.os-modo .wa.cerrado :is(.wa-titulo, .wa-chev) { display: none; }
+body.os-modo .wa.cerrado .wa-num { position: absolute; top: 4px; right: 4px; }
 
 @media (prefers-reduced-motion: reduce) {
   .menu-grupo, .ok-portada > *, .ok-flujo path, .ok-giro, .ok-halo, .ok-nodos polygon, .ok-celdas polygon,

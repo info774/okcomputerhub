@@ -11,22 +11,14 @@
 // encargo se reparte como comanda, pero solo tras confirmarlo (avisa al equipo).
 import type { Modulo, Contador } from '../../core/modulo';
 import { API } from '../../core/api';
-import { modulos, ir } from '../../core/router';
+import { modulos } from '../../core/router';
 import { registrarAcciones } from '../../core/dispatcher';
 import { htmlTelegram } from '../informes/index';
-import { grabando, grabarYTranscribir, pararGrabacion, puedeDictar } from '../../ui/dictado';
+import { puedeDictar } from '../../ui/dictado';
 import { esAdmin, usuario } from '../../core/estado';
 import { llamarFuncion } from '../../core/funciones';
-import { esc, toast, hace } from '../../ui/dom';
-
-interface Aviso {
-  clave: string; tipo: string; gravedad: 'mal' | 'aviso' | 'info'; titulo: string; detalle: string | null;
-  enlace: string | null; dinero: boolean;
-}
-interface TicketMin {
-  id: string; estado: string; created_at: string; cerrado_at: string | null;
-  sla_respuesta_at: string | null; primera_respuesta_at: string | null;
-}
+import { esc, hace } from '../../ui/dom';
+import { type Aviso, urgentesDe, hrefAviso, diceHTML, pintarEstadisticas, vozHTML, ordenesHTML, ola } from './piezas';
 
 // Las seis áreas del diagrama: posición del centro de la tarjeta en el lienzo
 // de 860 × 620 y el módulo cuyo contador pinta su dato.
@@ -105,19 +97,12 @@ export async function pintar(el: HTMLElement, baldosas: string) {
     </header>
     <div class="ok-cuerpo">
     <aside class="ok-lateral">
-      <section class="ok-panel ok-voz" id="ok-voz">
-        <div class="ok-ph"><span class="hex-punto" aria-hidden="true"></span><h3>Voz de Oki</h3><span class="ok-ph-l"></span></div>
-        <div class="ok-ola" aria-hidden="true">${ola(24)}</div>
-        <p class="ok-voz-estado" id="ok-voz-estado" aria-live="polite">${puedeDictar() ? 'Pulsa para hablar' : 'Este navegador no deja grabar audio'}</p>
-        <div class="ok-voz-hex"><span class="ok-anillo"></span><span class="ok-anillo d2"></span>
-          <button type="button" class="ok-voz-btn" id="ok-voz-btn" data-action="okHablar" aria-label="Hablar con Oki" aria-pressed="false" ${puedeDictar() ? '' : 'disabled'}>
-            <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></button></div>
-        <div class="ok-voz-res" id="ok-voz-res"></div>
+      <section class="ok-panel ok-voz" data-voz="portada">
+        ${vozHTML('portada', '<div class="ok-ph"><span class="hex-punto" aria-hidden="true"></span><h3>Voz de Oki</h3><span class="ok-ph-l"></span></div>')}
       </section>
       <section class="ok-panel ok-ordenes">
         <div class="ok-ph"><span class="hex-punto" aria-hidden="true"></span><h3>Órdenes rápidas</h3><span class="ok-ph-l"></span></div>
-        ${ORDENES.map(o => o.href ? `<a class="ok-orden" href="${o.href}"><span aria-hidden="true">›</span>${esc(o.t)}</a>`
-          : `<button type="button" class="ok-orden" data-action="${o.accion}"><span aria-hidden="true">›</span>${esc(o.t)}</button>`).join('')}
+        ${ordenesHTML()}
       </section>
     </aside>
     <div class="ok-principal">
@@ -142,9 +127,9 @@ export async function pintar(el: HTMLElement, baldosas: string) {
     </div>
     <footer class="ok-pie">
       <div class="ok-pie-datos"><span class="ok-con"><small>Último sync con la app</small><b id="ok-sync">…</b></span></div>
-      <button type="button" class="ok-hablar" id="ok-hablar" data-action="okHablar" ${puedeDictar() ? '' : 'disabled'}>
+      <button type="button" class="ok-hablar" data-voz="portada" data-action="okHablar" data-p0="portada" ${puedeDictar() ? '' : 'disabled'}>
         <span class="ok-ola corta" aria-hidden="true">${ola(10)}</span>
-        <span class="ok-hablar-txt"><b>Hablar con Oki</b><small id="ok-hablar-sub">Te escucho</small></span>
+        <span class="ok-hablar-txt"><b>Hablar con Oki</b><small class="ok-hablar-sub" data-voz="portada">Te escucho</small></span>
         <span class="ok-ola corta" aria-hidden="true">${ola(10)}</span></button>
       <button type="button" class="btn" data-action="okRepaso">Repaso de la mañana</button>
     </footer>
@@ -159,19 +144,6 @@ export async function pintar(el: HTMLElement, baldosas: string) {
   void avisos();
 }
 
-// La onda del micrófono: barras de alto y retraso fijos (se mueve con CSS).
-function ola(n: number): string {
-  return Array.from({ length: n }, (_, i) => `<span style="--h:${30 + ((i * 37) % 70)}%;animation-delay:${((i * 0.13) % 1.2).toFixed(2)}s"></span>`).join('');
-}
-
-const ORDENES: { t: string; href?: string; accion?: string }[] = [
-  { t: 'Mi lista de hoy', href: '#/lista-dia' },
-  { t: 'Nuevo trabajo', href: '#/trabajos/nuevo' },
-  { t: 'Nuevo ticket', href: '#/tickets/nuevo' },
-  { t: 'Repartir una comanda', href: '#/comandas' },
-  { t: 'Planificar la semana', href: '#/calendario' },
-  { t: 'Preguntar a Oki', accion: 'abrirBuscador' },
-];
 
 // «Estado» de la cabecera y «Último sync» del pie: la última pasada buena del
 // sync incremental con la app (hub.sync_estado, clave `audit`).
@@ -222,78 +194,11 @@ async function datosAreas() {
   ponDato('whatsapp', n ? `${n} por contestar` : 'todo contestado', n ? 'aviso' : 'bien');
 }
 
-function lunes(): Date {
-  const d = new Date(); d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return d;
-}
-
 async function estadisticas() {
   const el = document.getElementById('ok-stats');
-  if (!el) return;
-  const ini = lunes();
-  const hace30 = new Date(Date.now() - 30 * 86400000);
-  const { data, error } = await API.get<TicketMin[]>('tickets', {
-    select: 'id,estado,created_at,cerrado_at,sla_respuesta_at,primera_respuesta_at',
-    or: `(created_at.gte.${hace30.toISOString()},cerrado_at.gte.${ini.toISOString()})`, limit: '2000',
-  });
-  if (!document.getElementById('ok-stats')) return;
-  const cab = el.querySelector('.ok-ph')!.outerHTML;
-  if (error || !data) { el.innerHTML = `${cab}<p class="aviso">No se pudieron leer los tickets: ${esc(error?.message)}</p>`; return; }
-
-  const ahora = Date.now();
-  const conSla = data.filter(t => t.sla_respuesta_at && new Date(t.created_at) >= hace30);
-  const enPlazo = conSla.filter(t => t.primera_respuesta_at
-    ? t.primera_respuesta_at <= t.sla_respuesta_at!
-    : new Date(t.sla_respuesta_at!).getTime() > ahora).length;
-  const fuera = conSla.length - enPlazo;
-  const sla = conSla.length ? Math.round(enPlazo / conSla.length * 100) : null;
-  const cerrados = data.filter(t => t.cerrado_at && new Date(t.cerrado_at) >= ini);
-  const nuevos = data.filter(t => new Date(t.created_at) >= ini).length;
-  const hoyIdx = (new Date().getDay() + 6) % 7;
-  const porDia = Array.from({ length: 7 }, (_, i) => cerrados.filter(t => (new Date(t.cerrado_at!).getDay() + 6) % 7 === i).length);
-  const max = Math.max(1, ...porDia);
-  const off = `${sla == null ? 240 : (240 * (1 - sla / 100)).toFixed(1)}px`;
-  const completados = await trabajosCompletados(ini);
-  if (!document.getElementById('ok-stats')) return;
-
-  el.innerHTML = `${cab}
-    <p class="ok-titular"><b>${cerrados.length}</b> ${cerrados.length === 1 ? 'ticket cerrado' : 'tickets cerrados'} esta semana</p>
-    <div class="ok-medidor">
-      <svg viewBox="0 0 100 100" aria-hidden="true">
-        <polygon class="ok-med-ticks" points="50,2 91.6,26 91.6,74 50,98 8.4,74 8.4,26"/>
-        <polygon class="ok-med-pista" points="50,10 84.6,30 84.6,70 50,90 15.4,70 15.4,30"/>
-        <polygon class="ok-med-valor" points="50,10 84.6,30 84.6,70 50,90 15.4,70 15.4,30" style="--off:${off}"/>
-      </svg>
-      <div class="ok-med-txt">
-        <b>${sla == null ? '—' : `${sla} %`}</b>
-        <span>SLA de respuesta cumplido</span>
-        <small class="${fuera ? 'mal' : ''}">${conSla.length ? (fuera ? `${fuera} fuera de plazo (30 días)` : 'ninguno fuera de plazo') : 'sin tickets con plazo'}</small>
-      </div>
-    </div>
-    <div class="ok-fila-dato"><span>Tickets cerrados</span><b>${cerrados.length}</b></div>
-    <div class="ok-fila-dato"><span>Tickets nuevos</span><b>${nuevos}</b></div>
-    <a class="ok-fila-dato" href="#/trabajos"><span>Trabajos completados</span><b>${completados ?? '—'}</b></a>
-    <div class="ok-barras" role="img" aria-label="Tickets cerrados por día esta semana: ${porDia.map((n, i) => `${'LMXJVSD'[i]} ${n}`).join(', ')}">
-      <span class="ok-barras-tit">Tickets cerrados por día</span>
-      <div class="ok-barras-fila">${porDia.map((n, i) => `<div class="ok-barra${i === hoyIdx ? ' hoy' : ''}">
-        <small>${i > hoyIdx ? '' : n}</small><span style="--h:${i > hoyIdx ? 0 : Math.max(2, n / max * 100)}%"></span><em>${'LMXJVSD'[i]}</em></div>`).join('')}</div>
-    </div>`;
+  if (el) await pintarEstadisticas(el, el.querySelector('.ok-ph')!.outerHTML);
 }
 
-// Trabajos que se terminaron esta semana: los que están completados (o ya
-// para facturar o facturados) y cuyo último fichaje acabó desde el lunes. La
-// app no guarda cuándo se completó un trabajo; el fin del fichaje es lo más fiel.
-async function trabajosCompletados(desde: Date): Promise<number | null> {
-  const { data, error } = await API.get<{ entidad_id: string }[]>('sesiones', { select: 'entidad_id', entidad_tipo: 'eq.trabajo', fin: `gte.${desde.toISOString()}`, limit: '1000' });
-  if (error || !data) return null;
-  const ids = [...new Set(data.map(x => x.entidad_id).filter(Boolean))];
-  if (!ids.length) return 0;
-  return API.contar('trabajos', { id: `in.(${ids.join(',')})`, estado: 'in.(Completado,"Para facturar",Facturado)' });
-}
-
-const ORDEN = { mal: 0, aviso: 1, info: 2 } as const;
-const href = (a: Aviso) => (a.enlace?.startsWith('#/') ? a.enlace : '#/direccion');
 
 async function avisos() {
   const { data, error } = await API.rpc<Aviso[]>('panorama_direccion');
@@ -306,102 +211,25 @@ async function avisos() {
     persona.innerHTML = cab;
     return;
   }
-  const lista = [...data].sort((a, b) => ORDEN[a.gravedad] - ORDEN[b.gravedad]);
-  const urgentes = lista.filter(a => a.gravedad !== 'info');
+  const urgentes = urgentesDe(data);
   document.getElementById('ok-persona-n')!.textContent = String(urgentes.length);
-  const primero = urgentes[0];
   const n = document.getElementById('ok-campana-n'), campana = document.getElementById('ok-campana-lista');
   if (n) { n.hidden = !urgentes.length; n.textContent = String(urgentes.length); }
   if (campana) campana.innerHTML = urgentes.length
-    ? urgentes.slice(0, 6).map(a => `<a class="ok-campana-op ${a.gravedad}" href="${esc(href(a))}" role="menuitem"><span class="hex-punto" aria-hidden="true"></span>
+    ? urgentes.slice(0, 6).map(a => `<a class="ok-campana-op ${a.gravedad}" href="${esc(hrefAviso(a))}" role="menuitem"><span class="hex-punto" aria-hidden="true"></span>
         <span><b>${esc(a.titulo)}</b>${a.detalle ? `<small>${esc(a.detalle)}</small>` : ''}</span></a>`).join('')
     : '<p class="vacio">Nada pendiente.</p>';
-  // Si lo más urgente es un ticket, Oki se ofrece a redactar la respuesta
-  // (#/tickets/<n>/responder): la redacta y una persona la manda.
-  const ticket = primero?.enlace?.match(/^#\/tickets\/(\d+)$/)?.[1];
-  dice.innerHTML = `
-    <button type="button" class="ok-dice-btn" data-action="abrirBuscador" aria-label="Preguntar a Oki">
-      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>
-    <div class="ok-dice-txt">
-      <span class="ok-dice-et">Oki dice</span>
-      <p>${primero
-        ? `Hay ${urgentes.length === 1 ? 'una cosa que necesita' : `${urgentes.length} cosas que necesitan`} a una persona. Lo más urgente: <b>${esc(primero.titulo)}</b>${primero.detalle ? ` — ${esc(primero.detalle)}` : ''}.${ticket ? ' ¿Te redacto la respuesta?' : ''}`
-        : 'Todo en orden: no hay nada pendiente que necesite a una persona.'}</p>
-      <div class="acciones">
-        ${ticket ? `<a class="btn" href="#/tickets/${ticket}/responder">Sí, contéstalo</a><a class="btn secundario" href="#/tickets/${ticket}">Lo miro yo</a>`
-          : primero ? `<a class="btn" href="${esc(href(primero))}">Ir a lo más urgente</a>` : ''}
-        <a class="btn secundario" href="#/direccion">Ver todos los avisos</a>
-      </div>
-    </div>`;
+  dice.innerHTML = diceHTML(urgentes);
   persona.innerHTML = cab + (urgentes.length
     ? `<ul class="ok-lista">${urgentes.slice(0, 4).map(a => `<li class="ok-aviso ${a.gravedad}">
         <span class="hex-punto" aria-hidden="true"></span>
         <span class="ok-aviso-txt"><b>${esc(a.titulo)}</b>${a.detalle ? `<small>${esc(a.detalle)}</small>` : ''}</span>
-        <a class="btn secundario" href="${esc(href(a))}">Abrir</a></li>`).join('')}</ul>
+        <a class="btn secundario" href="${esc(hrefAviso(a))}">Abrir</a></li>`).join('')}</ul>
        ${urgentes.length > 4 ? `<a href="#/direccion">Y ${urgentes.length - 4} más en Dirección ›</a>` : ''}`
     : '<p class="vacio">Nada urgente. Buen trabajo.</p>');
 }
 
-// ── Voz de Oki ──────────────────────────────────────────────────────────────
-// Suena a pregunta si acaba en «?», empieza por «¿» o por una palabra de
-// pregunta o de buscar. Lo demás es un encargo para el equipo (comanda).
-const PREGUNTA = new Set(['que', 'cual', 'cuales', 'cuanto', 'cuanta', 'cuantos', 'cuantas', 'cuando', 'donde', 'quien', 'quienes', 'como', 'por',
-  'hay', 'tengo', 'tenemos', 'tiene', 'esta', 'estan', 'dime', 'busca', 'buscame', 'ensename', 'muestrame', 'sabes', 'cuentame']);
-export function esPregunta(t: string): boolean {
-  const s = t.trim();
-  if (s.startsWith('¿') || s.endsWith('?')) return true;
-  const w = s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().match(/[a-zñ]+/)?.[0] ?? '';
-  return PREGUNTA.has(w);
-}
-
-let _dicho = '';
-function vozEstado(modo: 'quieto' | 'escucha' | 'pasa', texto: string) {
-  const voz = document.getElementById('ok-voz'), pie = document.getElementById('ok-hablar');
-  for (const e of [voz, pie]) { e?.classList.toggle('escuchando', modo === 'escucha'); e?.classList.toggle('pensando', modo === 'pasa'); }
-  document.getElementById('ok-voz-btn')?.setAttribute('aria-pressed', String(modo === 'escucha'));
-  const est = document.getElementById('ok-voz-estado'); if (est) est.textContent = texto;
-  const sub = document.getElementById('ok-hablar-sub');
-  if (sub) sub.textContent = modo === 'escucha' ? 'Escuchando… pulsa para acabar' : modo === 'pasa' ? 'Pasando a texto…' : 'Te escucho';
-}
-
-function vozResultado(html: string) {
-  const r = document.getElementById('ok-voz-res');
-  if (r) { r.innerHTML = html; r.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
-}
-
-// Ojo: el despachador desactiva el botón mientras dura una acción asíncrona,
-// así que okHablar vuelve al momento y la escucha sigue aparte (si no, no se
-// podría pulsar otra vez para parar).
-async function escuchar() {
-    vozResultado('');
-    const r = await grabarYTranscribir({
-      empieza: () => vozEstado('escucha', 'Escuchando…'),
-      pasando: () => vozEstado('pasa', 'Pasando a texto…'),
-    });
-    vozEstado('quieto', puedeDictar() ? 'Pulsa para hablar' : '');
-    if (!r.texto) { vozResultado(`<p class="nota">${esc(r.error ?? 'No se entendió nada')}</p>`); return; }
-    _dicho = r.texto;
-    if (esPregunta(r.texto)) { ir('buscar', r.texto); return; }
-    vozResultado(`<p class="ok-dicho">«${esc(r.texto)}»</p>
-      <p class="nota">Suena a un encargo para el equipo. ¿Lo reparto como comanda?</p>
-      <div class="acciones"><button type="button" class="btn" data-action="okComanda">Repartir como comanda</button>
-        <button type="button" class="btn secundario" data-action="okPreguntar">No, pregúntalo</button>
-        <button type="button" class="btn secundario" data-action="okDescartar">Descartar</button></div>`);
-}
-
 registrarAcciones({
-  okHablar() { if (grabando()) pararGrabacion(); else void escuchar(); },
-  async okComanda() {
-    if (!_dicho) return;
-    vozResultado('<p class="nota"><span class="hex-punto pulso" aria-hidden="true"></span> Repartiendo…</p>');
-    const r = await llamarFuncion<{ tareas: unknown[] }>('comandas', { accion: 'crear', texto: _dicho }, 120000);
-    if (r.error || !r.data) { vozResultado(`<p class="nota">No se pudo repartir: ${esc(r.error)}</p>`); return; }
-    _dicho = '';
-    toast(`Comanda repartida en ${r.data.tareas.length} tarea(s)`);
-    vozResultado(`<p class="nota">Repartida en ${r.data.tareas.length} tarea(s). <a href="#/comandas">Ver comandas ›</a></p>`);
-  },
-  okPreguntar() { if (_dicho) ir('buscar', _dicho); },
-  okDescartar() { _dicho = ''; vozResultado(''); },
   // El repaso de la mañana (el mismo informe que llega por Telegram), aquí mismo.
   async okRepaso() {
     const caja = document.getElementById('ok-repaso');

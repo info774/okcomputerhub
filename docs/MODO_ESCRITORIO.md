@@ -6,10 +6,12 @@ código el 2026-09-28. Convive con el hub clásico y no lo toca.
 
 ## Cómo se enciende
 
-- Botón **«🖥 Modo escritorio»** al pie del menú lateral (solo se ve a partir de
-  1024 px). Se recuerda por navegador (`localStorage.hub_escritorio`).
+- **Desde el 2026-10-03 es la entrada por defecto** en pantallas de 1024 px o
+  más (decisión de Fran): sin nada guardado, se entra al escritorio.
+- Se apaga desde el avatar de la barra → **«Volver a la app clásica»**, y eso se
+  recuerda por navegador (`localStorage.hub_escritorio = '0'`) hasta que se
+  pulse **«🖥 Modo escritorio»** al pie del menú lateral.
 - `?os=1` en la URL lo enciende y `?os=0` lo apaga (la URL se limpia sola).
-- Se apaga desde el avatar de la barra → **«Volver a la app clásica»**.
 - Por debajo de 1024 px no entra aunque esté activado: el móvil sigue con el
   hub de siempre.
 
@@ -32,6 +34,22 @@ código el 2026-09-28. Convive con el hub clásico y no lo toca.
     señal, alertas activas y las dos últimas.
   - *Agenda de hoy*: bloques de `agenda` con su trabajo y cliente; un bloque
     sin técnico va marcado con «Asignar».
+  - *Voz de Oki*: hablar con Oki (una pregunta va al buscador; un encargo se
+    reparte como comanda tras confirmarlo).
+  - *Oki dice*: lo más urgente, con «Sí, contéstalo» / «Lo miro yo» si es un
+    ticket.
+  - *Estadísticas*: SLA de respuesta, tickets de la semana, trabajos
+    completados y cerrados por día (cada ~5 min).
+  - *Órdenes rápidas*: lista del día, nuevo trabajo/ticket, comandas,
+    calendario, preguntar a Oki.
+  Las cuatro últimas son las mismas piezas que la portada de Oki
+  (`src/modulos/inicio/piezas.ts`). Mientras nadie mueve un widget van en
+  columnas que se rellenan de arriba abajo.
+- **«Oki» en el dock** abre la portada de Oki entera (diagrama, estadísticas,
+  pie con «Hablar con Oki» y el repaso) como una ventana más.
+- **WhatsApp**: el chat de clientes, plegado, es un botón hexagonal encima de
+  la esquina derecha del dock con el número de pendientes; abierto, sube por
+  encima del dock.
 - **Ventanas**: una por módulo. Navegar a `#/proyectos/12` pinta la ficha en
   la ventana de Proyectos (la misma `pintarPantalla` del shell clásico, en un
   contenedor con clase `principal` para que los estilos de formulario valgan).

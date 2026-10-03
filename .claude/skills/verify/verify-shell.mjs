@@ -53,6 +53,8 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Header
 const CUENTAS = { trabajos: 7, agenda: 3, tickets: 4, tareas: 0, clientes: 120, presupuestos: 2, locales: 150, contactos: 300 };
 
 async function preparar(ctx, { email, usuarios = FIX.usuarios } = {}) {
+  // El escritorio es la entrada por defecto a partir de 1024 px: aquí se prueba el clásico.
+  await ctx.addInitScript(() => { if (localStorage.getItem('hub_escritorio') == null) localStorage.setItem('hub_escritorio', '0'); });
   const reg = { rest: [], funciones: [] };
   await ctx.route(`${SB}/rest/v1/**`, async route => {
     const req = route.request();

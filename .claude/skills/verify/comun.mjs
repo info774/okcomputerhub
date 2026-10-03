@@ -137,7 +137,11 @@ export function baseMemoria(inicial = {}, rpc = {}) {
   return { db, reg, manejar };
 }
 
-export async function preparar(ctx, { email, base }) {
+// `escritorio`: el modo escritorio es la entrada por defecto a partir de
+// 1024 px; los arneses de cada pantalla prueban el shell clásico, así que aquí
+// se elige el clásico salvo que se pida 'defecto' (sin preferencia guardada).
+export async function preparar(ctx, { email, base, escritorio = 'clasico' }) {
+  if (escritorio === 'clasico') await ctx.addInitScript(() => { if (localStorage.getItem('hub_escritorio') == null) localStorage.setItem('hub_escritorio', '0'); });
   await ctx.route(`${SB}/rest/v1/**`, base.manejar);
   await ctx.route(`${SB}/functions/v1/**`, async route => {
     base.reg.funciones.push({ url: route.request().url(), body: route.request().postDataJSON() });

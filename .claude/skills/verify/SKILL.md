@@ -113,6 +113,10 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   técnico sin Cobros, 900 px no entra) y la paleta Ctrl+K con sus cuatro
   modos. No escribe nada.
 
+  Desde el 2026-10-03: el escritorio es la entrada por defecto (sin preferencia
+  guardada), widgets de Oki (voz, Oki dice, estadísticas, órdenes) que se
+  arrastran, «Oki» en el dock abre la portada en su ventana, WhatsApp plegado
+  como botón y «Volver a la app clásica» se recuerda al recargar.
 - `verify-final.mjs`: trabajos, calendario, hoy y chat en los dos mundos: con
   las áreas de la app (todo se ve, nada se edita, avisa) y cortadas (estado,
   material, mover, fichar, terminar con foto, por sus RPC). El GPS no
@@ -176,5 +180,5 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
 ## Pantalla nueva
 
 Un `verify-<modulo>.mjs` propio sobre `comun.mjs` (`servidor`, `navegador`,
-`baseMemoria`, `preparar`), añadido a `npm run verify`, y una línea aquí con
+`baseMemoria`, `preparar` —que deja el shell clásico salvo `{ escritorio: 'defecto' }`, porque a partir de 1024 px el modo escritorio es la entrada por defecto—), añadido a `npm run verify`, y una línea aquí con
 qué cubre.

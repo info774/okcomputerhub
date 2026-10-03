@@ -172,25 +172,25 @@ try {
   await page.click('#wa-cab');
 
   // Voz: una pregunta va al buscador
-  await page.click('#ok-voz-btn');
-  await page.waitForSelector('#ok-voz.escuchando');
-  ok((await page.textContent('#ok-hablar-sub')).includes('Escuchando'), 'voz: escuchando (también en la barra del pie)');
+  await page.click('.ok-voz-btn[data-voz="portada"]');
+  await page.waitForSelector('.ok-voz.escuchando');
+  ok((await page.textContent('.ok-hablar-sub')).includes('Escuchando'), 'voz: escuchando (también en la barra del pie)');
   await page.waitForTimeout(1200);
-  await page.click('#ok-voz-btn');
+  await page.click('.ok-voz-btn[data-voz="portada"]');
   await page.waitForFunction(() => location.hash.startsWith('#/buscar/'));
   ok(decodeURIComponent(page.url().split('#/buscar/')[1]) === '¿Qué tickets tengo abiertos?', 'voz: una pregunta va al buscador');
   // Un encargo se reparte como comanda, pero solo tras confirmarlo
   dictado = 'Llamar a Costa Adeje para cambiar el router mañana';
   await page.goto(`${srv.base}/#/inicio`);
-  await page.waitForSelector('#ok-hablar');
-  await page.click('#ok-hablar');
-  await page.waitForSelector('#ok-hablar.escuchando');
+  await page.waitForSelector('.ok-hablar');
+  await page.click('.ok-hablar');
+  await page.waitForSelector('.ok-hablar.escuchando');
   await page.waitForTimeout(1200);
-  await page.click('#ok-hablar');
+  await page.click('.ok-hablar');
   await page.waitForSelector('[data-action="okComanda"]');
   ok(!llamadas.some(l => l.fn === 'comandas' && l.accion === 'crear'), 'voz: un encargo NO se reparte sin confirmar');
   await page.click('[data-action="okComanda"]');
-  await page.waitForFunction(() => document.getElementById('ok-voz-res')?.textContent.includes('Repartida en 2'));
+  await page.waitForFunction(() => document.querySelector('.ok-voz-res[data-voz="portada"]')?.textContent.includes('Repartida en 2'));
   ok(llamadas.some(l => l.fn === 'comandas' && l.accion === 'crear' && l.texto.startsWith('Llamar a Costa')), 'voz: confirmado, se reparte como comanda');
   // Repaso de la mañana
   await page.click('[data-action="okRepaso"]');
