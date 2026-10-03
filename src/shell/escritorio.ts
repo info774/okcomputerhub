@@ -14,7 +14,8 @@
 // modulos/inicio/piezas.ts, las mismas que la portada; la portada entera se
 // abre como una ventana más con «Oki» en el dock.
 // Barra con escritorios (varios, con nombre), Ctrl+K, sync, avisos, tema y
-// reloj; dock con las pantallas del hub, Claude y «Todas». La disposición
+// reloj; dock estilo macOS (shell/dock.ts: aumento, rebote y fijas de cada
+// persona en hub.dock_fijas) con las pantallas del hub, Claude y «Todas». La disposición
 // (ventanas, tamaño, sitio, zona de ajuste) se guarda por persona y por
 // escritorio en localStorage.
 // Prefijo de ids y clases: os-.
@@ -29,11 +30,13 @@ import { avisos as cargarAvisos, GRUPOS, esMio, type Aviso } from '../modulos/di
 import { urgentesDe, diceHTML, pintarEstadisticas, vozHTML, ordenesHTML } from '../modulos/inicio/piezas';
 import { pintarPantalla } from './pantalla';
 import { abrirBuscador } from './buscador';
+import { iconoHex } from './iconos';
+import { instalarDock, trasPintar, cargarFijas, fijas, fijar, quitar, rebotar } from './dock';
 
 const CLAVE_ACTIVO = 'hub_escritorio';
 const ANCHO_MINIMO = 1024;
 const MARGEN = 16;
-const DOCK_FIJAS = 12;
+const DOCK_FIJAS = 12;   // las de siempre, mientras la persona no elija las suyas
 type Zona = 'izq' | 'der' | 'ai' | 'ad' | 'bi' | 'bd' | 'max' | null;
 interface Ventana { id: string; params: string[]; x: number; y: number; w: number; h: number; min: boolean; snap: Zona; z: number }
 interface Escritorio { nombre: string; ventanas: Ventana[]; widgets?: Record<string, { x: number; y: number }> }
@@ -114,7 +117,15 @@ export function pintarEscritorio(raiz: HTMLElement) {
     <nav id="os-dock" aria-label="Dock"></nav>`;
   raiz.appendChild(el);
   pintarEscritorios();
+  instalarDock(document.getElementById('os-dock')!, document.getElementById('os-lanzador')!, {
+    repintar: pintarDock,
+    defecto: () => visibles().filter(delHub).filter(m => m.id !== 'inicio').slice(0, DOCK_FIJAS).map(m => m.id),
+    titulo: id => modulo(id)?.titulo ?? id,
+    abierta: id => !!ventanaDe(id),
+    cerrarLanzador: () => { document.getElementById('os-lanzador')!.hidden = true; },
+  });
   pintarDock();
+  void cargarFijas();
   pintarWidgets();
   reloj();
   for (const v of escritorio().ventanas) void abrirVentana(v.id, v.params, false);
@@ -139,33 +150,44 @@ function pintarEscritorios() {
 
 const delHub = (m: Modulo) => !m.enlaceExterno;
 
+// Panel y Oki delante; luego las fijas de la persona (en su orden) y lo
+// abierto que no esté fijo, mientras dure; tras la raya, Claude y «Todas».
 function pintarDock() {
   const abiertas = new Set(escritorio().ventanas.map(v => v.id));
   const frente = ventanaFrente()?.id;
-  const item = (m: Modulo, extra = '') => `
-    <button class="os-ditem ${abiertas.has(m.id) ? 'abierta' : ''} ${frente === m.id ? 'activa' : ''} ${extra}" data-action="osAbrir" data-p0="${esc(m.id)}" title="${esc(m.titulo)}">
-      <span class="hex" aria-hidden="true">${esc(m.icono)}</span><span class="os-dlabel">${esc(m.titulo)}</span><span class="os-dpunto"></span></button>`;
-  // Fijas: las primeras del menú (las del hub); lo abierto que no esté entre
-  // ellas se añade mientras dure, como en cualquier dock. El resto, en «Todas».
-  const hub = visibles().filter(delHub);
-  const fijas = hub.slice(0, DOCK_FIJAS);
-  const enDock = [...fijas, ...hub.filter(m => abiertas.has(m.id) && !fijas.includes(m))];
-  document.getElementById('os-dock')!.innerHTML = item({ id: 'inicio', titulo: 'Panel', icono: '▦' } as Modulo)
-    + `<button class="os-ditem os-oki ${abiertas.has('inicio') ? 'abierta' : ''} ${frente === 'inicio' ? 'activa' : ''}" data-action="osOki" title="Oki · centro de mando">
-        <span class="hex" aria-hidden="true">OKI</span><span class="os-dlabel">Oki</span><span class="os-dpunto"></span></button>`
-    + enDock.map(m => item(m)).join('')
-    + '<span class="os-dsep"></span>'
-    + `<button class="os-ditem os-claude" data-action="osClaude" title="Pedir a Claude"><span class="hex" aria-hidden="true">✨</span><span class="os-dlabel">Claude</span><span class="os-dpunto"></span></button>`
-    + `<button class="os-ditem" data-action="osLanzador" data-p0="1" title="Todas las pantallas"><span class="hex os-hex-borde" aria-hidden="true">⋯</span><span class="os-dlabel">Todas</span><span class="os-dpunto"></span></button>`;
+  const hub = visibles().filter(delHub).filter(m => m.id !== 'inicio');
+  const deHub = new Map(hub.map(m => [m.id, m]));
+  const fijasM = fijas().map(id => deHub.get(id)).filter((m): m is Modulo => !!m);
+  const sueltas = hub.filter(m => abiertas.has(m.id) && !fijasM.includes(m));
+  const estado = (id: string) => `${abiertas.has(id) ? 'abierta' : ''} ${frente === id ? 'activa' : ''}`;
+  const item = (m: Modulo, fija: boolean) => `
+    <button class="os-ditem ${estado(m.id)}" data-action="osAbrir" data-p0="${esc(m.id)}" data-mod="${esc(m.id)}"${fija ? ' data-fija="1"' : ''} aria-label="${esc(m.titulo)}">
+      ${iconoHex(m.id, m.titulo)}<span class="os-dlabel" aria-hidden="true">${esc(m.titulo)}</span><span class="os-dpunto"></span></button>`;
+  const fijo = (accion: string, extra: string, ico: string, titulo: string, clase = '') => `
+    <button class="os-ditem ${clase}" data-action="${accion}"${extra} aria-label="${esc(titulo)}">
+      ${ico}<span class="os-dlabel" aria-hidden="true">${esc(titulo)}</span><span class="os-dpunto"></span></button>`;
+  const html = fijo('osAbrir', ' data-p0="inicio"', iconoHex('panel'), 'Panel')
+    + fijo('osOki', '', iconoHex('oki', 'Oki', 'os-ico-oki'), 'Oki · centro de mando', `os-oki ${estado('inicio')}`)
+    + fijasM.map(m => item(m, true)).join('')
+    + sueltas.map(m => item(m, false)).join('')
+    + '<span class="os-dsep" aria-hidden="true"></span>'
+    + fijo('osClaude', '', iconoHex('claude', 'Claude', 'os-ico-claude'), 'Pedir a Claude', 'os-claude')
+    + fijo('osLanzador', ' data-p0="1"', iconoHex('todas', 'Todas'), 'Todas las pantallas');
+  const dock = document.getElementById('os-dock');
+  if (!dock) return;
+  // Mismo HTML, mismo DOM: rehacerlo entre pointerdown y pointerup se come el clic.
+  if (dock.dataset.html !== html) { dock.innerHTML = html; dock.dataset.html = html; }
+  trasPintar(dock);
 }
 
 function pintarLanzador() {
   const lista = visibles();
   const grupo = (titulo: string, ms: Modulo[]) => ms.length ? `<div class="os-ltit"><i class="hex-punto"></i>${esc(titulo)}</div>
-    <div class="os-lgrid">${ms.map(m => `<a class="os-litem ${m.enlaceExterno ? 'ext' : ''}" href="${esc(hrefDe(m))}"${m.enlaceExterno ? ' target="_blank" rel="noopener"' : ''} data-action="osLanzador" data-p0="0">
-      <span class="hex" aria-hidden="true">${esc(m.icono)}</span><span>${esc(m.titulo)}<small>${esc(m.enlaceExterno ? 'abre la app actual' : m.grupo)}</small></span></a>`).join('')}</div>` : '';
+    <div class="os-lgrid">${ms.map(m => `<a class="os-litem ${m.enlaceExterno ? 'ext' : ''}" href="${esc(hrefDe(m))}"${m.enlaceExterno ? ' target="_blank" rel="noopener"' : ` data-mod="${esc(m.id)}" draggable="false"`} data-action="osLanzador" data-p0="0">
+      ${m.enlaceExterno ? `<span class="hex" aria-hidden="true">${esc(m.icono)}</span>` : iconoHex(m.id === 'inicio' ? 'oki' : m.id, m.titulo, m.id === 'inicio' ? 'os-ico-oki' : '')}<span>${esc(m.titulo)}<small>${esc(m.enlaceExterno ? 'abre la app actual' : m.grupo)}</small></span></a>`).join('')}</div>` : '';
   document.querySelector('#os-lanzador .os-lanzador-panel')!.innerHTML =
-    grupo('Del hub', lista.filter(delHub)) + grupo('En la app actual', lista.filter(m => !delHub(m)));
+    '<p class="nota os-lnota">Arrastra una pantalla al dock para dejarla fija, o clic derecho → «Mantener en el dock».</p>'
+    + grupo('Del hub', lista.filter(delHub)) + grupo('En la app actual', lista.filter(m => !delHub(m)));
 }
 
 function reloj() {
@@ -239,6 +261,7 @@ async function abrirVentana(id: string, params: string[], enfocarla = true) {
   const m = modulo(id);
   if (!m || m.enlaceExterno) return;
   let v = ventanaDe(id);
+  const nueva = !v;
   if (!v) {
     v = { id, params, min: false, snap: null, z: ++_z, ...sitioNuevo(escritorio().ventanas.length) };
     escritorio().ventanas.push(v);
@@ -252,7 +275,7 @@ async function abrirVentana(id: string, params: string[], enfocarla = true) {
     el.setAttribute('aria-label', `Ventana ${m.titulo}`);
     el.innerHTML = `
       <div class="os-win-cab" data-on-dblclick="osMaximizar:${esc(id)}">
-        <span class="hex os-win-icono" aria-hidden="true">${esc(m.icono)}</span>
+        ${iconoHex(id === 'inicio' ? 'oki' : id, m.titulo, `os-win-icono ${id === 'inicio' ? 'os-ico-oki' : ''}`)}
         <span class="os-win-titulo" title="${esc(m.explicacion)}">${esc(m.titulo)}</span>
         <button class="os-wbtn" data-action="osMinimizar" data-p0="${esc(id)}" aria-label="Minimizar">–</button>
         <button class="os-wbtn" data-action="osMaximizar" data-p0="${esc(id)}" aria-label="Maximizar o restaurar">▢</button>
@@ -270,6 +293,7 @@ async function abrirVentana(id: string, params: string[], enfocarla = true) {
     }).observe(el);
   }
   aplicarGeometria(v);
+  if (nueva && enfocarla) rebotar(id);
   if (enfocarla) enfocar(id); else { el.classList.toggle('activa', ventanaFrente()?.id === id); pintarDock(); }
   guardarEstado();
   await pintarPantalla(el.querySelector('.os-pantalla') as HTMLElement, m, params);
@@ -701,6 +725,8 @@ registrarAcciones({
     if (!l.hidden) pintarLanzador();
   },
   osClaude() { abrirBuscador('claude'); },
+  osDockFijar(id: string) { fijar(id); },
+  osDockQuitar(id: string) { quitar(id); },
 });
 
 // Un clic fuera cierra el menú del avatar.

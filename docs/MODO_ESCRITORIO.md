@@ -61,6 +61,18 @@ código el 2026-09-28. Convive con el hub clásico y no lo toca.
 - **Dock**: las pantallas del hub (sin las que enlazan a la app actual) con su
   estado (abierta, delante), **Claude** (abre la paleta en modo «Pedir a
   Claude») y **Todas** (lanzador con todo, incluidas las de la app actual).
+  Desde el 2026-10-03 funciona como el de macOS (`shell/dock.ts`): los iconos
+  crecen al pasar el ratón, el nombre sale encima, la pantalla que se abre
+  rebota y lo abierto lleva un punto. Iconos de línea en hexágono, como los de
+  la web (`shell/iconos.ts`). **Cada persona elige sus fijas** y se guardan en
+  la base (`hub.dock_fijas`), así es el mismo dock en cualquier ordenador:
+  - clic derecho en un icono (del dock o de «Todas») → «Mantener en el dock»
+    o «Quitar del dock»;
+  - arrastrar una pantalla de «Todas» al dock la fija donde se suelte, y
+    arrastrar dentro del dock cambia el orden;
+  - sacar un icono hacia arriba, fuera del dock, lo quita.
+  Panel, Oki, Claude y Todas no se mueven. Sin elegir nada, las 12 primeras
+  pantallas del menú. Lo abierto que no está fijo sale mientras esté abierto.
 - **Centro de avisos** (campana): la lista completa, con «Los míos» (misma regla
   `esMio` del puesto de mando) y el enlace de cada aviso.
 
