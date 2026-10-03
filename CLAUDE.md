@@ -377,8 +377,9 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   voz se agrupa con `data-voz`) y «Oki» en el dock abre la portada entera en su
   ventana (`#/inicio` sigue siendo el escritorio). Los widgets van en columnas
   que se rellenan de arriba abajo hasta que se mueve uno. La disposición va en
-  `localStorage.hub_os_<usuario>`; no escribe nada en la base. Un módulo nuevo
-  entra solo en el dock y el lanzador (sale de `visibles()`). Los arneses usan
+  `localStorage.hub_os_<usuario>`; lo ÚNICO que va a la base son las fijas del
+  dock (abajo). Un módulo nuevo entra solo en el lanzador y, mientras nadie
+  haya elegido sus fijas, en el dock (las 12 primeras de `visibles()`). Los arneses usan
   el clásico salvo que pidan `preparar(…, { escritorio: 'defecto' })`. Arnés
   `verify-escritorio.mjs`.
 - **Clientes con escritura** (2026-10-03, paridad bloque 2, PREPARADO para
@@ -445,6 +446,19 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   etiqueta directa, la fila filtra con su `data-action` y la `activa` lleva el
   hexágono). `.chip.aviso` es una
   píldora; la CIFRA en ámbar es `.di-cifra.atento` (nunca `.aviso`, que es caja).
+- **Dock estilo macOS** (`src/shell/dock.ts`, `src/shell/iconos.ts`,
+  `20261022_dock.sql`, 2026-10-03, diseño «Dock del hub»): aumento bajo el
+  puntero (coseno, medido sobre el dock EN REPOSO para que no tiemble), nombre
+  encima, rebote al abrir una ventana nueva y punto en lo abierto. Fijas POR
+  PERSONA en `hub.dock_fijas` (una fila, `modulos` en orden, RLS «propia»;
+  copia en `localStorage.hub_dock_<usuario>` para pintar al instante; sin fila,
+  las 12 primeras). Tres gestos: clic derecho → Mantener/Quitar (también en
+  «Todas»), arrastrar desde «Todas» o dentro del dock (ordena) y sacar hacia
+  arriba (quita). Panel, Oki, Claude y «Todas» van siempre. Iconos: SVG de
+  línea duotono en hexágono (`iconoHex(id)`), colores por CSS (`.os-ico-*`);
+  pantalla nueva = su dibujo en `DIBUJOS` (si no, sale su inicial). OJO: tras
+  un arrastre el clic que sigue se descarta, pero solo en ese mismo turno (si
+  no llega, no puede quedarse esperando al siguiente). Arnés `verify-dock.mjs`.
 - **Widgets movibles** del modo escritorio: se arrastran por cualquier punto
   que no sea un enlace o botón; al mover el primero se congela el sitio de
   todos (`Escritorio.widgets`, por escritorio, en la misma disposición de
