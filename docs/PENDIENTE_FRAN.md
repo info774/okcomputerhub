@@ -36,6 +36,29 @@ tickets de gasto se leen solos (#/personas → Gastos).
    ANTHROPIC_API_KEY=sk-ant-...
    ```
 
+## 1 bis · WhatsApp: contestar desde el hub (2 claves, ~5 minutos)
+
+**Desbloquea**: el botón **Enviar** del chat de WhatsApp del hub (la ventana de
+abajo a la derecha). Leer las conversaciones ya funciona sin esto. Son las
+MISMAS dos claves que tiene la app actual; Supabase no deja volver a verlas, así
+que se sacan otra vez de Meta.
+
+1. **El id del número**: entra en **https://developers.facebook.com** → **Mis
+   apps** → la app de WhatsApp de la empresa → menú de la izquierda
+   **WhatsApp** → **Configuración de la API**. Copia el número largo que pone
+   **Identificador del número de teléfono** (no es el teléfono).
+2. **El token**: entra en **https://business.facebook.com/settings** → menú
+   **Usuarios** → **Usuarios del sistema** → elige el que ya usa la app →
+   botón **Generar token** → app: la de WhatsApp → caducidad: **Nunca** →
+   marca `whatsapp_business_messaging` y `whatsapp_business_management` →
+   **Generar token** y cópialo (solo se enseña una vez). Generar uno nuevo NO
+   anula el que usa la app.
+3. Variables de entorno (ver arriba cómo):
+   ```
+   WHATSAPP_TOKEN=EAAG...
+   WHATSAPP_PHONE_NUMBER_ID=1234567890...
+   ```
+
 ## 2 · Google: correo, Drive (una vez, ~10 minutos)
 
 **Desbloquea**: los correos a info@ se convierten en tickets y las respuestas

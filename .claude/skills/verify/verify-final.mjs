@@ -140,7 +140,7 @@ try {
 
   // Móvil
   const M = await contexto(browser, 'tito@ok.test', true, { width: 390, height: 844 });
-  for (const [r, sel] of [['trabajos', '#tr-lista'], ['trabajos/151', '.op-ficha'], ['calendario', '.ca-bloque'], ['hoy', '.ho-siguiente'], ['chat', '.ch-lista'], ['chat/cg', '#ch-texto']]) {
+  for (const [r, sel] of [['trabajos', '#tr-lista'], ['trabajos/151', '.op-ficha'], ['calendario', '.ca-agenda li'], ['hoy', '.ho-siguiente'], ['chat', '.ch-lista'], ['chat/cg', '#ch-texto']]) {
     await M.page.goto(`${srv.base}/#/${r}`);
     await M.page.waitForSelector(sel);
     const ancho = await M.page.evaluate(() => document.documentElement.scrollWidth);

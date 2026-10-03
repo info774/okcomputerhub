@@ -45,6 +45,10 @@ export const TABLAS_APP: Record<string, TablaApp> = {
     trabajo_id ticket_id presupuesto_id duracion_teorica hora_recordatorio numero cliente_id local_id
     contacto_id recurrencia recurrencia_cada proxima_recurrencia recurrencia_hasta tarea_origen_id gtask_id
     hora_inicio hora_fin tipo oportunidad_id descripcion`) },
+  // Lista del día (paridad bloque 1): en el audit_log de la app y, por si el
+  // espejo nace vacío, entera cada noche.
+  plantillas_trabajo: { auditada: false, columnas: c('id created_at nombre tipo descripcion duracion_teorica checklist activa') },
+  lista_dia: { auditada: true, nocturna: true, columnas: c('id created_at fecha usuario tipo ref_id titulo orden completado completado_at estado_previo creado_por') },
   tickets: { auditada: true, columnas: c(`id created_at cliente_id local_id titulo descripcion estado prioridad
     tecnico_id resolucion via_contacto numero contacto_id trabajo_id resolucion_categoria`) },
   presupuestos: { auditada: true, columnas: c(`id created_at cliente_id local_id titulo exigencias estado total

@@ -21,6 +21,7 @@ import { moduloOportunidades } from './oportunidades';
 import { moduloPresupuestos } from './presupuestos';
 import { moduloMantenimientos } from './mantenimientos';
 import { moduloTickets } from './tickets';
+import { moduloListaDia } from './lista-dia';
 import { moduloPortal } from './portal';
 import { moduloFirmas } from './firmas';
 import { moduloFacturacion } from './facturacion';
@@ -31,6 +32,7 @@ import { moduloInventario } from './inventario';
 import { moduloTrabajos } from './trabajos';
 import { moduloCalendario } from './calendario';
 import { moduloChat } from './chat';
+import { moduloTablero } from './tablero';
 import { moduloHoy } from './hoy';
 import { modulosAppActual } from './app-actual';
 
@@ -42,6 +44,7 @@ export const MODULOS: Modulo[] = [
   moduloComandas,
   moduloTareas,
   moduloChat,
+  moduloTablero,
   moduloPersonas,
   moduloWiki,
   moduloBuscar,
@@ -58,6 +61,7 @@ export const MODULOS: Modulo[] = [
   moduloFacturacion,
   moduloMapa,
   moduloHoy,
+  moduloListaDia,
   moduloTrabajos,
   moduloCalendario,
   moduloMonitorizacion,

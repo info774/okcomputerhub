@@ -127,6 +127,39 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   curso; cuota NETA con el bruto heredado de Zoho sin IGIC), barras por plan
   que filtran, la fila lleva al sitio, y un técnico en el móvil sin euros.
   `comun.mjs` entiende `not.` (un NULL no cumple `not.in`, como en SQL).
+- `verify-oki.mjs`: portada de Oki (diagrama con 6 áreas y su dato, SLA y
+  cerrados por día, «Oki dice» y «Necesita a una persona» desde
+  `panorama_direccion`, baldosas debajo) y chat de WhatsApp fijo (plegado al
+  entrar, leer y marcar leída, propuesta de Oki, enviar, ventana de 24 h
+  cerrada bloquea, sigue en otra pantalla, móvil sin desbordar). La función
+  `whatsapp` va simulada con su propia ruta encima de la de `preparar`.
+- `verify-trabajos.mjs`: paridad de trabajos. Sin corte: el alta lleva a la
+  app y el formulario no guarda. Con corte: alta Simple/Completa (el modo se
+  recuerda; el móvil arranca en Simple), editar (estado por RPC y «¿Para
+  facturar?»), duplicar, continuación, kanban (soltar cambia el estado) y
+  Excel (CSV con BOM). `comun.mjs` numera los `trabajos` que se crean.
+- `verify-calendario.mjs`: calendario planificador. Semana (carga del día,
+  solapes por nombre de pila, traslados con «llega tarde» y salida de la
+  oficina), pendientes y «Sugerir hueco» (salta al Día con el hueco marcado,
+  «Otro hueco», «Planificar aquí» escribe la fecha en el TRABAJO), rejilla del
+  Día (soltar en otra columna reasigna y a esa hora), Por técnico, Agenda, Mes,
+  filtros guardados, citas sueltas y días de un trabajo. Sin corte: nada se
+  arrastra ni se planifica. Fecha fija (martes de la semana que viene).
+- `verify-lista-dia.mjs`: lista del día por persona (título leído del origen),
+  marcar por `hub.lista_dia_marcar` con su aviso de fichaje, pasar a otra
+  persona (reasigna), recado, añadir de lo pendiente (asigna), traer lo ya
+  asignado, quitar, Planificar (atrasado; «Mañana» mueve fecha y hora), la
+  casilla del alta de trabajo y el técnico que solo ve lo suyo.
+- `verify-parte.mjs`: firma del cliente (sin trazo no guarda; con trazo, PNG en
+  `firma_cliente`), parte imprimible (empresa de `hub.config`, cliente, duración,
+  productos con IGIC, firma, fotos; al imprimir sale solo el parte y entero),
+  plantillas (crear con pasos, editar, eliminar = desactivar, aplicarlas en el
+  alta) y el mundo sin corte (se ve, no se escribe).
+- `verify-tablero.mjs`: tablero (todas las notas con su autor, buscador; con
+  corte, nueva con el título sacado de la nota, editar y borrar solo las
+  propias, nota de voz con micrófono de mentira → `comandas` `transcribir`) y
+  chat por ficha («💬 Chat» del trabajo → `hub.chat_ficha` → `#/chat/<canal>`
+  con «Abrir la ficha»).
 - `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
   producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
   por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de

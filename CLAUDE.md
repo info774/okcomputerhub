@@ -55,6 +55,14 @@ la serie de PRUEBA. Detalle y pasos para activarla en `docs/FASE11.md`.
 `supabase/cortes/corte_final.sql` y NO se aplica sin el OK de Fran. Pasos en
 `docs/FASE_FINAL.md`.
 
+**Paridad con la app** (decisión de Fran, 2026-10-03): la app y el hub avanzan
+en paralelo; el hub tiene que hacer TODO lo que hace la app (también lo que se
+le añada) más lo suyo, hasta sustituirla, sin molestar el uso diario. Mapa,
+estados y orden de bloques en `docs/PARIDAD.md` (con «Revisado hasta» = último
+commit de la app revisado). Lo nuevo de la app se trae con **`/paridad`**, solo
+cuando Fran lo pida: lo de un área que ya está en el hub se porta, se fusiona y
+se despliega; lo demás se apunta. Primero la paridad, después lo propio.
+
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
 Cuando haga falta algo suyo (una clave, un clic en un panel, un ajuste), se
@@ -405,6 +413,78 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   todos (`Escritorio.widgets`, por escritorio, en la misma disposición de
   `localStorage`) y «Recolocar los widgets» (menú del avatar) vuelve a la
   rejilla.
+- **Portada de Oki** (`src/modulos/inicio/vista.ts`, `src/oki.css`,
+  2026-10-02): Inicio es el centro de mando de Oki (diseño del lienzo «Oki ·
+  Centro de mando», tablero «Flujo de Oki en blanco»): Oki en el centro unido
+  por circuitos a seis áreas, cada una con el `contador()` de SU pantalla
+  (`AREAS`; WhatsApp sale de la función), estadísticas del Desk de la semana
+  (SLA de respuesta de 30 días, cerrados por día), «Oki dice» y «Necesita a una
+  persona» desde `panorama_direccion` y, debajo, las baldosas de siempre. El
+  diagrama es un lienzo de 860 × 620 que escala por `cqw`. Sin colores fuera de
+  los tokens; el movimiento se apaga con `prefers-reduced-motion`. El menú
+  lateral se anima desde `oki.css`. Arnés `verify-oki.mjs`.
+- **Chat de WhatsApp fijo** (`src/shell/whatsapp.ts`, función `whatsapp`,
+  2026-10-02, con el OK de Fran a escribir en la app para esto): ventana abajo a
+  la derecha en TODAS las pantallas, plegada al entrar. Las conversaciones son
+  de la APP (`wa_conversaciones`/`wa_mensajes`, las recibe su webhook): la
+  función las LEE con la service key de la app y, al contestar, manda a Meta con
+  `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID` (secrets del hub, los mismos que
+  la app; `_shared/whatsapp.ts` portado) y APUNTA como `guardarSaliente` de la
+  app: insert en `wa_mensajes`, `ultimo_mensaje*` y `sin_leer` en
+  `wa_conversaciones`. Son las ÚNICAS escrituras del hub en `okcomputer`; nada
+  más se le escribe. El comentario del ticket va a `hub.ticket_comentarios`
+  (`tipo = respuesta`, canal whatsapp). Regla de Meta: texto libre solo dentro
+  de las 24 h desde el último mensaje del CLIENTE (la caja se bloquea fuera; la
+  plantilla se manda desde la app). Oki PROPONE (`proponer`, Claude) y una
+  persona manda. Si cambian las tablas `wa_*` de la app, cambiar la función.
+- **Trabajos: alta y edición** (`src/modulos/trabajos/formulario.ts`,
+  2026-10-03, paridad bloque 1): UN formulario para crear y editar
+  (`#/trabajos/nuevo`, `#/trabajos/<n>/editar`, prefijo `tf-`) con caras Simple
+  y Completa (`.tf-completa`; el móvil arranca en Simple y lo elegido se
+  recuerda). Al añadir un campo, decidir si es `.tf-completa`. El estado
+  SIEMPRE va por `hub.trabajo_estado` (que exige fichaje para completar, cierra
+  los tickets del trabajo y tras el que se propone «Para facturar»), nunca en
+  el PATCH. La fecha del trabajo crea o mueve su bloque por
+  `hub.trabajo_espejo_agenda` (y la agenda devuelve la del primer bloque),
+  disparadores que se apartan mientras la agenda sea de la app o escriba el
+  sync (`hub.espejo_agenda_activo()`). Arnés `verify-trabajos.mjs`.
+- **Calendario planificador** (`src/modulos/calendario/`, 2026-10-03, paridad
+  bloque 1): las reglas del calendario de la app viven en `motor.ts`, puro y sin
+  DOM (solapes por técnico con nombre de pila, traslados a 40 km/h × 1,3 + 5 min
+  y 30 min sin coordenadas, carga de 8 h por técnico, «Sugerir hueco» en 14
+  días de 9 a 19): si cambian en la app, cambiarlas ahí. Vistas Semana · Día
+  (rejilla por técnico; soltar en otra columna reasigna) · Por técnico ·
+  Agenda (la del móvil) · Mes. PLANIFICAR escribe la fecha en el trabajo y el
+  bloque lo crea la base; mover/reasignar va por `hub.agenda_mover`. Citas
+  sueltas y días de un trabajo: `cita.ts` (`#/calendario/cita`,
+  `#/calendario/dia/<trabajo>` y `dia/b:<bloque>`). Arnés `verify-calendario.mjs`.
+- **Firma, parte y plantillas de trabajo** (2026-10-03, paridad bloque 1):
+  la firma es un lienzo a pantalla completa (`trabajos/firma.ts`, prefijo
+  `fc-`, eventos de puntero enganchados al lienzo) que guarda PNG en data URL
+  en `trabajos.firma_cliente`, como la app. El parte (`#/trabajos/<n>/parte`)
+  es una página «Imprimir o guardar en PDF» (sin librería de PDF; empresa de
+  `hub.config.facturacion_emisor`, IGIC 7 %); al imprimir, `.tr-parte` va con
+  `top/left/right` y NUNCA `inset: 0`, que lo corta al alto de la ventana.
+  Plantillas: `#/trabajos/plantillas` (prefijo `tp-`), espejo en el área
+  `trabajos`; eliminar = `activa = false`. Arnés `verify-parte.mjs`.
+- **Tablero y chat por ficha** (2026-10-03, paridad bloque 1): `#/tablero`
+  (prefijo `tb-`) sobre el espejo `tablero_notas` (área `conocimiento`); todos
+  ven todas y se escriben SOLO las propias (`user_id` = id en usuarios, RLS
+  «propias»). Dictar en un campo: `alternarDictado(boton, campoId)` de
+  `src/ui/dictado.ts` (función `comandas`, acción `transcribir`). Chat por
+  ficha: `botonChatFicha(tipo, id, título, ruta)` de `src/ui/chat-ficha.ts` →
+  `hub.chat_ficha` (canal `tipo = 'ficha'`, uno por ficha, apunta a quien
+  entra). `chat_resumen` NO cambia de forma (la 20261016 la redefine): la ruta
+  de vuelta se lee del canal abierto. Arnés `verify-tablero.mjs`.
+- **Lista del día** (`src/modulos/lista-dia/`, `#/lista-dia`, 2026-10-03,
+  paridad bloque 1): espejo de `lista_dia` (área propia, dueño `app`); una fila
+  = una cosa de UNA persona para UN día, `usuario` por NOMBRE. Meterla en la
+  lista de alguien es ASIGNÁRSELA (al trabajo se le AÑADE el técnico; tarea y
+  ticket cambian de `tecnico_id`); marcar va SIEMPRE por `hub.lista_dia_marcar`
+  (cierra el origen guardando `estado_previo`; trabajo y tarea sin fichaje se
+  marcan en la lista y no se cierran). `anadirALista()` es la única entrada
+  (pantalla y casilla del alta de trabajo). «Planificar» (`#/lista-dia/planificar`)
+  mueve fecha Y hora del trabajo juntas. Arnés `verify-lista-dia.mjs`.
 - **Reloj** (`reloj/`, `#/reloj`, función `reloj`, `20261017_reloj.sql`,
   2026-10-02): app Wear OS (Galaxy Watch) con tile, complicación y app
   (avisos, mi día, RMM, cifras, fichar, comanda dictada). Se vincula con un

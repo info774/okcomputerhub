@@ -11,6 +11,7 @@ import { equipo, nombreDe } from '../../core/equipo';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { botonChatFicha } from '../../ui/chat-ficha';
 import {
   type Oportunidad, type Pipeline, type Etapa,
   TIPOS_ACTIVIDAD, ORIGENES, eur, pipelines, buscarClientes, nombresClientes, enApp,
@@ -163,7 +164,7 @@ async function pintarFicha(el: HTMLElement, id: string) {
     ...(trab.data ?? []).map(t => `🛠 Trabajo #${t.numero} ${esc(t.titulo ?? '')} · ${esc(t.estado)}`),
     ...(tar.data ?? []).map(t => `✅ Tarea #${t.numero ?? ''} ${esc(t.titulo)} · ${esc(t.estado)}`)];
   el.innerHTML = `<p><a href="#/oportunidades">← Oportunidades</a>${o.cliente_id ? ` · <a href="#/clientes/${esc(o.cliente_id)}">Ficha del cliente</a>` : ''}</p>
-    <div class="tarjeta-cab"><h2>🎯 ${esc(o.titulo)}</h2><span class="nota">Creada ${esc(hace(o.created_at))}${o.origen ? ` · entró por ${esc(o.origen)}` : ''}</span></div>
+    <div class="tarjeta-cab"><h2>🎯 ${esc(o.titulo)}</h2><span class="nota">Creada ${esc(hace(o.created_at))}${o.origen ? ` · entró por ${esc(o.origen)}` : ''}</span>${botonChatFicha('oportunidad', o.id, o.titulo, `#/oportunidades/${o.id}`)}</div>
     <div class="op-etapas" role="group" aria-label="Etapa">${pipe.etapas.map(e => `<button class="op-etapa ${e.clave === o.estado ? 'activo' : ''} op-${e.tipo}"
       data-action="opEtapa" data-p0="${esc(e.clave)}" aria-pressed="${e.clave === o.estado}">${esc(e.nombre)}</button>`).join('')}</div>
     ${o.estado === 'Perdido' || pipe.etapas.find(e => e.clave === o.estado)?.tipo === 'perdida' ? `<p class="aviso">Perdida${o.motivo_perdida ? `: ${esc(o.motivo_perdida)}` : ''}</p>` : ''}

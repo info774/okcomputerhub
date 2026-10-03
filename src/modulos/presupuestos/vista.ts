@@ -7,6 +7,7 @@ import { esc, hace } from '../../ui/dom';
 import { barras } from '../../ui/barras';
 import { enApp, eur } from '../ventas/datos';
 import { esMio } from '../direccion';
+import { botonChatFicha } from '../../ui/chat-ficha';
 
 interface Presupuesto {
   id: string; created_at: string | null; cliente_id: string | null; local_id: string | null; contacto_id: string | null;
@@ -34,7 +35,8 @@ let _persona = '';      // '' todas · '__mios' · un nombre
 let _actual: string | null = null;
 
 const dia = (p: Presupuesto) => (p.fecha ?? p.created_at ?? '').slice(0, 10);
-const diasDesde = (p: Presupuesto) => { const d = dia(p); return d ? Math.floor((Date.now() - new Date(`${d}T12:00`).getTime()) / 86_400_000) : 0; };
+// Días de calendario (los dos a mediodía): contar desde «ahora» restaba uno por la mañana.
+const diasDesde = (p: Presupuesto) => { const d = dia(p); if (!d) return 0; const hoy = new Date(); hoy.setHours(12, 0, 0, 0); return Math.round((hoy.getTime() - new Date(`${d}T12:00`).getTime()) / 86_400_000); };
 const sinRespuesta = (p: Presupuesto) => p.estado === 'Enviado' && diasDesde(p) > DIAS_SIN_RESPUESTA;
 const nombre = (p: Presupuesto) => `${p.numero_presupuesto ? `${p.numero_presupuesto} · ` : ''}${p.titulo || 'Sin título'}`;
 const chipEstado = (e: string | null) => `<span class="chip ${TONO[e ?? ''] ?? ''}">${esc(e ?? '—')}</span>`;
@@ -146,7 +148,7 @@ async function pintarFicha(el: HTMLElement, id: string) {
   el.innerHTML = `<p><a href="#/presupuestos">← Presupuestos</a></p>
     ${delHub ? '' : avisoSoloLectura('Presupuestos')}
     <div class="tarjeta-cab"><h2>${esc(nombre(p))}</h2>
-      <div class="acciones"><a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los presupuestos se cambian y se mandan a Zoho en la app actual">Abrir en la app ↗</a></div></div>
+      <div class="acciones">${botonChatFicha('presupuesto', p.id, nombre(p), `#/presupuestos/${p.id}`)}<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los presupuestos se cambian y se mandan a Zoho en la app actual">Abrir en la app ↗</a></div></div>
     <p>${chipEstado(p.estado)} ${sinRespuesta(p) ? `<span class="chip mal">Enviado hace ${diasDesde(p)} días, sin respuesta</span>` : ''} ${p.zoho_estimate_id ? '<span class="chip">En Zoho Books</span>' : ''}</p>
     <div class="me-grid">
       <section class="tarjeta pp-total"><h3>💶 Total</h3><p class="di-valor">${eur(p.total, 2)}</p>

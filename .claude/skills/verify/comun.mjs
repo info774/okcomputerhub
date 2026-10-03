@@ -107,6 +107,8 @@ export function baseMemoria(inicial = {}, rpc = {}) {
         ...(tabla.startsWith('proyecto_') ? { orden: 0, fuentes: [], hecho: false, estado: 'pendiente' } : {}),
         ...(tabla === 'tickets' ? { numero: ++numero + 5000, valoracion_token: randomUUID(), primera_respuesta_at: null, cerrado_at: null, valoracion: null } : {}),
         ...(tabla === 'ticket_comentarios' ? { enviado_at: null, envio_error: null, canal: null } : {}),
+        // Trabajos: la secuencia que pone el corte (hub.trabajos_numero_seq).
+        ...(tabla === 'trabajos' ? { numero: ++numero } : {}),
         ...(tabla === 'pedidos_compra' ? { numero: ++numero, total: 0, esperado_para: null, entrada_app_at: null, notas: null, proveedor_id: null } : {}),
         ...(tabla === 'firmas' ? { token: randomUUID(), estado: 'pendiente', contenido_hash: 'b'.repeat(64), caduca_at: new Date(Date.now() + 30 * 86400000).toISOString(), firmado_at: null, enviado_at: null, creado_por: 'u-ana' } : {}),
         ...(tabla === 'facturas' ? { estado: 'borrador', codigo: null, tipo: 'ordinaria', total: 0, cobrado: 0, base_total: 0, impuesto_total: 0, trabajo_ids: [], emisor: null, huella: null } : {}),

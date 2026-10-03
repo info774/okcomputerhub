@@ -2,7 +2,8 @@
 // (ficha). Mientras el área `trabajos` sea de la app, solo lectura; al cortarla,
 // escribe por las funciones de la base que portan las reglas de la app:
 // hub.trabajo_estado (Completado exige fichaje), hub.trabajo_guardar_lineas
-// (el material mueve el stock). Prefijo de ids: tr-.
+// (el material mueve el stock). Alta y edición en formulario.ts (#/trabajos/nuevo,
+// #/trabajos/<n>/editar); duplicar y continuación, desde la ficha. Prefijo de ids: tr-.
 import { API } from '../../core/api';
 import { usuario } from '../../core/estado';
 import { equipo } from '../../core/equipo';
@@ -12,10 +13,13 @@ import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
 import { markdown } from '../../ui/markdown';
 import { nombresClientes, telWhatsApp, eur } from '../ventas/datos';
+import { pintarFormulario, ofrecerFacturar } from './formulario';
+import { APP_ACTUAL_URL } from '../../core/config';
+import { botonChatFicha } from '../../ui/chat-ficha';
 
-interface Trabajo { id: string; numero: number; created_at: string; titulo: string | null; descripcion: string | null; estado: string; tecnicos: string[] | null;
+interface Trabajo { id: string; numero: number; created_at: string; titulo: string | null; tipo?: string | null; chain_root_id?: string | null; descripcion: string | null; estado: string; tecnicos: string[] | null;
   cliente_id: string | null; local_id: string | null; contacto_id: string | null; fecha_programada: string | null; hora_llegada: string | null; prioridad: string | null;
-  materiales: string | null; observaciones: string | null; presupuesto_id: string | null; zoho_invoice_number: string | null; duracion_teorica: number | null }
+  materiales: string | null; observaciones: string | null; firma_cliente?: string | null; presupuesto_id: string | null; zoho_invoice_number: string | null; duracion_teorica: number | null }
 interface Linea { id?: string; nombre: string; cantidad: number; precio: number; descuento: number; inventario_id: string | null; furgoneta_id: string | null; categoria: string | null }
 
 export const ESTADOS = ['Pendiente', 'En progreso', 'Completado', 'Para facturar', 'Facturado', 'No facturar', 'Cancelado'];
@@ -30,6 +34,7 @@ let _lista: Trabajo[] = [];
 let _nombres = new Map<string, string>();
 let _t: Trabajo | null = null;
 let _lineas: Linea[] = [];
+let _arrastrado = '';
 
 function filas(): Trabajo[] {
   const q = norm(leer('hub_tr_q', ''));
@@ -42,22 +47,61 @@ const tabla = () => { const fs = filas(); return fs.length ? `<div class="tarjet
     <td>${esc(_nombres.get(t.cliente_id ?? '') ?? '')}</td><td>${esc((t.tecnicos ?? []).join(', '))}</td><td>${esc(t.fecha_programada ?? '')}${t.hora_llegada ? ` ${esc(t.hora_llegada.slice(0, 5))}` : ''}</td>
     <td><span class="chip ${TONO[t.estado] ?? ''}">${esc(t.estado)}</span></td></tr>`).join('')}</tbody></table></div>` : '<p class="vacio">Ningún trabajo con ese filtro.</p>'; };
 
+// Kanban por estado (las columnas son los estados del filtro elegido); con el
+// área cortada se arrastra de columna para cambiar el estado (hub.trabajo_estado).
+const COLS_KANBAN = ['Pendiente', 'En progreso', 'Completado', 'Para facturar'];
+let _escribe = false;
+const kanban = () => {
+  const fs = filas();
+  const cols = FILTROS[leer('hub_tr_filtro', 'abiertos')] ?? ESTADOS;
+  const usadas = cols.length > 4 ? cols : [...new Set([...cols, ...COLS_KANBAN.filter(c => cols.includes(c))])];
+  return `<div class="pr-kanban tr-kanban">${usadas.map(e => {
+    const col = fs.filter(t => t.estado === e);
+    return `<section class="pr-columna" data-estado="${esc(e)}" ${_escribe ? `data-on-dragover="trSobre:$this" data-prevent="1" data-on-dragleave="trFuera:$this" data-on-drop="trSoltar:${esc(e)}"` : ''}>
+      <header><h3>${esc(e)}</h3><span class="chip">${col.length}</span></header>
+      <div class="pr-col-cuerpo">${col.map(t => `<article class="pr-tarjeta" ${_escribe ? `draggable="true" data-on-dragstart="trArrastrar:${t.id}"` : ''} data-action="trAbrir" data-p0="${t.numero}">
+        <strong>#${t.numero} ${esc(t.titulo ?? '')}</strong><small class="nota">${esc(_nombres.get(t.cliente_id ?? '') ?? '')}</small>
+        <small class="nota">${esc((t.tecnicos ?? []).join(', ') || 'Sin técnico')}${t.fecha_programada ? ` · ${esc(t.fecha_programada)}` : ''}</small></article>`).join('') || '<p class="vacio">—</p>'}</div>
+    </section>`;
+  }).join('')}</div>`;
+};
+const cuerpoLista = () => (leer('hub_tr_vista', 'lista') === 'kanban' ? kanban() : tabla());
+
+// Exportar lo filtrado a Excel: CSV con BOM y «;», que Excel en español abre
+// con las columnas bien (exportTrabajosExcel de la app).
+function exportarCsv() {
+  const celda = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lineas = [['Nº', 'Título', 'Tipo', 'Cliente', 'Técnicos', 'Fecha', 'Hora', 'Estado', 'Descripción'].map(celda).join(';'),
+    ...filas().map(t => [t.numero, t.titulo, t.tipo, _nombres.get(t.cliente_id ?? '') ?? '', (t.tecnicos ?? []).join(', '), t.fecha_programada ?? '',
+      t.hora_llegada ? new Date(t.hora_llegada).toTimeString().slice(0, 5) : '', t.estado, t.descripcion].map(celda).join(';'))];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + lineas.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = `trabajos-${new Date().toLocaleDateString('sv-SE')}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 async function vistaLista(): Promise<string> {
   const f = leer('hub_tr_filtro', 'abiertos');
   const est = FILTROS[f];
   const [{ data, error }, personas, escribe] = await Promise.all([
-    API.get<Trabajo[]>('trabajos', { select: 'id,numero,created_at,titulo,descripcion,estado,tecnicos,cliente_id,fecha_programada,hora_llegada,prioridad',
+    API.get<Trabajo[]>('trabajos', { select: 'id,numero,created_at,titulo,tipo,descripcion,estado,tecnicos,cliente_id,fecha_programada,hora_llegada,prioridad',
       ...(est ? { estado: `in.(${est.map(e => `"${e}"`).join(',')})` } : {}), order: 'numero.desc', limit: '400' }),
     equipo(), esDelHub('trabajos')]);
   if (error) return `<p class="aviso mal">${esc(error.message)}</p>`;
+  _escribe = escribe;
   _lista = data ?? [];
   _nombres = await nombresClientes(_lista.map(t => t.cliente_id));
   const tec = leer('hub_tr_tecnico', '');
+  const vista = leer('hub_tr_vista', 'lista');
   return `${escribe ? '' : avisoSoloLectura('Trabajos')}
+    <div class="acciones">${escribe ? '<a class="btn" href="#/trabajos/nuevo">+ Nuevo trabajo</a>' : `<a class="btn secundario" href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">+ Nuevo trabajo en la app ↗</a>`}
+      <div class="segmentado" role="tablist" aria-label="Vista">${(['lista', 'kanban'] as const).map(v => `<button role="tab" aria-selected="${v === vista}" class="${v === vista ? 'activo' : ''}" data-action="trVista" data-p0="${v}">${v === 'lista' ? '☰ Lista' : '▦ Kanban'}</button>`).join('')}</div>
+      <button class="btn secundario" data-action="trExportar">⬇ Excel</button><a class="btn secundario" href="#/trabajos/plantillas">Plantillas</a></div>
     <div class="acciones pr-barra"><div class="segmentado" role="tablist">${Object.keys(FILTROS).map(k => `<button role="tab" aria-selected="${k === f}" class="${k === f ? 'activo' : ''}" data-action="trFiltro" data-p0="${k}">${{ abiertos: 'Abiertos', facturar: 'Por facturar', cerrados: 'Cerrados', todos: 'Todos' }[k]}</button>`).join('')}</div>
       <select id="tr-tecnico" data-on-change="trTecnico:$value" aria-label="Técnico"><option value="">Todos</option><option value="__yo" ${tec === '__yo' ? 'selected' : ''}>Los míos</option>${personas.map(p => `<option ${tec === p.nombre ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>
       <input id="tr-q" type="search" placeholder="Buscar nº, cliente, texto…" value="${esc(leer('hub_tr_q', ''))}" data-on-input="trBuscar:$value" aria-label="Buscar trabajos"></div>
-    <div id="tr-lista">${tabla()}</div>`;
+    <div id="tr-lista">${cuerpoLista()}</div>`;
 }
 
 function editorLineas(): string {
@@ -88,6 +132,7 @@ async function vistaFicha(numero: string): Promise<string> {
     API.get<any[]>('trabajo_comentarios', { select: '*', trabajo_id: `eq.${t.id}`, order: 'created_at' }),
     API.get<any[]>('trabajo_fotos', { select: 'id,created_at,descripcion,drive_url,archivo_path,tecnico_id', trabajo_id: `eq.${t.id}`, order: 'created_at' }),
     API.get<any[]>('tickets', { select: 'numero,titulo,estado', trabajo_id: `eq.${t.id}` }), equipo(), esDelHub('trabajos', 'documento_lineas', 'furgoneta_inventario')]);
+  const escribeAgenda = await esDelHub('agenda');
   _lineas = (lin.data ?? []).map(l => ({ ...l, cantidad: Number(l.cantidad), precio: Number(l.precio), descuento: Number(l.descuento ?? 0) }));
   const tel = con.data?.telefono ?? cli.data?.telefono, wa = telWhatsApp(tel);
   const mapa = loc.data?.lat && loc.data?.lng ? `https://www.google.com/maps/dir/?api=1&destination=${loc.data.lat},${loc.data.lng}` : loc.data?.direccion ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc.data.direccion)}` : null;
@@ -99,7 +144,12 @@ async function vistaFicha(numero: string): Promise<string> {
       ${escribe ? `<select id="tr-estado" data-on-change="trEstado:$value" aria-label="Estado">${ESTADOS.map(e => `<option ${e === t.estado ? 'selected' : ''}>${e}</option>`).join('')}</select>` : `<span class="chip ${TONO[t.estado] ?? ''}">${esc(t.estado)}</span>`}</div>
     <p class="nota">Creado ${esc(hace(t.created_at))}${t.fecha_programada ? ` · para el ${esc(t.fecha_programada)}${t.hora_llegada ? ` a las ${esc(t.hora_llegada.slice(0, 5))}` : ''}` : ''}${t.zoho_invoice_number ? ` · factura ${esc(t.zoho_invoice_number)}` : ''}</p>
     <div class="acciones">${tel ? `<a class="btn secundario" href="tel:${esc(tel)}">📞 Llamar</a>` : ''}${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
-      ${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">🗺 Cómo llegar</a>` : ''}</div>
+      ${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">🗺 Cómo llegar</a>` : ''}
+      <a class="btn secundario" href="#/trabajos/${t.numero}/parte">🖨 Parte (PDF)</a>
+      ${botonChatFicha('trabajo', t.id, `#${t.numero} ${t.titulo ?? ''}`.trim(), `#/trabajos/${t.numero}`)}
+      ${escribe ? `<a class="btn secundario" href="#/trabajos/${t.numero}/editar">✎ Editar</a>
+        <button class="btn secundario" data-action="trDuplicar">⧉ Duplicar</button>
+        ${['Completado', 'Cancelado', 'Facturado', 'No facturar'].includes(t.estado) ? '' : '<button class="btn secundario" data-action="trContinuacion" title="Otro trabajo que sigue a este (otra visita)">↪ Continuación</button>'}` : ''}</div>
     <div class="op-ficha"><div>
       <section class="tarjeta"><h3>Qué hay que hacer</h3><div class="md">${markdown(t.descripcion) || '<p class="nota">Sin descripción.</p>'}</div>
         ${t.observaciones ? `<h4>Lo que se hizo</h4><div class="md">${markdown(t.observaciones)}</div>` : ''}</section>
@@ -109,8 +159,11 @@ async function vistaFicha(numero: string): Promise<string> {
     </div><div>
       <section class="tarjeta"><h3>Dónde y quién</h3><dl class="tk-dl"><dt>Cliente</dt><dd>${esc(cli.data?.nombre ?? '—')}</dd><dt>Sede</dt><dd>${loc.data ? `<a href="#/monitorizacion/sede/${esc(loc.data.id)}">${esc(loc.data.nombre)}</a><br><small class="nota">${esc(loc.data.direccion ?? '')}</small>` : '—'}</dd>
         <dt>Contacto</dt><dd>${esc(con.data?.nombre ?? '—')}</dd><dt>Técnicos</dt><dd>${escribe ? `<div class="tr-tecnicos">${personas.map(p => `<label class="check"><input type="checkbox" value="${esc(p.nombre)}" ${(t.tecnicos ?? []).includes(p.nombre) ? 'checked' : ''} data-on-change="trTecnicos"> ${esc(p.nombre)}</label>`).join('')}</div>` : esc((t.tecnicos ?? []).join(', ') || '—')}</dd></dl></section>
-      <section class="tarjeta"><h3>Días de agenda</h3><ul>${(bloques.data ?? []).map(b => `<li>${esc(fechaHora(b.inicio))} → ${esc(new Date(b.fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }))} · ${esc((b.tecnicos ?? []).join(', '))}</li>`).join('') || '<li class="nota">Sin programar.</li>'}</ul>
-        <p class="nota"><a href="#/calendario">Ver en el calendario</a></p></section>
+      <section class="tarjeta"><h3>Días de agenda</h3><ul class="tr-dias">${(bloques.data ?? []).map((b, i, xs) => `<li>${xs.length > 1 ? `<strong>Día ${i + 1}</strong> · ` : ''}${esc(fechaHora(b.inicio))} → ${esc(new Date(b.fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }))} · ${esc((b.tecnicos ?? []).join(', ') || 'sin técnico')}
+          ${escribeAgenda ? ` <a href="#/calendario/dia/b:${esc(b.id)}" aria-label="Cambiar este día">✎</a>` : ''}</li>`).join('') || '<li class="nota">Sin programar.</li>'}</ul>
+        <p class="acciones">${escribeAgenda ? `<a class="btn secundario" href="#/calendario/dia/${esc(t.id)}">+ Añadir día</a>` : ''}<a href="#/calendario">Ver en el calendario</a></p></section>
+      <section class="tarjeta"><h3>Firma del cliente</h3>${t.firma_cliente && /^data:image\/(png|jpeg);base64,/.test(t.firma_cliente) ? `<img class="tr-firma" src="${esc(t.firma_cliente)}" alt="Firma del cliente">` : '<p class="nota">Sin firmar.</p>'}
+        ${escribe ? `<p class="acciones"><button class="btn secundario" data-action="trFirmar">✍ ${t.firma_cliente ? 'Volver a firmar' : 'Firmar'}</button></p>` : ''}</section>
       <section class="tarjeta"><h3>Fichajes · ${Math.floor(horas / 60)} h ${horas % 60} min</h3><ul>${(ses.data ?? []).map(s => `<li>${esc(s.tecnico_nombre ?? '')}: ${esc(fechaHora(s.traslado ?? s.inicio))} → ${s.fin ? esc(new Date(s.fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })) : '<strong>en curso</strong>'}</li>`).join('') || '<li class="nota">Nadie ha fichado aún.</li>'}</ul></section>
       ${(fotos.data ?? []).length ? `<section class="tarjeta"><h3>Fotos</h3><ul>${(fotos.data ?? []).map(f => `<li>${f.drive_url && /^https:\/\//.test(f.drive_url) ? `<a href="${esc(f.drive_url)}" target="_blank" rel="noopener">${esc(f.descripcion || 'Foto')}</a>` : f.archivo_path ? `<button class="btn secundario" data-action="trVerFoto" data-p0="${esc(f.id)}">${esc(f.descripcion || 'Foto')}</button>` : esc(f.descripcion || 'Foto')} <small class="nota">${esc(hace(f.created_at))}</small></li>`).join('')}</ul></section>` : ''}
       ${(tks.data ?? []).length ? `<section class="tarjeta"><h3>Tickets</h3><ul>${(tks.data ?? []).map(k => `<li><a href="#/tickets/${k.numero}">#${k.numero} ${esc(k.titulo)}</a> · ${esc(k.estado)}</li>`).join('')}</ul></section>` : ''}
@@ -119,6 +172,10 @@ async function vistaFicha(numero: string): Promise<string> {
 
 export async function pintar(el: HTMLElement, params: string[]) {
   el.innerHTML = '<p class="cargando">Cargando…</p>';
+  if (params[0] === 'nuevo') { await pintarFormulario(el); return; }
+  if (params[0] && params[1] === 'editar') { await pintarFormulario(el, params[0]); return; }
+  if (params[0] === 'plantillas') { await (await import('./plantillas')).pintarPlantillas(el, params[1]); return; }
+  if (params[0] && params[1] === 'parte') { await (await import('./parte')).pintarParte(el, params[0]); return; }
   el.innerHTML = params[0] ? await vistaFicha(params[0]) : await vistaLista();
 }
 
@@ -127,12 +184,52 @@ let _timer = 0;
 registrarAcciones({
   trAbrir(n: string) { ir('trabajos', n); },
   trFiltro(f: string) { guardar('hub_tr_filtro', f); resolver(); },
-  trTecnico(v: string) { guardar('hub_tr_tecnico', v); const c = document.getElementById('tr-lista'); if (c) c.innerHTML = tabla(); },
-  trBuscar(q: string) { guardar('hub_tr_q', q); const c = document.getElementById('tr-lista'); if (c) c.innerHTML = tabla(); },
+  trTecnico(v: string) { guardar('hub_tr_tecnico', v); const c = document.getElementById('tr-lista'); if (c) c.innerHTML = cuerpoLista(); },
+  trBuscar(q: string) { guardar('hub_tr_q', q); const c = document.getElementById('tr-lista'); if (c) c.innerHTML = cuerpoLista(); },
+  trVista(v: string) { guardar('hub_tr_vista', v); resolver(); },
+  trExportar: exportarCsv,
+  trArrastrar(id: string, ev: DragEvent) { _arrastrado = id; ev?.dataTransfer?.setData('text/plain', id); },
+  trSobre(el: HTMLElement) { el.classList.add('sobre'); },
+  trFuera(el: HTMLElement) { el.classList.remove('sobre'); },
+  async trSoltar(estado: string, ev?: DragEvent) {
+    document.querySelectorAll('.tr-kanban .sobre').forEach(x => x.classList.remove('sobre'));
+    const id = ev?.dataTransfer?.getData('text/plain') || _arrastrado;
+    const t = _lista.find(x => x.id === id);
+    if (!t || t.estado === estado) return;
+    const r = await API.rpc('trabajo_estado', { p_id: t.id, p_estado: estado });
+    if (r.error) { toast(r.error.message, 'error'); return; }
+    t.estado = estado;
+    toast(`#${t.numero}: ${estado}`);
+    if (estado === 'Completado' && await ofrecerFacturar(t.id)) t.estado = 'Para facturar';
+    const c = document.getElementById('tr-lista'); if (c) c.innerHTML = cuerpoLista();
+  },
+  async trDuplicar() {
+    if (!_t) return;
+    // Mismos datos, en Pendiente y SIN programación ni ejecución (duplicarTrabajo de la app).
+    const t: any = _t;
+    const r = await API.post<any[]>('trabajos', { cliente_id: t.cliente_id, local_id: t.local_id, contacto_id: t.contacto_id, tipo: t.tipo || 'Asistencia',
+      titulo: t.titulo ? `${t.titulo} (copia)` : null, descripcion: t.descripcion, materiales: t.materiales, observaciones: t.observaciones,
+      ubicacion: t.ubicacion, duracion_teorica: t.duracion_teorica, prioridad: t.prioridad, tecnicos: t.tecnicos, estado: 'Pendiente' });
+    if (r.error || !r.data?.[0]) { toast(`No se pudo duplicar: ${r.error?.message ?? ''}`, 'error'); return; }
+    toast(`Duplicado como #${r.data[0].numero} (sin programar)`);
+    ir('trabajos', String(r.data[0].numero));
+  },
+  async trContinuacion() {
+    if (!_t) return;
+    // Otro trabajo de la misma cadena (generarTrabajoContinuacion de la app).
+    const t: any = _t;
+    const r = await API.post<any[]>('trabajos', { cliente_id: t.cliente_id, local_id: t.local_id, tipo: t.tipo || 'Asistencia', titulo: t.titulo,
+      descripcion: t.descripcion, estado: 'Pendiente', parent_trabajo_id: t.id, chain_root_id: t.chain_root_id || t.id });
+    if (r.error || !r.data?.[0]) { toast(`No se pudo crear la continuación: ${r.error?.message ?? ''}`, 'error'); return; }
+    toast(`Continuación creada: #${r.data[0].numero}`);
+    ir('trabajos', String(r.data[0].numero));
+  },
   async trEstado(estado: string) {
     if (!_t) return;
     const r = await API.rpc('trabajo_estado', { p_id: _t.id, p_estado: estado });
-    if (r.error) { toast(r.error.message, 'error'); resolver(); } else toast(`Trabajo: ${estado}`);
+    if (r.error) { toast(r.error.message, 'error'); resolver(); return; }
+    toast(`Trabajo: ${estado}`);
+    if (estado === 'Completado' && await ofrecerFacturar(_t.id)) resolver();
   },
   async trTecnicos() {
     if (!_t) return;
@@ -186,6 +283,7 @@ registrarAcciones({
     const r = await API.post('trabajo_comentarios', { trabajo_id: _t.id, texto: val('tr-com'), autor_nombre: usuario()?.nombre ?? null });
     if (r.error) toast(`No se pudo: ${r.error.message}`, 'error'); else resolver();
   },
+  async trFirmar() { if (_t) (await import('./firma')).abrirFirma(_t.id); },
   async trVerFoto(id: string) {
     const { llamarFuncion } = await import('../../core/funciones');
     const r = await llamarFuncion<{ url: string }>('trabajo-foto', { accion: 'url', id });

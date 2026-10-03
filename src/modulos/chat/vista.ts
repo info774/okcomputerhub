@@ -1,6 +1,7 @@
 // Chat del hub (fase Final): #/chat y #/chat/<canal>. Lista con lo no leído
 // (hub.chat_resumen), conversación que se refresca cada 4 s mientras está a la
-// vista, directos (hub.chat_directo) y canales de grupo. Prefijo de ids: ch-.
+// vista, directos (hub.chat_directo), canales de grupo y los de cada ficha
+// (hub.chat_ficha, con enlace de vuelta). Prefijo de ids: ch-.
 import { API } from '../../core/api';
 import { usuario, esAdmin } from '../../core/estado';
 import { equipo, nombreDe } from '../../core/equipo';
@@ -9,13 +10,13 @@ import { ir, resolver } from '../../core/router';
 import { esc, toast } from '../../ui/dom';
 import { markdown } from '../../ui/markdown';
 
-interface Canal { id: string; nombre: string | null; tipo: 'grupo' | 'directo'; miembros: string[]; ultimo_at: string; sin_leer: number; ultimo_texto: string | null }
+interface Canal { id: string; nombre: string | null; tipo: 'grupo' | 'directo' | 'ficha'; miembros: string[]; ultimo_at: string; sin_leer: number; ultimo_texto: string | null }
 interface Mensaje { id: string; canal_id: string; autor_id: string | null; texto: string; created_at: string; editado_at: string | null }
 let _canal: string | null = null;
 let _timer = 0;
 let _ultimo = '';
 
-const nombreCanal = (c: Canal) => c.tipo === 'grupo' ? `# ${c.nombre ?? 'grupo'}` : `👤 ${nombreDe(c.miembros.find(m => m !== usuario()?.id)) || 'directo'}`;
+const nombreCanal = (c: Canal) => c.tipo === 'grupo' ? `# ${c.nombre ?? 'grupo'}` : c.tipo === 'ficha' ? c.nombre ?? 'Ficha' : `👤 ${nombreDe(c.miembros.find(m => m !== usuario()?.id)) || 'directo'}`;
 const hora = (v: string) => { const d = new Date(v); return d.toDateString() === new Date().toDateString() ? d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); };
 
 function burbujas(ms: Mensaje[]): string {
@@ -47,12 +48,14 @@ export async function pintar(el: HTMLElement, params: string[]) {
   _canal = params[0] ?? (window.matchMedia('(min-width: 768px)').matches ? canales[0]?.id ?? null : null);
   _ultimo = '';
   const actual = canales.find(c => c.id === _canal);
+  // Un canal de ficha lleva a la ficha (la ruta la guardó hub.chat_ficha).
+  const ruta = actual?.tipo === 'ficha' ? (await API.single<{ ficha_ruta: string | null }>('chat_canales', { select: 'ficha_ruta', id: `eq.${actual.id}` })).data?.ficha_ruta ?? null : null;
   el.innerHTML = `<div class="ch-marco ${_canal ? 'ch-con-canal' : ''}">
     <aside class="tarjeta ch-lista"><ul>${canales.map(c => `<li><a href="#/chat/${c.id}" class="${c.id === _canal ? 'activo' : ''}"><span>${esc(nombreCanal(c))}</span>${c.sin_leer ? `<span class="chip aviso">${c.sin_leer}</span>` : ''}
         <small class="nota">${esc((c.ultimo_texto ?? '').slice(0, 50))}</small></a></li>`).join('') || '<li class="nota">Sin canales.</li>'}</ul>
       <form class="acciones" data-on-submit="chDirecto" data-prevent="1"><select id="ch-persona" aria-label="Persona"><option value="">Mensaje directo a…</option>${personas.filter(p => p.id !== usuario()?.id).map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}</select><button class="btn secundario" type="submit">Abrir</button></form>
       <form class="acciones" data-on-submit="chGrupo" data-prevent="1"><input id="ch-grupo" placeholder="Nuevo canal de grupo" maxlength="40" aria-label="Nombre del canal"><button class="btn secundario" type="submit">Crear</button></form></aside>
-    <section class="tarjeta ch-conversacion">${actual ? `<header class="ch-cab"><a href="#/chat" class="ch-volver" aria-label="Volver a la lista">‹</a><h3>${esc(nombreCanal(actual))}</h3></header>
+    <section class="tarjeta ch-conversacion">${actual ? `<header class="ch-cab"><a href="#/chat" class="ch-volver" aria-label="Volver a la lista">‹</a><h3>${esc(nombreCanal(actual))}</h3>${ruta && /^#\/[a-z-]+\/[A-Za-z0-9-]+$/.test(ruta) ? `<a class="ch-ficha" href="${esc(ruta)}">Abrir la ficha →</a>` : ''}</header>
       <div id="ch-mensajes" class="ch-mensajes" aria-live="polite"></div>
       <form class="ch-escribir" data-on-submit="chEnviar" data-prevent="1"><textarea id="ch-texto" rows="2" maxlength="4000" placeholder="Escribe… (Intro envía, Mayús+Intro salta de línea)" data-on-keydown="chTecla:$event" aria-label="Mensaje"></textarea>
         <button class="btn" type="submit">Enviar</button></form>` : '<p class="vacio">Elige una conversación.</p>'}</section></div>`;

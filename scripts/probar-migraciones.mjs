@@ -621,6 +621,8 @@ try {
   const noCortado = psql(como('authenticated', 'tito@ok.test', `select hub.fichar('inicio', 'trabajo', '${tr}');`), { esperaError: true });
   ok(!noCortado.ok && /app/.test(noCortado.err), 'final: sin el corte, fichar desde el hub avisa de que se hace en la app');
   ok(!psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_guardar_lineas('${tr}', '[]');`), { esperaError: true }).ok, 'final: sin el corte, el material tampoco');
+  psql(`insert into hub.trabajos (id, numero, titulo, estado, fecha_programada) values ('00000000-0000-0000-0000-0000000000e2', 699, 'Copia de la app', 'Pendiente', current_date)`);
+  ok(psql(`select count(*) from hub.agenda where trabajo_id = '00000000-0000-0000-0000-0000000000e2'`) === '0', 'paridad: sin el corte, una fecha en el trabajo no crea bloque (la agenda la trae el espejo)');
   // Chat
   const gen = psql(`select id from hub.chat_canales where nombre = 'General'`);
   psql(como('authenticated', 'tito@ok.test', `insert into hub.chat_mensajes (canal_id, texto) values ('${gen}', 'Hola equipo');`));
@@ -632,6 +634,23 @@ try {
     'chat: un directo solo lo leen sus dos personas');
   ok(!psql(como('authenticated', 'ana@ok.test', `update hub.chat_mensajes set texto = 'x' where canal_id = '${dm}';`) + `\nselect 1/(select count(*) from hub.chat_mensajes where texto = 'x');`, { esperaError: true }).ok,
     'chat: nadie edita lo que escribió otro');
+  // Chat por ficha (20261020): un canal por ficha; quien entra se apunta.
+  const T9 = '00000000-0000-0000-0000-0000000000c9';
+  const cf1 = psql(como('authenticated', 'tito@ok.test', `select hub.chat_ficha('trabajo', '${T9}', '🔧 Trabajo · #9 Router', '#/trabajos/9');`)).split('\n').pop();
+  ok(una('ana@ok.test', `select count(*) from hub.chat_resumen() where id = '${cf1}'`) === '0', 'chat por ficha: quien no ha entrado no lo ve en su lista');
+  const cf2 = psql(como('authenticated', 'ana@ok.test', `select hub.chat_ficha('trabajo', '${T9}', 'otro nombre', '#/trabajos/9');`)).split('\n').pop();
+  ok(cf1 === cf2 && psql(`select cardinality(miembros) from hub.chat_canales where id = '${cf1}'`) === '2', 'chat por ficha: un solo canal por ficha y quien entra se apunta');
+  ok(una('ana@ok.test', `select r.tipo || '|' || c.ficha_ruta from hub.chat_resumen() r join hub.chat_canales c using (id) where r.id = '${cf1}'`) === 'ficha|#/trabajos/9', 'chat por ficha: sale en la lista y lleva la ruta para volver a la ficha');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.chat_ficha('trabajo', '${T9}', 'x', 'javascript:alert(1)');`), { esperaError: true }).ok
+    && !psql(como('authenticated', 'tito@ok.test', `select hub.chat_ficha('cliente', '${T9}', 'x', '#/clientes/1');`), { esperaError: true }).ok, 'chat por ficha: ruta y tipo validados');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.chat_mensajes (canal_id, texto) values ('${cf1}', 'Llevo el router');`));
+  ok(una('extrano@ok.test', `select count(*) from hub.chat_mensajes where canal_id = '${cf1}'`) === '0', 'chat por ficha: fuera del hub no se lee');
+  // Tablero (20261020): sin el corte no se escribe.
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${titoId}', 'Antes');`), { esperaError: true }).ok, 'tablero: sin el corte no se escribe');
+
+  ok(psql(`select 'plantillas_trabajo' = any (tablas) from hub.areas where area = 'trabajos'`) === 't'
+    && !psql(como('authenticated', 'ana@ok.test', `insert into hub.plantillas_trabajo (nombre) values ('Antes del corte');`), { esperaError: true }).ok,
+    'plantillas (20261019): van con el área trabajos y sin el corte no se escriben');
 
   // ── Reloj: vinculación por código, huella del token y fichar a nombre de la persona ──
   const [rtok, rcod] = psql(como('service_role', null, `select token || '|' || codigo from hub.reloj_iniciar();`)).split('\n').pop().split('|');
@@ -669,10 +688,12 @@ commit;`);
   psql(como('authenticated', 'tito@ok.test', `select hub.fichar('inicio', 'trabajo', '${tr}');`));
   ok(psql(`select count(*) || '|' || bool_and(inicio is not null and traslado is not null) from hub.sesiones where entidad_id = '${tr}'`) === '1|true'
     && psql(`select estado from hub.trabajos where id = '${tr}'`) === 'En progreso', 'fichar: el inicio reusa el traslado y pone el trabajo en progreso');
+  psql(`insert into hub.tickets (id, titulo, estado, trabajo_id) values ('00000000-0000-0000-0000-0000000000f1', 'Sin wifi', 'Abierto', '${tr}')`);
   ok(!psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_estado('${tr}', 'Completado');`), { esperaError: true }).ok, 'trabajo: no se completa sin fichar el fin');
   psql(como('authenticated', 'tito@ok.test', `select hub.fichar('fin');`));
   psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_estado('${tr}', 'Completado');`));
   ok(psql(`select estado from hub.trabajos where id = '${tr}'`) === 'Completado', 'trabajo: con inicio y fin, se completa');
+  ok(psql(`select estado from hub.tickets where id = '00000000-0000-0000-0000-0000000000f1'`) === 'Cerrado', 'paridad: completar el trabajo cierra su ticket abierto');
   psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_guardar_lineas('${tr}', '[{"nombre":"Router","cantidad":3,"precio":40,"inventario_id":"00000000-0000-0000-0000-0000000000b9"},{"nombre":"Mano de obra","cantidad":1,"precio":35}]');`));
   ok(psql(`select cantidad from hub.furgoneta_inventario where id = '00000000-0000-0000-0000-0000000000b9'`) === '0'
     && psql(`select tipo || cantidad || (trabajo_id = '${tr}') from hub.furgoneta_movimientos where producto_id = '00000000-0000-0000-0000-0000000000b9'`) === 'salida2true',
@@ -693,6 +714,41 @@ commit;`);
   ok(psql(`select count(*) from cron.job where jobname in ('hub-sync-app', 'hub-sync-app-completo')`) === '0', 'corte final: el sync con la app se apaga');
   const nt = psql(como('authenticated', 'ana@ok.test', `insert into hub.trabajos (descripcion) values ('Nuevo tras el corte') returning numero;`)).split('\n').pop();
   ok(Number(nt) > 700, `corte final: los trabajos nuevos siguen la numeración (${nt})`);
+  // Paridad (20261018): marcar en la lista del día cierra el origen con las reglas de la app.
+  const tl = psql(como('authenticated', 'ana@ok.test', `insert into hub.trabajos (titulo, estado) values ('Sin fichar', 'Pendiente') returning id;`)).split('\n').pop();
+  const tkl = psql(como('authenticated', 'ana@ok.test', `insert into hub.tickets (titulo, estado) values ('Lista', 'En curso') returning id;`)).split('\n').pop();
+  const l1 = psql(como('authenticated', 'ana@ok.test', `insert into hub.lista_dia (usuario, tipo, ref_id) values ('Tito', 'trabajo', '${tl}') returning id;`)).split('\n').pop();
+  const l2 = psql(como('authenticated', 'ana@ok.test', `insert into hub.lista_dia (usuario, tipo, ref_id) values ('Tito', 'ticket', '${tkl}') returning id;`)).split('\n').pop();
+  const av = psql(como('authenticated', 'tito@ok.test', `select hub.lista_dia_marcar('${l1}', true);`)).split('\n').pop();
+  ok(av.includes('fichar') && psql(`select estado from hub.trabajos where id = '${tl}'`) === 'Pendiente' && psql(`select completado from hub.lista_dia where id = '${l1}'`) === 't',
+    'lista del día: sin fichaje se marca en la lista pero el trabajo no se cierra (y avisa)');
+  psql(como('authenticated', 'tito@ok.test', `select hub.lista_dia_marcar('${l2}', true);`));
+  ok(psql(`select estado from hub.tickets where id = '${tkl}'`) === 'Cerrado' && psql(`select estado_previo from hub.lista_dia where id = '${l2}'`) === 'En curso', 'lista del día: marcar cierra el ticket y guarda su estado');
+  psql(como('authenticated', 'tito@ok.test', `select hub.lista_dia_marcar('${l2}', false);`));
+  ok(psql(`select estado from hub.tickets where id = '${tkl}'`) === 'En curso', 'lista del día: desmarcar lo devuelve a como estaba');
+  psql(como('authenticated', 'ana@ok.test', `delete from hub.tickets where id = '${tkl}';`));
+  ok(psql(`select count(*) from hub.lista_dia where ref_id = '${tkl}'`) === '0', 'lista del día: borrar el origen se lleva su fila');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.plantillas_trabajo (nombre, tipo, duracion_teorica, checklist) values ('Instalar TPV', 'Instalación', 120, '[{"texto":"Probar impresora","completado":false}]');`));
+  ok(psql(`select tipo || '|' || jsonb_array_length(checklist) || '|' || activa from hub.plantillas_trabajo where nombre = 'Instalar TPV'`) === 'Instalación|1|true',
+    'plantillas: tras el corte se crean (con sus pasos)');
+  const nota = psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${titoId}', 'Comprar bridas') returning id;`)).split('\n').pop();
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${anaId}', 'A nombre de otra');`), { esperaError: true }).ok, 'tablero: nadie apunta notas a nombre de otro');
+  psql(como('authenticated', 'ana@ok.test', `update hub.tablero_notas set titulo = 'Pisada' where id = '${nota}'; delete from hub.tablero_notas where id = '${nota}';`));
+  ok(psql(`select titulo from hub.tablero_notas where id = '${nota}'`) === 'Comprar bridas' && una('ana@ok.test', `select count(*) from hub.tablero_notas where id = '${nota}'`) === '1',
+    'tablero: todos la ven y solo su autor la cambia o la borra');
+
+  // Paridad (20261017): el trabajo manda su fecha a la agenda y la agenda la devuelve.
+  const ta = psql(como('authenticated', 'ana@ok.test', `insert into hub.trabajos (titulo, fecha_programada, hora_llegada, duracion_teorica, tecnicos)
+    values ('Cámaras', '2026-11-02', '2026-11-02 10:00+00', 90, '{Tito}') returning id;`)).split('\n').pop();
+  ok(psql(`select count(*) || '|' || min(inicio)::text || '|' || min(fin)::text || '|' || min(tecnicos::text) from hub.agenda where trabajo_id = '${ta}'`)
+    === '1|2026-11-02 10:00:00+00|2026-11-02 11:30:00+00|{Tito}', 'paridad: el alta con fecha crea su bloque (hora, duración y técnicos)');
+  psql(como('authenticated', 'ana@ok.test', `update hub.trabajos set fecha_programada = '2026-11-04', hora_llegada = '2026-11-04 08:00+00' where id = '${ta}';`));
+  ok(psql(`select min(inicio)::text from hub.agenda where trabajo_id = '${ta}'`) === '2026-11-04 08:00:00+00', 'paridad: cambiar la fecha del trabajo mueve su bloque');
+  psql(como('authenticated', 'ana@ok.test', `insert into hub.agenda (trabajo_id, inicio, fin) values ('${ta}', '2026-11-05 08:00+00', '2026-11-05 12:00+00');`));
+  psql(como('authenticated', 'ana@ok.test', `update hub.trabajos set fecha_programada = '2026-11-06' where id = '${ta}';`));
+  ok(psql(`select string_agg((inicio at time zone 'Atlantic/Canary')::date::text, ',' order by inicio) from hub.agenda where trabajo_id = '${ta}'`) === '2026-11-06,2026-11-07',
+    'paridad: con dos días, cambiar la fecha desplaza los dos');
+  ok(psql(`select fecha_programada::text from hub.trabajos where id = '${ta}'`) === '2026-11-06', 'paridad: y el trabajo queda con la fecha de su primer bloque');
 
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);

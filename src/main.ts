@@ -1,6 +1,7 @@
 // Arranque: tema → sesión → ¿es usuario del hub? → shell + router.
 import './estilo.css';
 import './escritorio.css';
+import './oki.css';
 import { instalarDispatcher, registrarAcciones } from './core/dispatcher';
 import { sesionInicial, alCambiarSesion, entrarConCorreo, entrarConGoogle, salir, emailSesion } from './core/auth';
 import { API } from './core/api';

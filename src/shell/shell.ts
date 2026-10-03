@@ -8,6 +8,7 @@ import { usuario } from '../core/estado';
 import { visibles, hrefDe } from '../modulos/inicio';
 import { pintarPantalla } from './pantalla';
 import { escritorioActivo, pintarEscritorio, mostrarEnEscritorio } from './escritorio';
+import { pintarWhatsapp } from './whatsapp';
 
 export function pintarShell(raiz: HTMLElement) {
   const u = usuario();
@@ -38,6 +39,7 @@ export function pintarShell(raiz: HTMLElement) {
       <p class="bus-pie"><kbd>Tab</kbd> cambia de modo · <kbd>↵</kbd> abre · <kbd>Esc</kbd> cierra</p>
     </dialog>`;
   pintarMenu();
+  pintarWhatsapp(raiz);
   if (escritorioActivo()) pintarEscritorio(raiz);
 }
 

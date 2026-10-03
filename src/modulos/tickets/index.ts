@@ -14,6 +14,7 @@ import { APP_ACTUAL_URL } from '../../core/config';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
 import { markdown } from '../../ui/markdown';
 import { buscarClientes, nombresClientes, telWhatsApp } from '../ventas/datos';
+import { botonChatFicha } from '../../ui/chat-ficha';
 import {
   type Ticket, type Comentario, type Plantilla,
   ESTADOS, ABIERTOS, PRIORIDADES, CATEGORIAS, CANALES, TONO_PRIORIDAD, prioridadNorm, sla, limiteSla, esMio, rellenar, enlaceValoracion,
@@ -143,7 +144,7 @@ async function pintarFicha(el: HTMLElement, numero: string) {
   const cerrado = t.estado === 'Cerrado';
   el.innerHTML = `<p><a href="#/tickets">← Tickets</a>${t.cliente_id ? ` · <a href="#/clientes/${esc(t.cliente_id)}">Ficha del cliente</a>` : ''}</p>
     <div class="tarjeta-cab"><h2>🎫 #${t.numero} ${esc(t.titulo)}</h2>
-      <div class="acciones">${chipPrioridad(t.prioridad)} <span class="chip">${esc(t.estado)}</span> ${s ? chipSla(t) : ''}</div></div>
+      <div class="acciones">${chipPrioridad(t.prioridad)} <span class="chip">${esc(t.estado)}</span> ${s ? chipSla(t) : ''} ${botonChatFicha('ticket', t.id, `#${t.numero} ${t.titulo}`, `#/tickets/${t.numero}`)}</div></div>
     <p class="nota">Entró ${esc(hace(t.created_at))} por ${esc(CANALES[t.canal ?? ''] ?? t.canal ?? '—')}${t.email_de ? ` · ${esc(t.email_de)}` : ''}</p>
     <div class="op-ficha">
       <div>

@@ -6,6 +6,7 @@ import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, hace } from '../../ui/dom';
 import { enApp } from '../ventas/datos';
 import { esMio } from '../direccion';
+import { botonChatFicha } from '../../ui/chat-ficha';
 
 interface Tarea {
   id: string; numero: number | null; titulo: string; descripcion: string | null; notas: string | null; estado: string; prioridad: string | null;
@@ -130,7 +131,7 @@ async function pintarFicha(el: HTMLElement, id: string) {
   el.innerHTML = `<p><a href="#/tareas">← Tareas</a></p>
     ${delHub ? '' : avisoSoloLectura('Tareas')}
     <div class="tarjeta-cab"><h2>${t.numero != null ? `#${t.numero} ` : ''}${esc(t.titulo)}</h2>
-      <div class="acciones"><a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Las tareas se cambian en la app actual">Abrir en la app ↗</a></div></div>
+      <div class="acciones">${botonChatFicha('tarea', t.id, t.titulo, `#/tareas/${t.id}`)}<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Las tareas se cambian en la app actual">Abrir en la app ↗</a></div></div>
     <p>${chipEstado(t.estado)} ${chipPrio(t.prioridad)} ${vencida(t) ? '<span class="chip mal">Vencida</span>' : ''}</p>
     <div class="me-grid">
       <section class="tarjeta"><h3>📋 La tarea</h3><dl class="me-datos">
