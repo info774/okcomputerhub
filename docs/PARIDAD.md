@@ -47,6 +47,11 @@ Fran, 2026-10-03).
    preparado para el corte del área `clientes`.
 3. **Presupuestos y facturar trabajos**: crear con líneas del catálogo,
    plantillas, PDF, a Zoho, convertir en trabajo; facturar trabajos en Zoho.
+   **Bloque 3 HECHO** (2026-10-03), preparado para el corte de `presupuestos`
+   (y de `trabajos` para facturar): tanda 1 presupuestos con escritura
+   (`20261023_presupuestos.sql`), tanda 2 a Zoho y tanda 3 facturar (función
+   `zoho-ventas`). Falta que Fran amplíe los permisos del Self Client de Zoho
+   (PENDIENTE_FRAN §5).
 4. **Mantenimiento y cobros**: Stripe (domiciliar, enlace de pago, cambiar plan,
    abonos), libro de cuotas, contratos con firma y pago, renovaciones, tabla
    maestra de Locales.
@@ -129,15 +134,15 @@ Fran, 2026-10-03).
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
 | Oportunidades: embudo, lista, ficha | Hecho | `#/oportunidades` | — |
-| Oportunidad a presupuesto, trabajo o tarea | Falta | — | — |
+| Oportunidad a presupuesto, trabajo o tarea | Preparado (presupuesto) | Ficha de la oportunidad → «📄 Crear presupuesto» (`#/presupuestos/nuevo/o/<id>`) | A trabajo o tarea. |
 | Formulario de las webs (`formulario-web`) | Falta | — | Entra por la app y se importa. |
 | Captación de leads de comerciales (`captacion.html`, `captar-lead`) | Falta | — | — |
-| Lista de presupuestos | Solo lectura | `#/presupuestos` | Corte del área. |
-| Crear y editar presupuesto con catálogo | Falta | — | — |
-| Plantillas de presupuesto | Falta | — | — |
-| PDF del presupuesto | Falta | — | — |
-| Presupuesto a Zoho (`send-to-zoho-estimate`) | Falta | — | Escribir en Zoho. |
-| Presupuesto a trabajo | Falta | — | — |
+| Lista de presupuestos | Preparado | `#/presupuestos` (+ Nuevo presupuesto, Plantillas) | Corte del área. |
+| Crear y editar presupuesto con catálogo | Preparado | `#/presupuestos/nuevo[/c/<cliente>|/o/<oportunidad>]`, `#/presupuestos/<id>/editar` (`presupuestos/formulario.ts`, editor `lineas.ts`); líneas por `hub.presupuesto_guardar_lineas` (pone el total); duplicar; eliminar solo admin | Corte. |
+| Plantillas de presupuesto | Preparado | `#/presupuestos/plantillas` (espejo `presupuesto_plantillas`; varias se juntan al crear) | Corte. |
+| PDF del presupuesto | Hecho | `#/presupuestos/<id>/pdf` (imprimible con IGIC y condiciones; vale ya) | — |
+| Presupuesto a Zoho (`send-to-zoho-estimate`) | Preparado | Ficha → «📤 Enviar a Zoho» (función `zoho-ventas`, acción `presupuesto`) | Corte y permisos de Zoho (PENDIENTE_FRAN §5). |
+| Presupuesto a trabajo | Preparado | Ficha (aceptado) → «🛠 Convertir en trabajo» (`hub.trabajo_desde_presupuesto`, copia las líneas) | Corte de `trabajos`. |
 | Aceptación por el cliente | Falta | `portal` | En el portal se acepta, pero hay que pasarlo a la app a mano. |
 
 ### 5. Mantenimiento y cobros
@@ -162,8 +167,8 @@ Fran, 2026-10-03).
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
 | Facturas de venta desde Zoho | Solo lectura | espejo `hub.zoho_facturas` (+ Enlace «Facturación y cobros») | Listado; credenciales de Zoho. |
-| Facturar trabajos en Zoho (`send-to-zoho-invoice`, `add-to-zoho-invoice`) | Falta | `#/facturacion` (propia, sin activar) | — |
-| Asignar cliente a sede suelta al facturar | Falta | — | — |
+| Facturar trabajos en Zoho (`send-to-zoho-invoice`, `add-to-zoho-invoice`) | Preparado | `#/trabajos/facturar/<ids>` (desde la ficha o marcando en «Por facturar»): factura nueva, añadir a un borrador o presupuesto; función `zoho-ventas` | Corte de `trabajos` y permisos de Zoho. |
+| Asignar cliente a sede suelta al facturar | Preparado | La pantalla de facturar pide el cliente y se lo deja a las sedes sueltas y sus trabajos | Corte. |
 | Factura o presupuesto en PDF por WhatsApp | Falta | — | — |
 | Tablero VeriFactu (`modules/verifactu.js`) | Falta | — | Tabla y pantalla. |
 | Facturas de compra (`facturas_compra.js`) | Falta | — | — |

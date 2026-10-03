@@ -276,9 +276,10 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   avisos (panel, bot, informes, MCP); un aviso nuevo se añade ahí, con
   `dinero = true` si es de dinero (solo admins). Es `security definer`: filtra
   él mismo con `hub.admin_para()`. Dinero de Zoho: espejo de SOLO LECTURA
-  (`hub.zoho_*`, RLS solo admins) que rellena `zoho-lectura`; el hub no
-  escribe dinero en Zoho (la única escritura son los contactos de clientes,
-  ver «Clientes con escritura»). Los 7 informes viven en `_shared/informes.ts` (texto en el
+  (`hub.zoho_*`, RLS solo admins) que rellena `zoho-lectura`. Las ÚNICAS
+  escrituras del hub en Zoho son las de la paridad con la app, cada una con su
+  área cortada: contactos de clientes («Clientes con escritura»), presupuestos y
+  facturas de trabajos (función `zoho-ventas`, «Presupuestos con escritura»). Los 7 informes viven en `_shared/informes.ts` (texto en el
   HTML de Telegram, escapado con `h()`); el front lo pinta con `htmlTelegram()`,
   que solo deja pasar `<b>`, `<i>`, `<code>` y enlaces https.
 - Los técnicos se guardan por NOMBRE en la app y no siempre igual («Matteo» /
@@ -446,6 +447,27 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   app (ya no es un enlace): filtros de la app, por persona, lista y tablero, y
   ficha con lo que enlaza. Espejo en SOLO LECTURA (área `tareas`); NO son las
   comandas (`hub.comanda_tareas`). Arnés `verify-tareas.mjs`.
+- **Presupuestos con escritura y facturar trabajos** (2026-10-03, paridad
+  bloque 3, PREPARADO para el corte): alta y edición (`presupuestos/formulario.ts`,
+  prefijo `pf-`; desde la lista, un cliente `/nuevo/c/<id>` o una oportunidad
+  `/nuevo/o/<id>`), editor de líneas COMPARTIDO (`presupuestos/lineas.ts`, ids
+  `<prefijo>-lin-*`, catálogo del espejo), plantillas (`/plantillas`, espejo
+  `presupuesto_plantillas`; varias se JUNTAN y el mismo concepto suma), imprimible
+  (`/<id>/pdf`, vale ya), duplicar, «Convertir en trabajo» (`/<id>/trabajo`) y
+  eliminar (solo admin, RLS restrictiva). Las líneas de un presupuesto viven en
+  `documento_lineas` (área `trabajos`), así que se escriben SOLO con
+  `hub.presupuesto_guardar_lineas` (exige `presupuestos` y deja el `total`);
+  el trabajo nace con `hub.trabajo_desde_presupuesto` (exige `trabajos`, copia
+  las líneas). Zoho: función `zoho-ventas` (`presupuesto`, `borradores`,
+  `factura`, `anadir`; líneas por `_shared/zoho-lineas.ts`, rótulo + detalle y
+  artículo del catálogo si está enlazado), 409 con el área de la app.
+  Facturar: `#/trabajos/facturar/<id,…>` (`trabajos/facturar.ts`, prefijo
+  `ft-`; botón en la ficha y casillas en «Por facturar»), líneas como la app
+  (fichajes, artículos o los del presupuesto, materiales) y la sede sin cliente
+  se queda con el elegido ANTES de facturar. OJO: en un editor de líneas el
+  `change` salta al perder el foco; repintar la tabla ahí rompe el clic que
+  viene (se actualizan solo subtotal y total). La ficha del trabajo se abre por
+  número o por id. Arnés `verify-presupuestos-escritura.mjs`.
 - **Presupuestos** (`src/modulos/presupuestos/`, `#/presupuestos`, 2026-10-02):
   ya no es un enlace. Cifras (abiertos, enviados sin respuesta más de una
   semana —el mismo umbral que el aviso del puesto de mando—, aceptado y tasa de 12 meses),
