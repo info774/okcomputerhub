@@ -14,11 +14,14 @@
 // Acciones (con sesión de una persona del hub):
 //   estado · conversaciones · mensajes {conversacion_id} · leida {conversacion_id}
 //   enviar {conversacion_id, texto} · proponer {conversacion_id}
+//   plantilla {conversacion_id}: fuera de las 24 h, la plantilla de retomar la
+//   conversación (WHATSAPP_PLANTILLA_TEXTO); se apunta como la app apunta las
+//   suyas (tipo `template`).
 import { makeCorsHeaders, json, getAuthedUser, unauthorized, forbidden } from '../_shared/http.ts'
 import { hubDb } from '../_shared/hub-db.ts'
 import { personaPorEmail } from '../_shared/personas.ts'
 import { claudeConfigurado, preguntarClaude } from '../_shared/claude.ts'
-import { dentroDeVentana, enviarTexto, waConfigurado } from '../_shared/whatsapp.ts'
+import { dentroDeVentana, enviarPlantillaTexto, enviarTexto, plantillaTexto, waConfigurado } from '../_shared/whatsapp.ts'
 
 const HUB_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const HUB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -106,11 +109,11 @@ Deno.serve(async req => {
   if (!yo) return forbidden(cors, 'No estás dado de alta en el hub.')
   const b = await req.json().catch(() => ({}))
   try {
-    if (b.accion === 'estado') return json({ envio: waConfigurado(), claude: claudeConfigurado() }, 200, cors)
+    if (b.accion === 'estado') return json({ envio: waConfigurado(), claude: claudeConfigurado(), plantilla: !!plantillaTexto() }, 200, cors)
 
     if (b.accion === 'conversaciones') {
       const filas: Fila[] = await appReq('GET', `wa_conversaciones?select=${CONV_COLS}&order=ultimo_mensaje_at.desc.nullslast&limit=40`)
-      return json({ conversaciones: filas.map(convVista), envio: waConfigurado() }, 200, cors)
+      return json({ conversaciones: filas.map(convVista), envio: waConfigurado(), plantilla: !!plantillaTexto() }, 200, cors)
     }
 
     if (b.accion === 'mensajes') {
@@ -154,6 +157,24 @@ Deno.serve(async req => {
       return r.ok ? json({ ok: true, mensaje: msg }, 200, cors) : json({ error: r.error, mensaje: msg }, 502, cors)
     }
 
+    if (b.accion === 'plantilla') {
+      if (!waConfigurado()) return json({ error: 'Falta poner las claves de WhatsApp en el hub (ver docs/PENDIENTE_FRAN.md).' }, 503, cors)
+      if (!plantillaTexto()) return json({ error: 'Falta la plantilla de Meta para retomar conversaciones (WHATSAPP_PLANTILLA_TEXTO, ver docs/PENDIENTE_FRAN.md).' }, 503, cors)
+      const c = await conversacion(String(b.conversacion_id ?? ''))
+      if (dentroDeVentana(c.ultimo_entrante_at)) return json({ error: 'Dentro de las 24 h se contesta con texto normal.' }, 409, cors)
+      const v = convVista(c)
+      const nombre = String(c.contactos?.nombre || c.nombre || v.nombre).split(/\s+/)[0]
+      const r = await enviarPlantillaTexto(c.telefono, nombre)
+      const ahora = new Date().toISOString()
+      const texto = `📨 Plantilla «${plantillaTexto()}» para retomar la conversación`
+      const [msg] = await appReq('POST', 'wa_mensajes', {
+        conversacion_id: c.id, direccion: 'saliente', usuario: yo.nombre, created_at: ahora, texto,
+        wa_message_id: r.id ?? null, tipo: 'template', estado: r.ok ? 'enviado' : 'fallido', error: r.error ?? null,
+      })
+      await appReq('PATCH', `wa_conversaciones?id=eq.${c.id}`, { ultimo_mensaje: texto.slice(0, 200), ultimo_mensaje_at: ahora, sin_leer: 0 })
+      return r.ok ? json({ ok: true, mensaje: msg }, 200, cors) : json({ error: r.error, mensaje: msg }, 502, cors)
+    }
+
     if (b.accion === 'proponer') {
       if (!claudeConfigurado()) return json({ propuesta: null, motivo: 'Oki necesita la clave de Claude (ANTHROPIC_API_KEY) para proponer respuestas.' }, 200, cors)
       const c = await conversacion(String(b.conversacion_id ?? ''))
@@ -171,7 +192,7 @@ Deno.serve(async req => {
       return json({ propuesta: propuesta.trim() || null }, 200, cors)
     }
 
-    return json({ error: 'Acción desconocida (estado, conversaciones, mensajes, leida, enviar, proponer)' }, 400, cors)
+    return json({ error: 'Acción desconocida (estado, conversaciones, mensajes, leida, enviar, plantilla, proponer)' }, 400, cors)
   } catch (e) {
     const status = (e as { status?: number }).status ?? 502
     console.error('[whatsapp]', e)

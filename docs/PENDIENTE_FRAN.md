@@ -59,6 +59,29 @@ que se sacan otra vez de Meta.
    WHATSAPP_PHONE_NUMBER_ID=1234567890...
    ```
 
+### 1 ter · La plantilla para retomar una conversación (opcional, ~5 min + la aprobación de Meta)
+
+**Desbloquea**: el botón **📨 Mandar plantilla** del chat de WhatsApp del hub.
+Cuando el cliente lleva más de 24 h sin escribir, WhatsApp no deja mandarle
+texto normal: solo una plantilla aprobada por Meta. La que tiene la app es para
+mandar facturas con un PDF; esta es de texto, para volver a hablar con él.
+
+1. Entra en **https://business.facebook.com/wa/manage/message-templates/** (el
+   Administrador de WhatsApp de la empresa) → botón **Crear plantilla**.
+2. Categoría: **Utilidad**. Nombre: `retomar_conversacion` (en minúsculas y
+   con guion bajo, tal cual). Idioma: **Español (ESP)**.
+3. En **Cuerpo** pega este texto (el `{{1}}` lo cambia el hub por el nombre del
+   cliente; si Meta pide un ejemplo para la variable, pon `Marta`):
+   ```
+   Hola {{1}}, le escribimos de Ok Computer Tenerife sobre su consulta. ¿Podemos seguir por aquí?
+   ```
+4. **Enviar** y espera a que salga como **Activa** (suele tardar minutos; a veces
+   unas horas).
+5. Variable de entorno (ver arriba cómo):
+   ```
+   WHATSAPP_PLANTILLA_TEXTO=retomar_conversacion
+   ```
+
 ## 2 · Google: correo, Drive (una vez, ~10 minutos)
 
 **Desbloquea**: los correos a info@ se convierten en tickets y las respuestas

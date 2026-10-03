@@ -1,41 +1,55 @@
-// Dictar dentro de un campo (ui/dictado.js de la app): un botón que graba con
-// MediaRecorder, lo pasa a texto en la función `comandas` (acción
-// `transcribir`, Groq Whisper) y AÑADE el texto al campo. Un segundo clic
-// para la grabación. Lo usa la nota de voz del Tablero; vale para cualquier
-// formulario: `alternarDictado(boton, 'id-del-campo')`.
+// Dictar: grabar con MediaRecorder y pasarlo a texto en la función `comandas`
+// (acción `transcribir`, Groq Whisper).
+//   · grabarYTranscribir(avisos): graba hasta que se llame a pararGrabacion() y
+//     devuelve el texto. Lo usa la voz de Oki de la portada.
+//   · alternarDictado(boton, campoId): el botón de dictar de un formulario
+//     (ui/dictado.js de la app): un clic graba, otro para, y el texto se AÑADE
+//     al campo. Lo usa la nota de voz del Tablero.
 import { llamarFuncion } from '../core/funciones';
 import { toast } from './dom';
 
 let _grabadora: MediaRecorder | null = null;
 
 export const puedeDictar = () => typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+export const grabando = () => _grabadora?.state === 'recording';
+export function pararGrabacion() { if (grabando()) _grabadora!.stop(); }
 
 const aBase64 = (b: Blob) => new Promise<string>((ok, mal) => { const f = new FileReader(); f.onload = () => ok(String(f.result).split(',')[1] ?? ''); f.onerror = mal; f.readAsDataURL(b); });
 
+export interface Avisos { empieza?(): void; pasando?(): void }
+
+export async function grabarYTranscribir(avisos: Avisos = {}): Promise<{ texto: string | null; error: string | null }> {
+  if (!puedeDictar()) return { texto: null, error: 'Este navegador no deja grabar audio' };
+  let stream: MediaStream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { return { texto: null, error: 'No hay permiso para el micrófono: actívalo en el navegador' }; }
+  const trozos: Blob[] = [];
+  const g = new MediaRecorder(stream);
+  _grabadora = g;
+  const parado = new Promise<void>(ok => { g.onstop = () => ok(); });
+  g.ondataavailable = e => { if (e.data.size) trozos.push(e.data); };
+  g.start();
+  avisos.empieza?.();
+  await parado;
+  stream.getTracks().forEach(t => t.stop());
+  _grabadora = null;
+  const blob = new Blob(trozos, { type: g.mimeType || 'audio/webm' });
+  if (blob.size < 1000) return { texto: null, error: 'No se ha grabado nada' };
+  avisos.pasando?.();
+  const r = await llamarFuncion<{ texto: string }>('comandas', { accion: 'transcribir', audio: await aBase64(blob), mime: blob.type });
+  if (r.error) return { texto: null, error: `No se pudo pasar a texto: ${r.error}` };
+  const texto = r.data?.texto?.trim();
+  return texto ? { texto, error: null } : { texto: null, error: 'No se entendió nada' };
+}
+
 export async function alternarDictado(boton: HTMLElement | null, campoId: string) {
-  if (_grabadora?.state === 'recording') { _grabadora.stop(); return; }
-  if (!puedeDictar()) { toast('Este navegador no deja grabar audio', 'error'); return; }
+  if (grabando()) { pararGrabacion(); return; }
   const texto0 = boton?.textContent ?? '';
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const trozos: Blob[] = [];
-    const g = new MediaRecorder(stream);
-    _grabadora = g;
-    g.ondataavailable = e => { if (e.data.size) trozos.push(e.data); };
-    g.onstop = async () => {
-      stream.getTracks().forEach(t => t.stop());
-      _grabadora = null;
-      const blob = new Blob(trozos, { type: g.mimeType || 'audio/webm' });
-      if (blob.size < 1000) { if (boton) { boton.textContent = texto0; boton.setAttribute('aria-pressed', 'false'); } toast('No se ha grabado nada', 'error'); return; }
-      if (boton) boton.textContent = '… pasando a texto';
-      const r = await llamarFuncion<{ texto: string }>('comandas', { accion: 'transcribir', audio: await aBase64(blob), mime: blob.type });
-      if (boton) { boton.textContent = texto0; boton.setAttribute('aria-pressed', 'false'); }
-      const texto = r.data?.texto?.trim();
-      if (r.error || !texto) { toast(r.error ? `No se pudo pasar a texto: ${r.error}` : 'No se entendió nada', 'error'); return; }
-      const campo = document.getElementById(campoId) as HTMLTextAreaElement | HTMLInputElement | null;
-      if (campo) { campo.value = campo.value.trim() ? `${campo.value.trimEnd()}\n${texto}` : texto; campo.dispatchEvent(new Event('input', { bubbles: true })); }
-    };
-    g.start();
-    if (boton) { boton.textContent = '⏹ Parar'; boton.setAttribute('aria-pressed', 'true'); }
-  } catch { toast('No hay permiso para el micrófono: actívalo en el navegador', 'error'); }
+  const r = await grabarYTranscribir({
+    empieza: () => { if (boton) { boton.textContent = '⏹ Parar'; boton.setAttribute('aria-pressed', 'true'); } },
+    pasando: () => { if (boton) boton.textContent = '… pasando a texto'; },
+  });
+  if (boton) { boton.textContent = texto0; boton.setAttribute('aria-pressed', 'false'); }
+  if (!r.texto) { toast(r.error ?? 'No se entendió nada', 'error'); return; }
+  const campo = document.getElementById(campoId) as HTMLTextAreaElement | HTMLInputElement | null;
+  if (campo) { campo.value = campo.value.trim() ? `${campo.value.trimEnd()}\n${r.texto}` : r.texto; campo.dispatchEvent(new Event('input', { bubbles: true })); }
 }

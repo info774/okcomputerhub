@@ -133,6 +133,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   entrar, leer y marcar leída, propuesta de Oki, enviar, ventana de 24 h
   cerrada bloquea, sigue en otra pantalla, móvil sin desbordar). La función
   `whatsapp` va simulada con su propia ruta encima de la de `preparar`.
+  Tablero completo (2026-10-03): cabecera con el estado del sync y la campana,
+  «Trabajos completados», «Sí, contéstalo» (la función `oki` redacta en el
+  ticket), voz con micrófono de mentira (pregunta → `#/buscar`; encargo →
+  comanda solo tras confirmar), órdenes rápidas, pie con el último sync y el
+  repaso de la mañana, y «Mandar plantilla» fuera de las 24 h.
 - `verify-trabajos.mjs`: paridad de trabajos. Sin corte: el alta lleva a la
   app y el formulario no guarda. Con corte: alta Simple/Completa (el modo se
   recuerda; el móvil arranca en Simple), editar (estado por RPC y «¿Para

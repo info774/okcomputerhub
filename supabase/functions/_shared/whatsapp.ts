@@ -7,6 +7,10 @@
 //  - WHATSAPP_TOKEN            token permanente del usuario del sistema de Meta.
 //  - WHATSAPP_PHONE_NUMBER_ID  id del número (no el número).
 //  - WHATSAPP_API_VERSION      opcional (v23.0).
+//  - WHATSAPP_PLANTILLA_TEXTO  opcional: plantilla de Meta (categoría Utilidad)
+//    para RETOMAR una conversación pasadas las 24 h, con UNA variable en el
+//    cuerpo, {{1}} = nombre del cliente. Sin ella, fuera de las 24 h no se
+//    puede escribir desde el hub. WHATSAPP_PLANTILLA_IDIOMA (por defecto es).
 
 const VERSION = () => Deno.env.get('WHATSAPP_API_VERSION') || 'v23.0'
 const GRAPH = () => `https://graph.facebook.com/${VERSION()}`
@@ -40,18 +44,35 @@ function traduceError(e: any): string {
   if (code === 131026) return 'Ese número no puede recibir el mensaje (no tiene WhatsApp o no ha aceptado las condiciones).'
   if (code === 190) return 'El token de WhatsApp ha caducado o no es válido (secret WHATSAPP_TOKEN del hub).'
   if (code === 131051) return 'Meta no admite ese tipo de mensaje.'
+  if (code === 132001) return 'Meta no encuentra esa plantilla (WHATSAPP_PLANTILLA_TEXTO): revisa el nombre y que esté aprobada en ese idioma.'
+  if (code === 132000) return 'La plantilla de Meta no tiene una sola variable {{1}} para el nombre del cliente.'
   if (code === 130429 || code === 131056) return 'Demasiados mensajes seguidos: Meta ha puesto un límite, prueba en un rato.'
   return e?.error_user_msg || e?.message || 'WhatsApp rechazó el mensaje.'
 }
 
-export async function enviarTexto(para: string, texto: string): Promise<EnvioWa> {
+export const plantillaTexto = () => Deno.env.get('WHATSAPP_PLANTILLA_TEXTO') ?? ''
+
+export function enviarTexto(para: string, texto: string): Promise<EnvioWa> {
+  return postMensaje({ to: normalizaTelefono(para), type: 'text', text: { body: texto.slice(0, 4096), preview_url: true } })
+}
+
+// La plantilla de retomar la conversación (WHATSAPP_PLANTILLA_TEXTO), con el
+// nombre del cliente en {{1}}.
+export function enviarPlantillaTexto(para: string, nombre: string): Promise<EnvioWa> {
+  return postMensaje({
+    to: normalizaTelefono(para), type: 'template',
+    template: {
+      name: plantillaTexto(), language: { code: Deno.env.get('WHATSAPP_PLANTILLA_IDIOMA') || 'es' },
+      components: [{ type: 'body', parameters: [{ type: 'text', text: nombre.slice(0, 60) || 'cliente' }] }],
+    },
+  })
+}
+
+async function postMensaje(cuerpo: Record<string, unknown>): Promise<EnvioWa> {
   const res = await fetch(`${GRAPH()}/${Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')}/messages`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${Deno.env.get('WHATSAPP_TOKEN')}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp', recipient_type: 'individual',
-      to: normalizaTelefono(para), type: 'text', text: { body: texto.slice(0, 4096), preview_url: true },
-    }),
+    body: JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', ...cuerpo }),
     signal: AbortSignal.timeout(20000),
   })
   const data = await res.json().catch(() => ({}))
