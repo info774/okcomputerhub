@@ -179,6 +179,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   rol en la fila, editar, quitar), baja y reactivar desde «De baja», Excel,
   eliminar (admin: teléfonos y después la sede), técnico sin «Eliminar» y el
   mundo sin corte.
+- `verify-sitios-equipamiento.mjs`: pestañas Software, Hardware y Cámaras
+  (avisos de certificado y garantía, garantía = instalación + 1 año, añadir,
+  editar, quitar; contraseña de cámara tras «Ver»), Seguimiento (marcar y
+  desmarcar por periodo), «🖥 Remoto» (AnyDesk sin repetir y RustDesk con la
+  contraseña al portapapeles), AnyDesk en la lista y en el Excel, vivienda sin
+  Software ni Seguimiento, eliminar con lo que cuelga y el mundo sin corte.
 - `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
   producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
   por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de

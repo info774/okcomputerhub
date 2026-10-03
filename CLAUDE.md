@@ -404,7 +404,16 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `activo`), eliminar (admin: DELETE de sus `local_telefonos` y después de la
   sede, porque el espejo no tiene cascada) y pestaña «Teléfonos» con ROL
   (`hub.local_telefonos`, en el área `clientes`; sin CHECK de rol por ser
-  espejo). Arnés `verify-sitios-escritura.mjs`.
+  espejo). Arnés `verify-sitios-escritura.mjs`. Tanda 3 (mismo día): pestañas
+  Software, Hardware, Cámaras y Seguimiento (`sitios/equipamiento.ts`, prefijos
+  `si-eq-`/`si-rem-`) sobre los espejos de `20261022_sitio_equipamiento.sql`
+  (área `clientes`), y «🖥 Remoto»: AnyDesk de hardware + software sin repetir
+  y RustDesk de Breeze con la contraseña de la sede al portapapeles
+  (`hub.rmm_despliegues`: SOLO LECTURA también tras el corte y FUERA de
+  `hub.auditoria`, que la guardaría en claro; su clave es `local_id`, que el
+  sync lee de `clave` en `tablas-app.ts`). Contraseñas de cámaras tras «Ver».
+  En una Vivienda no salen Software ni Seguimiento. Eliminar una sede borra
+  antes lo que cuelga de ella. Arnés `verify-sitios-equipamiento.mjs`.
 - **Contactos** (`src/modulos/contactos/`, `#/contactos`, 2026-09-28): la
   agenda de la app (tipos, favoritos, etiquetas, de baja; llamar/WhatsApp/correo
   desde la fila) y ficha con datos, trabajos y tickets donde figura. Espejo en

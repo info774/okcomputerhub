@@ -654,6 +654,9 @@ try {
   ok(psql(`select 'local_telefonos' = any (tablas) from hub.areas where area = 'clientes'`) === 't'
     && !psql(como('authenticated', 'ana@ok.test', `insert into hub.local_telefonos (numero) values ('600000000');`), { esperaError: true }).ok,
     'teléfonos de la sede (20261021): van con el área clientes y sin el corte no se escriben');
+  ok(psql(`select count(*) from hub.areas, unnest(tablas) t where area = 'clientes' and t in ('local_software', 'local_hardware', 'local_camaras', 'rmm_despliegues', 'plan_tareas', 'sitio_tarea_seguimiento')`) === '6'
+    && !psql(como('authenticated', 'ana@ok.test', `insert into hub.local_hardware (nombre) values ('TPV');`), { esperaError: true }).ok,
+    'equipamiento de la sede (20261022): en el área clientes y sin el corte no se escribe');
 
   // ── Reloj: vinculación por código, huella del token y fichar a nombre de la persona ──
   const [rtok, rcod] = psql(como('service_role', null, `select token || '|' || codigo from hub.reloj_iniciar();`)).split('\n').pop().split('|');
@@ -737,6 +740,17 @@ commit;`);
   psql(como('authenticated', 'tito@ok.test', `insert into hub.local_telefonos (local_id, nombre, numero, rol) values ('00000000-0000-0000-0000-0000000000c1', 'Pepe', '600111222', 'dueno');`));
   ok(psql(`select rol from hub.local_telefonos where numero = '600111222'`) === 'dueno' && psql(`select count(*) from hub.auditoria where tabla = 'local_telefonos'`) !== '0',
     'teléfonos de la sede: tras el corte se apuntan (con su rol) y quedan en la auditoría');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.local_camaras (local_id, marca, contrasena) values ('00000000-0000-0000-0000-0000000000c1', 'Hikvision', 'x');
+    insert into hub.local_software (local_id, nombre, fecha_caducidad_certificado) values ('00000000-0000-0000-0000-0000000000c1', 'Glop', '2027-01-31');`));
+  ok(psql(`select count(*) from hub.local_camaras where marca = 'Hikvision'`) === '1' && psql(`select count(*) from hub.auditoria where tabla = 'local_software'`) !== '0',
+    'equipamiento: tras el corte se apunta (y queda en la auditoría)');
+  ok(!psql(como('authenticated', 'ana@ok.test', `insert into hub.rmm_despliegues (local_id, rustdesk_password) values ('00000000-0000-0000-0000-0000000000c1', 'x');`), { esperaError: true }).ok
+    && psql(`select count(*) from information_schema.triggers where event_object_schema = 'hub' and event_object_table = 'rmm_despliegues'`) === '0',
+    'contraseñas de RustDesk: solo lectura también tras el corte, y fuera de la auditoría');
+  const pt = psql(`insert into hub.plan_tareas (plan, nombre, periodicidad) values ('Silver', 'Revisar copia', 'mensual') returning id;`).split('\n').pop();
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.sitio_tarea_seguimiento (local_id, tarea_id, periodo) values ('00000000-0000-0000-0000-0000000000c1', '${pt}', '2026-10');`));
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.sitio_tarea_seguimiento (local_id, tarea_id, periodo) values ('00000000-0000-0000-0000-0000000000c1', '${pt}', '2026-10');`), { esperaError: true }).ok,
+    'seguimiento: una marca por sede, tarea y periodo');
   const nota = psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${titoId}', 'Comprar bridas') returning id;`)).split('\n').pop();
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.tablero_notas (user_id, titulo) values ('${anaId}', 'A nombre de otra');`), { esperaError: true }).ok, 'tablero: nadie apunta notas a nombre de otro');
   psql(como('authenticated', 'ana@ok.test', `update hub.tablero_notas set titulo = 'Pisada' where id = '${nota}'; delete from hub.tablero_notas where id = '${nota}';`));

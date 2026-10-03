@@ -139,9 +139,9 @@ try {
   await pestana(page, L2, 'resumen');
   await page.click('[data-action="siEliminar"]');
   await page.waitForFunction(() => location.hash === '#/sitios');
-  const borr = base.reg.escrituras.filter(e => e.metodo === 'DELETE').slice(-2);
-  ok(borr[0]?.tabla === 'local_telefonos' && borr[0].url.includes(`local_id=eq.${L2}`) && borr[1]?.tabla === 'locales' && borr[1].url.includes(`id=eq.${L2}`),
-    'eliminar: se lleva sus teléfonos y después la sede');
+  const borr = base.reg.escrituras.filter(e => e.metodo === 'DELETE' && e.url.includes(L2));
+  ok(borr[0]?.tabla === 'local_telefonos' && borr[0].url.includes(`local_id=eq.${L2}`) && borr.at(-1)?.tabla === 'locales' && borr.at(-1).url.includes(`id=eq.${L2}`),
+    'eliminar: se lleva sus teléfonos (y lo demás que cuelga) y después la sede');
   ok(B.errores.length === 0, `con corte: sin errores${B.errores.length ? ': ' + B.errores.join(' | ') : ''}`);
   await B.ctx.close();
 
