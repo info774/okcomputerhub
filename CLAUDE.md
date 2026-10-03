@@ -397,6 +397,13 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   trabajos, tickets y equipos). Espejo en SOLO LECTURA (área `clientes`); la
   cuota solo para admin y el código de alarma oculto hasta pulsar «Ver». Las
   sedes de la ficha del cliente enlazan aquí. Arnés `verify-sitios.mjs`.
+  Desde el 2026-10-03 (paridad bloque 2, tanda 2) con escritura PREPARADA para
+  el corte del área `clientes`: alta y edición (`sitios/formulario.ts`, prefijo
+  `sf-`, sin el mantenimiento, que es del bloque 4), baja/reactivar (solo
+  `activo`), eliminar (admin: DELETE de sus `local_telefonos` y después de la
+  sede, porque el espejo no tiene cascada) y pestaña «Teléfonos» con ROL
+  (`hub.local_telefonos`, en el área `clientes`; sin CHECK de rol por ser
+  espejo). Arnés `verify-sitios-escritura.mjs`.
 - **Contactos** (`src/modulos/contactos/`, `#/contactos`, 2026-09-28): la
   agenda de la app (tipos, favoritos, etiquetas, de baja; llamar/WhatsApp/correo
   desde la fila) y ficha con datos, trabajos y tickets donde figura. Espejo en

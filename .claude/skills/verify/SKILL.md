@@ -173,6 +173,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   del duplicado; con NIF repetido no se crea; alta en Zoho del recién creado),
   editar (sin Zoho), dar de baja y reactivar, «De baja», Excel, eliminar (admin:
   baja + quitar de Zoho), el técnico sin «Eliminar» y el mundo sin corte.
+- `verify-sitios-escritura.mjs`: alta de sede (desde «+ Nueva sede» del cliente
+  o buscándolo; mapa de la dirección; teléfono «Principal»; sin tocar el
+  mantenimiento), editar (TPV y alarma), teléfonos con rol (añadir, cambiar el
+  rol en la fila, editar, quitar), baja y reactivar desde «De baja», Excel,
+  eliminar (admin: teléfonos y después la sede), técnico sin «Eliminar» y el
+  mundo sin corte.
 - `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
   producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
   por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de
