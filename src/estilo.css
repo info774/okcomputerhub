@@ -557,6 +557,14 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 #tr-q { min-width: 12rem; flex: 1; }
 .tr-lineas input { width: 100%; min-width: 4rem; }
 .tr-tecnicos { display: grid; gap: .2rem; }
+/* Alta/edición de trabajo: la cara Simple esconde lo de .tf-completa. */
+.tf-form[data-modo="simple"] .tf-completa { display: none; }
+.tf-modo { margin-bottom: .25rem; }
+.tf-tecnicos { display: flex; flex-wrap: wrap; gap: .4rem 1rem; border: 1px solid var(--borde); border-radius: 9px; padding: .5rem .75rem; margin: .5rem 0; }
+.tf-tecnicos legend { padding: 0 .3rem; font-size: .85rem; color: var(--texto-suave); }
+.tf-mas { margin: .5rem 0; }
+.tf-mas summary { cursor: pointer; font-weight: 600; min-height: 40px; display: flex; align-items: center; }
+.tr-kanban .pr-tarjeta { display: grid; gap: .15rem; cursor: pointer; }
 .ca-semana { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .5rem; }
 .ca-dia { padding: .6rem; min-height: 8rem; } .ca-dia h3 { font-size: .9rem; margin: 0 0 .4rem; text-transform: capitalize; }
 .ca-hoy { outline: 2px solid var(--primario); }

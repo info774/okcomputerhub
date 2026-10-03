@@ -430,6 +430,17 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   de las 24 h desde el último mensaje del CLIENTE (la caja se bloquea fuera; la
   plantilla se manda desde la app). Oki PROPONE (`proponer`, Claude) y una
   persona manda. Si cambian las tablas `wa_*` de la app, cambiar la función.
+- **Trabajos: alta y edición** (`src/modulos/trabajos/formulario.ts`,
+  2026-10-03, paridad bloque 1): UN formulario para crear y editar
+  (`#/trabajos/nuevo`, `#/trabajos/<n>/editar`, prefijo `tf-`) con caras Simple
+  y Completa (`.tf-completa`; el móvil arranca en Simple y lo elegido se
+  recuerda). Al añadir un campo, decidir si es `.tf-completa`. El estado
+  SIEMPRE va por `hub.trabajo_estado` (que exige fichaje para completar, cierra
+  los tickets del trabajo y tras el que se propone «Para facturar»), nunca en
+  el PATCH. La fecha del trabajo crea o mueve su bloque por
+  `hub.trabajo_espejo_agenda` (y la agenda devuelve la del primer bloque),
+  disparadores que se apartan mientras la agenda sea de la app o escriba el
+  sync (`hub.espejo_agenda_activo()`). Arnés `verify-trabajos.mjs`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

@@ -34,7 +34,8 @@ let _persona = '';      // '' todas · '__mios' · un nombre
 let _actual: string | null = null;
 
 const dia = (p: Presupuesto) => (p.fecha ?? p.created_at ?? '').slice(0, 10);
-const diasDesde = (p: Presupuesto) => { const d = dia(p); return d ? Math.floor((Date.now() - new Date(`${d}T12:00`).getTime()) / 86_400_000) : 0; };
+// Días de calendario (los dos a mediodía): contar desde «ahora» restaba uno por la mañana.
+const diasDesde = (p: Presupuesto) => { const d = dia(p); if (!d) return 0; const hoy = new Date(); hoy.setHours(12, 0, 0, 0); return Math.round((hoy.getTime() - new Date(`${d}T12:00`).getTime()) / 86_400_000); };
 const sinRespuesta = (p: Presupuesto) => p.estado === 'Enviado' && diasDesde(p) > DIAS_SIN_RESPUESTA;
 const nombre = (p: Presupuesto) => `${p.numero_presupuesto ? `${p.numero_presupuesto} · ` : ''}${p.titulo || 'Sin título'}`;
 const chipEstado = (e: string | null) => `<span class="chip ${TONO[e ?? ''] ?? ''}">${esc(e ?? '—')}</span>`;

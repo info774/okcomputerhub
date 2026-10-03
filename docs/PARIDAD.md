@@ -27,8 +27,9 @@ Fran, 2026-10-03).
 
 ## Bloques de paridad (orden propuesto)
 
-1. **Trabajos y calendario completos**: alta de trabajo (Simple/Completa),
-   kanban, firma del cliente y PDF del parte, plantillas, planificador del
+1. **Trabajos y calendario completos** — tanda 1 HECHA (2026-10-03: alta y
+   edición Simple/Completa, duplicar, continuación, kanban, Excel y espejo
+   trabajo ⇄ agenda). Falta: firma del cliente y PDF del parte, plantillas, planificador del
    calendario (vistas, pendientes, «Sugerir hueco», traslados, solapes), lista
    del día, chat por ficha. Es lo que más usan los técnicos.
 2. **Clientes, sedes y contactos con escritura**: alta y edición (NIF, Google
@@ -79,9 +80,9 @@ Fran, 2026-10-03).
 
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
-| Lista de trabajos, filtros, kanban, Excel (`modules/trabajos.js`) | Solo lectura | `#/trabajos` | Kanban y Excel. |
-| Crear trabajo (Simple/Completa), duplicar, continuación | Falta | — | Alta de trabajos (preparada para el corte). |
-| Ficha: estado, comentarios, material con stock (`saveWdLineas`) | Preparado | `#/trabajos`, `hub.trabajo_estado`, `hub.trabajo_guardar_lineas` | Se enciende con el corte. |
+| Lista de trabajos, filtros, kanban, Excel (`modules/trabajos.js`) | Preparado | `#/trabajos` (lista, kanban y Excel ya hoy; arrastrar en el kanban cambia el estado tras el corte) | Corte. |
+| Crear y editar trabajo (Simple/Completa), duplicar, continuación | Preparado | `#/trabajos/nuevo`, `#/trabajos/<n>/editar`, `trabajos/formulario.ts`; espejo trabajo ⇄ agenda en `20261017_trabajos_paridad.sql` | Crear cliente o sede al vuelo (bloque 2), plantillas (tanda 4), «añadir a la lista del día» (tanda 3). |
+| Ficha: estado, comentarios, material con stock (`saveWdLineas`); completar cierra sus tickets y propone «Para facturar» | Preparado | `#/trabajos`, `hub.trabajo_estado`, `hub.trabajo_guardar_lineas` | Se enciende con el corte. |
 | Material con escáner de código de barras | Falta | — | Escáner. |
 | Fichajes del trabajo con edición en línea | Solo lectura | `#/trabajos` | Correcciones por `hub.jornada_ajustes`. |
 | Fotos del trabajo (a Drive con descripción) | Preparado | `#/trabajos`, `trabajo-foto` | Va a Storage, no a Drive. |

@@ -133,6 +133,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   entrar, leer y marcar leída, propuesta de Oki, enviar, ventana de 24 h
   cerrada bloquea, sigue en otra pantalla, móvil sin desbordar). La función
   `whatsapp` va simulada con su propia ruta encima de la de `preparar`.
+- `verify-trabajos.mjs`: paridad de trabajos. Sin corte: el alta lleva a la
+  app y el formulario no guarda. Con corte: alta Simple/Completa (el modo se
+  recuerda; el móvil arranca en Simple), editar (estado por RPC y «¿Para
+  facturar?»), duplicar, continuación, kanban (soltar cambia el estado) y
+  Excel (CSV con BOM). `comun.mjs` numera los `trabajos` que se crean.
 
 `npm run verify` pasa todos los de la lista.
 
