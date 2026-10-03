@@ -9,8 +9,9 @@
 // `nocturna`: además de auditada, se repasa entera cada noche (en `locales`
 // los cron de Zoho/Stripe escriben columnas que audit_log trata como ruido y
 // no apunta).
+// `clave`: la clave primaria si no es `id` (rmm_despliegues: una por sede).
 
-export interface TablaApp { columnas: string[]; auditada: boolean; nocturna?: boolean }
+export interface TablaApp { columnas: string[]; auditada: boolean; nocturna?: boolean; clave?: string }
 
 const c = (s: string) => s.split(/\s+/).filter(Boolean)
 
@@ -48,6 +49,14 @@ export const TABLAS_APP: Record<string, TablaApp> = {
   // Lista del día (paridad bloque 1): en el audit_log de la app y, por si el
   // espejo nace vacío, entera cada noche.
   // Teléfonos de la sede con su rol (paridad bloque 2): fuera del audit_log de la app.
+  // Equipamiento de la sede y seguimiento del plan (paridad bloque 2, tanda 3):
+  // fuera del audit_log de la app, en la pasada nocturna.
+  local_software: { auditada: false, columnas: c('id created_at local_id nombre version num_licencia anydesk_id fecha_caducidad_certificado notas') },
+  local_hardware: { auditada: false, columnas: c('id created_at local_id tipo nombre num_serie ip garantia anydesk_id fecha_instalacion notas') },
+  local_camaras: { auditada: false, columnas: c('id created_at local_id marca modelo num_serie ip usuario contrasena notas') },
+  rmm_despliegues: { auditada: false, clave: 'local_id', columnas: c('local_id rustdesk_password creado_at creado_por notas') },
+  plan_tareas: { auditada: false, columnas: c('id created_at updated_at plan nombre periodicidad es_backup orden activa notas') },
+  sitio_tarea_seguimiento: { auditada: false, columnas: c('id created_at updated_at local_id tarea_id periodo completado completado_at completado_por notas') },
   local_telefonos: { auditada: false, columnas: c('id created_at local_id nombre numero rol contacto_id') },
   plantillas_trabajo: { auditada: false, columnas: c('id created_at nombre tipo descripcion duracion_teorica checklist activa') },
   lista_dia: { auditada: true, nocturna: true, columnas: c('id created_at fecha usuario tipo ref_id titulo orden completado completado_at estado_previo creado_por') },

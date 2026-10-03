@@ -39,7 +39,8 @@ Fran, 2026-10-03).
    Maps), baja/reactivar, pestañas Software, Hardware y Cámaras, teléfonos con
    rol, Excel; y lo que escribe en Zoho (alta de cliente). Decisiones de Fran
    (2026-10-03): Zoho igual que la app; Google Maps en la tanda 4. Tandas:
-   1 clientes (HECHA 2026-10-03), 2 sedes (HECHA 2026-10-03), 3 Software/Hardware/Cámaras,
+   1 clientes (HECHA 2026-10-03), 2 sedes (HECHA 2026-10-03), 3 Software/Hardware/Cámaras (HECHA 2026-10-03; decisiones de Fran:
+   RustDesk con la contraseña de la sede como la app, contraseñas de cámaras tras «Ver», seguimiento solo marcar),
    4 contactos y Google Maps.
 3. **Presupuestos y facturar trabajos**: crear con líneas del catálogo,
    plantillas, PDF, a Zoho, convertir en trabajo; facturar trabajos en Zoho.
@@ -69,14 +70,14 @@ Fran, 2026-10-03).
 | Sync de clientes y presupuestos desde Zoho (`sync-zoho*`, `sync-auto.js`) | Falta | — | Hoy entra por la app y el hub copia. |
 | Ficha del cliente (General, Locales, Contactos, Historial) | Solo lectura | `#/clientes` (ficha 360) | Editar datos. |
 | Suscripción de Zoho Billing a una sede (`list-zoho-subscriptions`) | Falta | — | Cartera vieja. |
-| Lista de sitios, etiqueta RMM, Excel, AnyDesk/RustDesk (`modules/locales.js`) | Preparado | `#/sitios` (Excel, «+ Nuevo sitio»); alta y edición en `#/sitios/nuevo[/<cliente>]`, `#/sitios/<id>/editar` (`sitios/formulario.ts`) | AnyDesk/RustDesk y su columna del Excel (tanda 3). |
+| Lista de sitios, etiqueta RMM, Excel, AnyDesk/RustDesk (`modules/locales.js`) | Preparado | `#/sitios` (Excel con AnyDesk, «+ Nuevo sitio», enlace de AnyDesk en la fila); alta y edición en `#/sitios/nuevo[/<cliente>]`, `#/sitios/<id>/editar` (`sitios/formulario.ts`); ficha → «🖥 Remoto» (AnyDesk de hardware + software y RustDesk de Breeze con la contraseña de la sede de `rmm_despliegues`) | Corte del área `clientes`. Importar sitios desde Excel (`importSitiosExcel`). |
 | Ficha del sitio: Info (renombrar, cliente, contacto) | Preparado | Ficha → «✎ Editar»; «Eliminar» (admin, se lleva sus teléfonos); «+ Nueva sede» en la ficha del cliente | Corte del área `clientes`. |
-| Ficha del sitio: Software y Hardware (`loadSoftware`, `hwAutoGarantia`) | Falta | — | Espejo de sus tablas y pestaña. |
-| Ficha del sitio: Cámaras | Falta | — | Espejo y pestaña. |
+| Ficha del sitio: Software y Hardware (`loadSoftware`, `hwAutoGarantia`) | Preparado | Pestañas Software y Hardware (`sitios/equipamiento.ts`; certificado y garantía con aviso a 30 días; garantía = instalación + 1 año); espejos `20261022_sitio_equipamiento.sql` | Corte. El disparador que sube el certificado a `locales.cert_caducidad` va con la ficha de mantenimiento (bloque 4). |
+| Ficha del sitio: Cámaras | Preparado | Pestaña Cámaras (contraseña oculta tras «Ver») | Corte. |
 | Ficha del sitio: Alarma (código oculto) | Preparado | `#/sitios` (se edita en el formulario) | Corte. |
 | Teléfonos de la sede con rol (`local_telefonos`) | Preparado | Ficha del sitio → «Teléfonos» (añadir, rol en la fila, editar, quitar); espejo `20261021_local_telefonos.sql` (pasada nocturna) | Corte. |
 | Ficha del sitio: Historial | Solo lectura | `#/sitios` | — |
-| Seguimiento de tareas de la sede (`loadSeguimientoLocal`) | Falta | — | — |
+| Seguimiento de tareas de la sede (`loadSeguimientoLocal`) | Preparado | Pestaña Seguimiento (rejilla por periodo; marcar/desmarcar) sobre los espejos `plan_tareas` y `sitio_tarea_seguimiento` | Corte. Editar el catálogo de tareas por plan (bloque 4). |
 | Agenda de contactos (`modules/contactos.js`) | Solo lectura | `#/contactos` | Alta y edición. |
 | Google Contacts (`google-contacts.js`) | Falta | — | — |
 | Mapa de sedes con estado RMM (`modules/mapa.js`) | Hecho | `#/mapa` | — |

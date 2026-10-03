@@ -117,7 +117,7 @@ async function altas(entera: boolean): Promise<Record<string, number>> {
       ? rs.map(r => ({ ...r, estado: ETAPAS_APP.includes(String(r.estado)) ? r.estado : 'Detectado' }))
       : rs
     for (const lote of trozos(filas, LOTE_UPSERT)) {
-      await hub('POST', `${tabla}?on_conflict=id`, lote, 'resolution=ignore-duplicates,return=minimal')
+      await hub('POST', `${tabla}?on_conflict=${claveDe(tabla)}`, lote, 'resolution=ignore-duplicates,return=minimal')
     }
     detalle[tabla] = filas.length
   }
@@ -128,13 +128,16 @@ async function altas(entera: boolean): Promise<Record<string, number>> {
 
 async function subir(tabla: string, filas: Fila[]): Promise<void> {
   for (const lote of trozos(filas, LOTE_UPSERT)) {
-    await hub('POST', `${tabla}?on_conflict=id`, lote, 'resolution=merge-duplicates,return=minimal')
+    await hub('POST', `${tabla}?on_conflict=${claveDe(tabla)}`, lote, 'resolution=merge-duplicates,return=minimal')
   }
 }
 
+// Clave primaria de la tabla (casi siempre `id`).
+const claveDe = (tabla: string) => TABLAS_APP[tabla]?.clave ?? 'id'
+
 async function borrar(tabla: string, ids: string[]): Promise<void> {
   for (const lote of trozos(ids, LOTE_IDS)) {
-    await hub('DELETE', `${tabla}?id=in.(${lote.join(',')})`, undefined, 'return=minimal')
+    await hub('DELETE', `${tabla}?${claveDe(tabla)}=in.(${lote.join(',')})`, undefined, 'return=minimal')
   }
 }
 
@@ -144,8 +147,8 @@ async function refrescar(tabla: string, ids: string[]): Promise<number> {
   const vistos = new Set<string>()
   const filas: Fila[] = []
   for (const lote of trozos(ids, LOTE_IDS)) {
-    const rs = await appGet(`${tabla}?select=${sel}&id=in.(${lote.join(',')})`)
-    for (const r of rs) { vistos.add(String(r.id)); filas.push(r) }
+    const rs = await appGet(`${tabla}?select=${sel}&${claveDe(tabla)}=in.(${lote.join(',')})`)
+    for (const r of rs) { vistos.add(String(r[claveDe(tabla)])); filas.push(r) }
   }
   await subir(tabla, filas)
   const idos = ids.filter(id => !vistos.has(id))
@@ -262,17 +265,18 @@ async function completo(todas: boolean): Promise<Fila> {
   let filas = 0
   for (const tabla of tablas) {
     const sel = TABLAS_APP[tabla].columnas.join(',')
+    const k = claveDe(tabla)
     const enApp = new Set<string>()
     for (let offset = 0; ; offset += 1000) {
-      const rs = await appGet(`${tabla}?select=${sel}&order=id.asc&limit=1000&offset=${offset}`)
-      rs.forEach(r => enApp.add(String(r.id)))
+      const rs = await appGet(`${tabla}?select=${sel}&order=${k}.asc&limit=1000&offset=${offset}`)
+      rs.forEach(r => enApp.add(String(r[k])))
       await subir(tabla, rs)
       if (rs.length < 1000) break
     }
     const idos: string[] = []
     for (let offset = 0; ; offset += 1000) {
-      const rs = await hub('GET', `${tabla}?select=id&order=id.asc&limit=1000&offset=${offset}`) ?? []
-      rs.forEach(r => { if (!enApp.has(String(r.id))) idos.push(String(r.id)) })
+      const rs = await hub('GET', `${tabla}?select=${k}&order=${k}.asc&limit=1000&offset=${offset}`) ?? []
+      rs.forEach(r => { if (!enApp.has(String(r[k]))) idos.push(String(r[k])) })
       if (rs.length < 1000) break
     }
     if (idos.length) await borrar(tabla, idos)

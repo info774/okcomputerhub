@@ -8,6 +8,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { descargarCsv } from '../../ui/csv';
+import { tabEquipamiento, tabSeguimiento } from './equipamiento';
 import { esc, hace, fechaHora, toast } from '../../ui/dom';
 import { eur, enApp, telWhatsApp } from '../ventas/datos';
 
@@ -18,10 +19,12 @@ interface Sitio {
 }
 interface EstadoRmm { local_id: string; equipos: number; conectados: number; alertas: number; visto_ultimo: string | null; estado: 'ok' | 'alerta' | 'parcial' | 'caido' }
 
-const PESTANAS = [['resumen', 'Resumen'], ['telefonos', 'Teléfonos'], ['contactos', 'Contactos'], ['trabajos', 'Trabajos'], ['tickets', 'Tickets'], ['equipos', 'Equipos']] as const;
+const PESTANAS = [['resumen', 'Resumen'], ['telefonos', 'Teléfonos'], ['software', 'Software'], ['hardware', 'Hardware'], ['camaras', 'Cámaras'], ['seguimiento', 'Seguimiento'], ['contactos', 'Contactos'], ['trabajos', 'Trabajos'], ['tickets', 'Tickets'], ['equipos', 'Equipos']] as const;
 const TONO_RMM: Record<string, string> = { ok: 'bien', alerta: 'mal', parcial: 'aviso', caido: 'mal' };
 const TEXTO_RMM: Record<string, string> = { ok: 'Todo en línea', alerta: 'Con alertas', parcial: 'Alguno sin señal', caido: 'Sin señal' };
 const PAGO_MAL = ['Último aviso', 'No paga'];
+// En una vivienda no aplican Software ni el seguimiento del plan (applyLocalTipoTabs de la app).
+const SOLO_LOCAL = ['software', 'seguimiento'];
 const SIN_MANT = (p: string | null) => !p || p === 'Sin mantenimiento';
 // Roles de local_telefonos (ROLES de mant-ficha.js de la app). Dueño y
 // administración son los únicos a los que el WhatsApp manda documentos.
@@ -33,6 +36,7 @@ let _listaAt = 0;
 let _listaBaja = false;
 let _clientes = new Map<string, string>();
 let _rmm = new Map<string, EstadoRmm>();
+let _anydesk = new Map<string, string[]>();   // local → AnyDesk de hardware + software
 let _q = '';
 let _baja = false;
 let _mant = '';     // '' | 'con' | 'sin'
@@ -56,11 +60,23 @@ const chipPago = (p: string | null) => p && p !== 'Al corriente' ? `<span class=
 async function cargar() {
   if (_lista.length && _listaBaja === _baja && Date.now() - _listaAt < 5 * 60_000) return null;
   const cols = `id,nombre,cliente_id,direccion,tipo,activo,estado,plan,estado_pago,programa_tpv,lat,lng,maps_url${esAdmin() ? ',importe_mantenimiento' : ''}`;
-  const [ls, cs, rmm] = await Promise.all([
+  const [ls, cs, rmm, hw, sw] = await Promise.all([
     API.fetchAll<Sitio>('locales', { select: cols, activo: _baja ? 'eq.false' : 'neq.false', order: 'nombre' }),
     _clientes.size ? Promise.resolve(null) : API.fetchAll<{ id: string; nombre: string }>('clientes', { select: 'id,nombre' }),
     API.get<EstadoRmm[]>('rmm_estado_local', { select: '*' }),
+    API.fetchAll<{ local_id: string; anydesk_id: string }>('local_hardware', { select: 'local_id,anydesk_id', anydesk_id: 'not.is.null' }),
+    API.fetchAll<{ local_id: string; anydesk_id: string }>('local_software', { select: 'local_id,anydesk_id', anydesk_id: 'not.is.null' }),
   ]);
+  if (!hw.error && !sw.error) {
+    _anydesk = new Map();
+    for (const x of [...(hw.data ?? []), ...(sw.data ?? [])]) {
+      const id = (x.anydesk_id ?? '').replace(/\s+/g, '');
+      if (!id) continue;
+      const l = _anydesk.get(x.local_id) ?? [];
+      if (!l.includes(id)) l.push(id);
+      _anydesk.set(x.local_id, l);
+    }
+  }
   if (cs && !cs.error) _clientes = new Map((cs.data ?? []).map(c => [c.id, c.nombre]));
   if (!rmm.error) _rmm = new Map((rmm.data ?? []).map(e => [e.local_id, e]));
   if (ls.error) return ls.error;
@@ -101,7 +117,7 @@ async function pintarLista(el: HTMLElement) {
         <td>${esc(_clientes.get(l.cliente_id ?? '') ?? '—')}</td>
         <td>${SIN_MANT(l.plan) ? '<span class="nota">Sin mantenimiento</span>' : `${esc(l.plan)}${esAdmin() && l.importe_mantenimiento ? ` · ${eur(l.importe_mantenimiento, 2)}/mes` : ''} ${chipPago(l.estado_pago)}`}</td>
         <td>${esc(l.programa_tpv ?? '—')}</td>
-        <td>${chipRmm(l)}</td>${_baja && escribe ? `<td><button class="btn secundario" data-action="siReactivar" data-p0="${esc(l.id)}" data-stop="1">Reactivar</button></td>` : ''}</tr>`;
+        <td>${chipRmm(l)}${(_anydesk.get(l.id) ?? []).slice(0, 1).map(id => ` <a href="anydesk://${esc(id)}" data-action="siNada" title="AnyDesk ${esc(id)}">AnyDesk</a>`).join('')}</td>${_baja && escribe ? `<td><button class="btn secundario" data-action="siReactivar" data-p0="${esc(l.id)}" data-stop="1">Reactivar</button></td>` : ''}</tr>`;
     }).join('') || '<tr><td colspan="6" class="vacio">Ningún sitio con ese filtro.</td></tr>'}</tbody></table></div>`;
 }
 
@@ -208,7 +224,9 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
   if (error || !l) { el.innerHTML = '<p class="aviso mal">No se encontró el sitio.</p><p><a href="#/sitios">← Sitios</a></p>'; return; }
   if (!esAdmin()) delete l.importe_mantenimiento;
   _sitio = l;
-  const p = PESTANAS.some(([k]) => k === pestana) ? pestana : 'resumen';
+  const vivienda = l.tipo === 'Vivienda';
+  const pestanas = PESTANAS.filter(([k]) => !(vivienda && SOLO_LOCAL.includes(k)));
+  const p = pestanas.some(([k]) => k === pestana) ? pestana : 'resumen';
   const cliente = l.cliente_id ? _clientes.get(l.cliente_id) ?? (await API.single<{ nombre: string }>('clientes', { select: 'nombre', id: `eq.${l.cliente_id}` })).data?.nombre : null;
   const mapa = mapaDe(l);
   _escribe = await esDelHub('locales');
@@ -220,13 +238,17 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
   el.innerHTML = `<p><a href="#/sitios">← Sitios</a></p>
     <div class="tarjeta-cab"><h2>${esc(l.nombre)}${l.activo === false ? ' <span class="chip mal">De baja</span>' : ''}</h2>
       <div class="acciones">${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">🗺 Cómo llegar</a>` : ''}
+        <button class="btn secundario" data-action="siRemoto" data-p0="${esc(l.id)}">🖥 Remoto</button>
         ${botones}</div></div>
+    <div id="si-rem-lista" class="tarjeta acciones" hidden></div>
     ${l.activo === false ? `<p class="aviso">Este sitio está DE BAJA: no sale en listados ni buscadores. No se ha borrado nada.</p>` : ''}
     <p class="nota">${cliente ? `<a href="#/clientes/${esc(l.cliente_id)}">${esc(cliente)}</a>` : 'Sin cliente'}${l.direccion ? ` · ${esc(l.direccion)}` : ''} ${chipPago(SIN_MANT(l.plan) ? null : l.estado_pago)}</p>
-    <nav class="pestanas" role="tablist">${PESTANAS.map(([k, n]) =>
+    <nav class="pestanas" role="tablist">${pestanas.map(([k, n]) =>
       `<button role="tab" aria-selected="${k === p}" class="${k === p ? 'activo' : ''}" data-action="siPestana" data-p0="${esc(id)}" data-p1="${k}">${n}</button>`).join('')}</nav>
     <div id="si-cuerpo"><p class="cargando">Cargando…</p></div>`;
-  const cuerpo = await ({ resumen: tabResumen, telefonos: tabTelefonos, contactos: tabContactos, trabajos: tabTrabajos, tickets: tabTickets, equipos: tabEquipos }[p]!)(l);
+  const cuerpo = await ({ resumen: tabResumen, telefonos: tabTelefonos,
+    software: () => tabEquipamiento('software', l.id, _escribe), hardware: () => tabEquipamiento('hardware', l.id, _escribe),
+    camaras: () => tabEquipamiento('camaras', l.id, _escribe), seguimiento: () => tabSeguimiento(l.id, l.plan, _escribe), contactos: tabContactos, trabajos: tabTrabajos, tickets: tabTickets, equipos: tabEquipos }[p]!)(l);
   const caja = el.querySelector('#si-cuerpo');
   if (caja && _sitio?.id === id) caja.innerHTML = cuerpo;
 }
@@ -262,8 +284,8 @@ registrarAcciones({
     btn.textContent = ver ? 'Ocultar' : 'Ver';
   },
   siExcel() {
-    descargarCsv(_baja ? 'sitios-de-baja' : 'sitios', ['ID', 'Cliente', 'Sitio', 'Dirección', 'Tipo', 'Estado', 'Mantenimiento', 'Plan', 'Software TPV', 'Estado de pago'],
-      _visibles.map(l => [l.id, _clientes.get(l.cliente_id ?? '') ?? '', l.nombre, l.direccion, l.tipo, l.estado,
+    descargarCsv(_baja ? 'sitios-de-baja' : 'sitios', ['ID', 'Cliente', 'Sitio', 'Dirección', 'Tipo', 'Estado', 'AnyDesk', 'Mantenimiento', 'Plan', 'Software TPV', 'Estado de pago'],
+      _visibles.map(l => [l.id, _clientes.get(l.cliente_id ?? '') ?? '', l.nombre, l.direccion, l.tipo, l.estado, (_anydesk.get(l.id) ?? []).join(', '),
         SIN_MANT(l.plan) ? 'No' : 'Sí', l.plan, l.programa_tpv, SIN_MANT(l.plan) ? '' : l.estado_pago]));
   },
   // Baja lógica (darDeBajaLocal de la app): solo `activo`, no se borra nada.
@@ -279,12 +301,16 @@ registrarAcciones({
     olvidarSitios(); toast('Sitio reactivado'); resolver();
   },
   // Eliminar (deleteLocal de la app, solo admin): borra la fila de verdad. En
-  // el hub no hay cascada (espejo sin claves foráneas): sus teléfonos se quitan antes.
+  // el hub no hay cascada (espejo sin claves foráneas): lo que cuelga de la sede
+  // (teléfonos, software, hardware, cámaras y seguimiento) se quita antes.
+  // La contraseña de RustDesk (rmm_despliegues) es de solo lectura y se queda.
   async siEliminar() {
-    if (!_sitio || !esAdmin() || !confirm(`¿ELIMINAR «${_sitio.nombre}»? Se borra el sitio y sus teléfonos, y no se puede deshacer. Si solo deja de ser cliente, mejor «Dar de baja».`)) return;
+    if (!_sitio || !esAdmin() || !confirm(`¿ELIMINAR «${_sitio.nombre}»? Se borra el sitio con sus teléfonos, software, hardware y cámaras, y no se puede deshacer. Si solo deja de ser cliente, mejor «Dar de baja».`)) return;
     const id = _sitio.id;
-    const t = await API.delete('local_telefonos', { local_id: `eq.${id}` });
-    if (t.error) { toast(`No se pudo eliminar: ${t.error.message}`, 'error'); return; }
+    for (const hija of ['local_telefonos', 'local_software', 'local_hardware', 'local_camaras', 'sitio_tarea_seguimiento']) {
+      const t = await API.delete(hija, { local_id: `eq.${id}` });
+      if (t.error) { toast(`No se pudo eliminar: ${t.error.message}`, 'error'); return; }
+    }
     const r = await API.delete('locales', { id: `eq.${id}` });
     if (r.error) { toast(`No se pudo eliminar: ${r.error.message}`, 'error'); return; }
     olvidarSitios(); toast('Sitio eliminado'); ir('sitios');
