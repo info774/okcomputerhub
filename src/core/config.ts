@@ -16,3 +16,9 @@ export const FUNCIONES_URL = `${SUPABASE_URL}/functions/v1`;
 // Panel de Breeze (RMM): lo que el usuario de servicio del hub no puede hacer
 // (resolver alertas, escritorio y terminal remotos) se abre allí.
 export const BREEZE_URL = 'https://breeze.oksistemas.online';
+
+// Google Places (buscar un negocio en Google Maps al dar de alta una sede): la
+// MISMA clave de navegador que la app (proyecto 508620194342), no es secreta;
+// la protege la lista de webs permitidas de la clave en Google Cloud, que tiene
+// que incluir okhub-tenerife.web.app (docs/PENDIENTE_FRAN.md §2 bis).
+export const PLACES_API_KEY = 'AIzaSyCVo9d6iECPX2L5zzgQ7Azo2TXyaOLQ09U';

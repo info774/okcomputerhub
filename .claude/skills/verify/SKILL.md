@@ -185,6 +185,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   desmarcar por periodo), «🖥 Remoto» (AnyDesk sin repetir y RustDesk con la
   contraseña al portapapeles), AnyDesk en la lista y en el Excel, vivienda sin
   Software ni Seguimiento, eliminar con lo que cuelga y el mundo sin corte.
+- `verify-contactos-escritura.mjs`: alta de contacto (tipo, favorito,
+  etiquetas, cliente y sede; desde la agenda, el cliente y la sede), editar,
+  baja y reactivar, empleados solo admin; «Buscar en Google Maps» con Google
+  SIMULADO (solo Tenerife, rellena, aviso fuera de la isla, fallo dicho), aviso
+  de sede de nombre parecido, y cliente y sede al vuelo en el alta de trabajo
+  (con Zoho y NIF repetido); el mundo sin corte.
 - `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
   producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
   por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de
