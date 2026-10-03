@@ -13,6 +13,7 @@ import { ir } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
 import { buscarClientes } from '../ventas/datos';
+import type { Plantilla } from './plantillas';
 
 export const TIPOS = ['Instalación', 'Asistencia', 'Mantenimiento', 'Visita comercial'];
 export const ESTADOS = ['Pendiente', 'En progreso', 'Completado', 'Para facturar', 'Facturado', 'No facturar', 'Cancelado'];
@@ -26,6 +27,7 @@ const guardar = (k: string, v: string) => { try { localStorage.setItem(k, v); } 
 const modoInicial = (): Modo => (leer(CLAVE_MODO) as Modo | null) ?? (window.matchMedia('(max-width: 767px)').matches ? 'simple' : 'completa');
 
 let _editando: { id: string; numero: number; estado: string } | null = null;
+let _plantillas: Plantilla[] = [];
 
 // Hora local de Canarias → ISO con su desfase (la app hace lo mismo con _localTzOffset).
 function horaIso(fecha: string, hora: string): string | null {
@@ -50,6 +52,8 @@ export async function pintarFormulario(el: HTMLElement, numero?: string) {
     t?.cliente_id ? API.get<any[]>('contactos', { select: 'id,nombre', cliente_id: `eq.${t.cliente_id}`, activo: 'eq.true', order: 'favorito.desc,nombre' }) : Promise.resolve({ data: [] }),
     t?.cliente_id ? API.get<any[]>('presupuestos', { select: 'id,numero,titulo', cliente_id: `eq.${t.cliente_id}`, order: 'created_at.desc', limit: '30' }) : Promise.resolve({ data: [] }),
   ]);
+  const plantillas = t ? [] : await (await import('./plantillas')).plantillasActivas();
+  _plantillas = plantillas;
   const modo = modoInicial();
   const opt = (v: string, txt: string, sel: boolean) => `<option value="${esc(v)}" ${sel ? 'selected' : ''}>${esc(txt)}</option>`;
   const atras = t ? `#/trabajos/${t.numero}` : '#/trabajos';
@@ -62,6 +66,8 @@ export async function pintarFormulario(el: HTMLElement, numero?: string) {
         <button type="button" role="tab" aria-selected="${modo === 'completa'}" class="${modo === 'completa' ? 'activo' : ''}" data-action="tfModo" data-p0="completa">📋 Completa</button>
       </div>
       <p class="nota tf-ayuda">${modo === 'simple' ? 'Lo justo para apuntarlo; el resto, desde la ficha o en «Completa».' : 'Todos los campos.'}</p>
+      ${plantillas.length ? `<label class="tf-plantilla">Partir de una plantilla <select id="tf-plantilla" data-on-change="tfPlantilla:$value"><option value="">— Ninguna —</option>${plantillas.map(p => opt(p.id, p.nombre, false)).join('')}</select>
+        <a class="nota" href="#/trabajos/plantillas">Gestionar plantillas</a></label>` : ''}
       <div class="in-campos">
         <label>Cliente <input id="tf-cliente-q" autocomplete="off" placeholder="Buscar por nombre o NIF…" value="${esc(cli.data?.nombre ?? '')}" data-on-input="tfBuscarCliente:$value"></label>
         <label class="tf-completa">Sede <select id="tf-local"><option value="">— Sin sede —</option>${(locs.data ?? []).map(l => opt(l.id, l.nombre, l.id === t?.local_id)).join('')}</select></label>
@@ -142,6 +148,18 @@ registrarAcciones({
     pon('tf-local', '— Sin sede —', ls.data ?? [], x => x.nombre);
     pon('tf-contacto', '—', ks.data ?? [], x => x.nombre);
     pon('tf-presupuesto', '— Sin presupuesto —', ps.data ?? [], x => `#${x.numero} ${x.titulo ?? ''}`);
+  },
+  // aplicarPlantilla de la app: tipo, descripción y duración (y el título, si
+  // está vacío, que aquí es obligatorio). Lo tecleado en el resto se queda.
+  tfPlantilla(id: string) {
+    const p = _plantillas.find(x => x.id === id);
+    if (!p) return;
+    const pon = (campo: string, v: string) => { const el = document.getElementById(campo) as HTMLInputElement | null; if (el) el.value = v; };
+    pon('tf-tipo', p.tipo);
+    pon('tf-descripcion', p.descripcion ?? '');
+    if (p.duracion_teorica) pon('tf-duracion', String(p.duracion_teorica));
+    if (!val('tf-titulo')) pon('tf-titulo', p.nombre);
+    toast(`Plantilla «${p.nombre}» aplicada`);
   },
   async tfGuardar() {
     const titulo = val('tf-titulo');

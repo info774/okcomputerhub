@@ -635,6 +635,10 @@ try {
   ok(!psql(como('authenticated', 'ana@ok.test', `update hub.chat_mensajes set texto = 'x' where canal_id = '${dm}';`) + `\nselect 1/(select count(*) from hub.chat_mensajes where texto = 'x');`, { esperaError: true }).ok,
     'chat: nadie edita lo que escribió otro');
 
+  ok(psql(`select 'plantillas_trabajo' = any (tablas) from hub.areas where area = 'trabajos'`) === 't'
+    && !psql(como('authenticated', 'ana@ok.test', `insert into hub.plantillas_trabajo (nombre) values ('Antes del corte');`), { esperaError: true }).ok,
+    'plantillas (20261019): van con el área trabajos y sin el corte no se escriben');
+
   // ── Corte final (preparado, NO aplicado en producción): se prueba aquí ──
   psql(`begin;
 ${readFileSync('supabase/cortes/corte_final.sql', 'utf8')}
@@ -679,6 +683,9 @@ commit;`);
   ok(psql(`select estado from hub.tickets where id = '${tkl}'`) === 'En curso', 'lista del día: desmarcar lo devuelve a como estaba');
   psql(como('authenticated', 'ana@ok.test', `delete from hub.tickets where id = '${tkl}';`));
   ok(psql(`select count(*) from hub.lista_dia where ref_id = '${tkl}'`) === '0', 'lista del día: borrar el origen se lleva su fila');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.plantillas_trabajo (nombre, tipo, duracion_teorica, checklist) values ('Instalar TPV', 'Instalación', 120, '[{"texto":"Probar impresora","completado":false}]');`));
+  ok(psql(`select tipo || '|' || jsonb_array_length(checklist) || '|' || activa from hub.plantillas_trabajo where nombre = 'Instalar TPV'`) === 'Instalación|1|true',
+    'plantillas: tras el corte se crean (con sus pasos)');
 
   // Paridad (20261017): el trabajo manda su fecha a la agenda y la agenda la devuelve.
   const ta = psql(como('authenticated', 'ana@ok.test', `insert into hub.trabajos (titulo, fecha_programada, hora_llegada, duracion_teorica, tecnicos)

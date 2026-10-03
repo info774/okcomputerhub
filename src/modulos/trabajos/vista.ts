@@ -18,7 +18,7 @@ import { APP_ACTUAL_URL } from '../../core/config';
 
 interface Trabajo { id: string; numero: number; created_at: string; titulo: string | null; tipo?: string | null; chain_root_id?: string | null; descripcion: string | null; estado: string; tecnicos: string[] | null;
   cliente_id: string | null; local_id: string | null; contacto_id: string | null; fecha_programada: string | null; hora_llegada: string | null; prioridad: string | null;
-  materiales: string | null; observaciones: string | null; presupuesto_id: string | null; zoho_invoice_number: string | null; duracion_teorica: number | null }
+  materiales: string | null; observaciones: string | null; firma_cliente?: string | null; presupuesto_id: string | null; zoho_invoice_number: string | null; duracion_teorica: number | null }
 interface Linea { id?: string; nombre: string; cantidad: number; precio: number; descuento: number; inventario_id: string | null; furgoneta_id: string | null; categoria: string | null }
 
 export const ESTADOS = ['Pendiente', 'En progreso', 'Completado', 'Para facturar', 'Facturado', 'No facturar', 'Cancelado'];
@@ -96,7 +96,7 @@ async function vistaLista(): Promise<string> {
   return `${escribe ? '' : avisoSoloLectura('Trabajos')}
     <div class="acciones">${escribe ? '<a class="btn" href="#/trabajos/nuevo">+ Nuevo trabajo</a>' : `<a class="btn secundario" href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">+ Nuevo trabajo en la app ↗</a>`}
       <div class="segmentado" role="tablist" aria-label="Vista">${(['lista', 'kanban'] as const).map(v => `<button role="tab" aria-selected="${v === vista}" class="${v === vista ? 'activo' : ''}" data-action="trVista" data-p0="${v}">${v === 'lista' ? '☰ Lista' : '▦ Kanban'}</button>`).join('')}</div>
-      <button class="btn secundario" data-action="trExportar">⬇ Excel</button></div>
+      <button class="btn secundario" data-action="trExportar">⬇ Excel</button><a class="btn secundario" href="#/trabajos/plantillas">Plantillas</a></div>
     <div class="acciones pr-barra"><div class="segmentado" role="tablist">${Object.keys(FILTROS).map(k => `<button role="tab" aria-selected="${k === f}" class="${k === f ? 'activo' : ''}" data-action="trFiltro" data-p0="${k}">${{ abiertos: 'Abiertos', facturar: 'Por facturar', cerrados: 'Cerrados', todos: 'Todos' }[k]}</button>`).join('')}</div>
       <select id="tr-tecnico" data-on-change="trTecnico:$value" aria-label="Técnico"><option value="">Todos</option><option value="__yo" ${tec === '__yo' ? 'selected' : ''}>Los míos</option>${personas.map(p => `<option ${tec === p.nombre ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>
       <input id="tr-q" type="search" placeholder="Buscar nº, cliente, texto…" value="${esc(leer('hub_tr_q', ''))}" data-on-input="trBuscar:$value" aria-label="Buscar trabajos"></div>
@@ -144,6 +144,7 @@ async function vistaFicha(numero: string): Promise<string> {
     <p class="nota">Creado ${esc(hace(t.created_at))}${t.fecha_programada ? ` · para el ${esc(t.fecha_programada)}${t.hora_llegada ? ` a las ${esc(t.hora_llegada.slice(0, 5))}` : ''}` : ''}${t.zoho_invoice_number ? ` · factura ${esc(t.zoho_invoice_number)}` : ''}</p>
     <div class="acciones">${tel ? `<a class="btn secundario" href="tel:${esc(tel)}">📞 Llamar</a>` : ''}${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
       ${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">🗺 Cómo llegar</a>` : ''}
+      <a class="btn secundario" href="#/trabajos/${t.numero}/parte">🖨 Parte (PDF)</a>
       ${escribe ? `<a class="btn secundario" href="#/trabajos/${t.numero}/editar">✎ Editar</a>
         <button class="btn secundario" data-action="trDuplicar">⧉ Duplicar</button>
         ${['Completado', 'Cancelado', 'Facturado', 'No facturar'].includes(t.estado) ? '' : '<button class="btn secundario" data-action="trContinuacion" title="Otro trabajo que sigue a este (otra visita)">↪ Continuación</button>'}` : ''}</div>
@@ -159,6 +160,8 @@ async function vistaFicha(numero: string): Promise<string> {
       <section class="tarjeta"><h3>Días de agenda</h3><ul class="tr-dias">${(bloques.data ?? []).map((b, i, xs) => `<li>${xs.length > 1 ? `<strong>Día ${i + 1}</strong> · ` : ''}${esc(fechaHora(b.inicio))} → ${esc(new Date(b.fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }))} · ${esc((b.tecnicos ?? []).join(', ') || 'sin técnico')}
           ${escribeAgenda ? ` <a href="#/calendario/dia/b:${esc(b.id)}" aria-label="Cambiar este día">✎</a>` : ''}</li>`).join('') || '<li class="nota">Sin programar.</li>'}</ul>
         <p class="acciones">${escribeAgenda ? `<a class="btn secundario" href="#/calendario/dia/${esc(t.id)}">+ Añadir día</a>` : ''}<a href="#/calendario">Ver en el calendario</a></p></section>
+      <section class="tarjeta"><h3>Firma del cliente</h3>${t.firma_cliente && /^data:image\/(png|jpeg);base64,/.test(t.firma_cliente) ? `<img class="tr-firma" src="${esc(t.firma_cliente)}" alt="Firma del cliente">` : '<p class="nota">Sin firmar.</p>'}
+        ${escribe ? `<p class="acciones"><button class="btn secundario" data-action="trFirmar">✍ ${t.firma_cliente ? 'Volver a firmar' : 'Firmar'}</button></p>` : ''}</section>
       <section class="tarjeta"><h3>Fichajes · ${Math.floor(horas / 60)} h ${horas % 60} min</h3><ul>${(ses.data ?? []).map(s => `<li>${esc(s.tecnico_nombre ?? '')}: ${esc(fechaHora(s.traslado ?? s.inicio))} → ${s.fin ? esc(new Date(s.fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })) : '<strong>en curso</strong>'}</li>`).join('') || '<li class="nota">Nadie ha fichado aún.</li>'}</ul></section>
       ${(fotos.data ?? []).length ? `<section class="tarjeta"><h3>Fotos</h3><ul>${(fotos.data ?? []).map(f => `<li>${f.drive_url && /^https:\/\//.test(f.drive_url) ? `<a href="${esc(f.drive_url)}" target="_blank" rel="noopener">${esc(f.descripcion || 'Foto')}</a>` : f.archivo_path ? `<button class="btn secundario" data-action="trVerFoto" data-p0="${esc(f.id)}">${esc(f.descripcion || 'Foto')}</button>` : esc(f.descripcion || 'Foto')} <small class="nota">${esc(hace(f.created_at))}</small></li>`).join('')}</ul></section>` : ''}
       ${(tks.data ?? []).length ? `<section class="tarjeta"><h3>Tickets</h3><ul>${(tks.data ?? []).map(k => `<li><a href="#/tickets/${k.numero}">#${k.numero} ${esc(k.titulo)}</a> · ${esc(k.estado)}</li>`).join('')}</ul></section>` : ''}
@@ -169,6 +172,8 @@ export async function pintar(el: HTMLElement, params: string[]) {
   el.innerHTML = '<p class="cargando">Cargando…</p>';
   if (params[0] === 'nuevo') { await pintarFormulario(el); return; }
   if (params[0] && params[1] === 'editar') { await pintarFormulario(el, params[0]); return; }
+  if (params[0] === 'plantillas') { await (await import('./plantillas')).pintarPlantillas(el, params[1]); return; }
+  if (params[0] && params[1] === 'parte') { await (await import('./parte')).pintarParte(el, params[0]); return; }
   el.innerHTML = params[0] ? await vistaFicha(params[0]) : await vistaLista();
 }
 
@@ -276,6 +281,7 @@ registrarAcciones({
     const r = await API.post('trabajo_comentarios', { trabajo_id: _t.id, texto: val('tr-com'), autor_nombre: usuario()?.nombre ?? null });
     if (r.error) toast(`No se pudo: ${r.error.message}`, 'error'); else resolver();
   },
+  async trFirmar() { if (_t) (await import('./firma')).abrirFirma(_t.id); },
   async trVerFoto(id: string) {
     const { llamarFuncion } = await import('../../core/funciones');
     const r = await llamarFuncion<{ url: string }>('trabajo-foto', { accion: 'url', id });

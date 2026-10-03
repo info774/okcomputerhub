@@ -150,6 +150,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   persona (reasigna), recado, añadir de lo pendiente (asigna), traer lo ya
   asignado, quitar, Planificar (atrasado; «Mañana» mueve fecha y hora), la
   casilla del alta de trabajo y el técnico que solo ve lo suyo.
+- `verify-parte.mjs`: firma del cliente (sin trazo no guarda; con trazo, PNG en
+  `firma_cliente`), parte imprimible (empresa de `hub.config`, cliente, duración,
+  productos con IGIC, firma, fotos; al imprimir sale solo el parte y entero),
+  plantillas (crear con pasos, editar, eliminar = desactivar, aplicarlas en el
+  alta) y el mundo sin corte (se ve, no se escribe).
 
 `npm run verify` pasa todos los de la lista.
 

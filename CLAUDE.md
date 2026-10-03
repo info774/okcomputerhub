@@ -451,6 +451,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   bloque lo crea la base; mover/reasignar va por `hub.agenda_mover`. Citas
   sueltas y días de un trabajo: `cita.ts` (`#/calendario/cita`,
   `#/calendario/dia/<trabajo>` y `dia/b:<bloque>`). Arnés `verify-calendario.mjs`.
+- **Firma, parte y plantillas de trabajo** (2026-10-03, paridad bloque 1):
+  la firma es un lienzo a pantalla completa (`trabajos/firma.ts`, prefijo
+  `fc-`, eventos de puntero enganchados al lienzo) que guarda PNG en data URL
+  en `trabajos.firma_cliente`, como la app. El parte (`#/trabajos/<n>/parte`)
+  es una página «Imprimir o guardar en PDF» (sin librería de PDF; empresa de
+  `hub.config.facturacion_emisor`, IGIC 7 %); al imprimir, `.tr-parte` va con
+  `top/left/right` y NUNCA `inset: 0`, que lo corta al alto de la ventana.
+  Plantillas: `#/trabajos/plantillas` (prefijo `tp-`), espejo en el área
+  `trabajos`; eliminar = `activa = false`. Arnés `verify-parte.mjs`.
 - **Lista del día** (`src/modulos/lista-dia/`, `#/lista-dia`, 2026-10-03,
   paridad bloque 1): espejo de `lista_dia` (área propia, dueño `app`); una fila
   = una cosa de UNA persona para UN día, `usuario` por NOMBRE. Meterla en la

@@ -31,9 +31,10 @@ Fran, 2026-10-03).
    edición Simple/Completa, duplicar, continuación, kanban, Excel y espejo
    trabajo ⇄ agenda) y tanda 2 HECHA (calendario planificador: vistas, carga,
    solapes, traslados, pendientes, «Sugerir hueco», citas y días) y tanda 3
-   HECHA (lista del día con su espejo y el planificador hoy/mañana). Falta:
-   firma del cliente y PDF del parte, plantillas (tanda 4), chat por ficha y
-   tablero de notas (tanda 5). Es lo que más usan los técnicos.
+   HECHA (lista del día con su espejo y el planificador hoy/mañana) y tanda 4
+   HECHA (firma del cliente, parte imprimible en PDF y plantillas de trabajo).
+   Falta: chat por ficha y tablero de notas (tanda 5). Es lo que más usan los
+   técnicos.
 2. **Clientes, sedes y contactos con escritura**: alta y edición (NIF, Google
    Maps), baja/reactivar, pestañas Software, Hardware y Cámaras, teléfonos con
    rol, Excel; y lo que escribe en Zoho (alta de cliente).
@@ -83,14 +84,14 @@ Fran, 2026-10-03).
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
 | Lista de trabajos, filtros, kanban, Excel (`modules/trabajos.js`) | Preparado | `#/trabajos` (lista, kanban y Excel ya hoy; arrastrar en el kanban cambia el estado tras el corte) | Corte. |
-| Crear y editar trabajo (Simple/Completa), duplicar, continuación | Preparado | `#/trabajos/nuevo`, `#/trabajos/<n>/editar`, `trabajos/formulario.ts`; espejo trabajo ⇄ agenda en `20261017_trabajos_paridad.sql` | Crear cliente o sede al vuelo (bloque 2), plantillas (tanda 4). |
+| Crear y editar trabajo (Simple/Completa), duplicar, continuación | Preparado | `#/trabajos/nuevo`, `#/trabajos/<n>/editar`, `trabajos/formulario.ts`; espejo trabajo ⇄ agenda en `20261017_trabajos_paridad.sql` | Crear cliente o sede al vuelo (bloque 2), — |
 | Ficha: estado, comentarios, material con stock (`saveWdLineas`); completar cierra sus tickets y propone «Para facturar» | Preparado | `#/trabajos`, `hub.trabajo_estado`, `hub.trabajo_guardar_lineas` | Se enciende con el corte. |
 | Material con escáner de código de barras | Falta | — | Escáner. |
 | Fichajes del trabajo con edición en línea | Solo lectura | `#/trabajos` | Correcciones por `hub.jornada_ajustes`. |
 | Fotos del trabajo (a Drive con descripción) | Preparado | `#/trabajos`, `trabajo-foto` | Va a Storage, no a Drive. |
-| Firma del cliente y PDF del parte (`saveFirma`, `generatePDF`) | Falta | — | — |
+| Firma del cliente y PDF del parte (`saveFirma`, `generatePDF`) | Preparado | `trabajos/firma.ts` (lienzo a pantalla completa → `firma_cliente`), `#/trabajos/<n>/parte` (`parte.ts`, imprimir o guardar en PDF) | El parte no se guarda en Drive (la app lo sube si hay sesión de Google). |
 | Guía de instalación de cámaras | Falta | — | — |
-| Plantillas de trabajo (`modules/plantillas.js`) | Falta | — | — |
+| Plantillas de trabajo (`modules/plantillas.js`) | Preparado | `#/trabajos/plantillas`, selector en el alta; espejo en `20261019_plantillas_trabajo.sql` (área `trabajos`) | Los pasos se guardan pero, como en la app, no pasan al trabajo. |
 | Chat de grupo por trabajo/ticket/tarea | Falta | — | Salas por ficha en `#/chat`. |
 | Borrar trabajo devolviendo el material | Preparado | trigger de `20261016_final.sql` | — |
 | Agenda por bloques y eventos libres (`modules/agenda.js`) | Preparado | `#/calendario/cita`, `#/calendario/dia/<trabajo>` (días de la ficha del trabajo), `calendario/cita.ts` | Corte. |
