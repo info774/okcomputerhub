@@ -55,6 +55,14 @@ la serie de PRUEBA. Detalle y pasos para activarla en `docs/FASE11.md`.
 `supabase/cortes/corte_final.sql` y NO se aplica sin el OK de Fran. Pasos en
 `docs/FASE_FINAL.md`.
 
+**Paridad con la app** (decisión de Fran, 2026-10-03): la app y el hub avanzan
+en paralelo; el hub tiene que hacer TODO lo que hace la app (también lo que se
+le añada) más lo suyo, hasta sustituirla, sin molestar el uso diario. Mapa,
+estados y orden de bloques en `docs/PARIDAD.md` (con «Revisado hasta» = último
+commit de la app revisado). Lo nuevo de la app se trae con **`/paridad`**, solo
+cuando Fran lo pida: lo de un área que ya está en el hub se porta, se fusiona y
+se despliega; lo demás se apunta. Primero la paridad, después lo propio.
+
 ## Cómo pedirle cosas a Fran (preferencia suya, 2026-09-27)
 
 Cuando haga falta algo suyo (una clave, un clic en un panel, un ajuste), se
