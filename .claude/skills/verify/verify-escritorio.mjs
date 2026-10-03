@@ -179,10 +179,42 @@ try {
     await page.mouse.move(4, 400, { steps: 8 });
     ok(await page.evaluate(() => document.body.dataset.osSnap) === 'izq', 'la guía de ajuste aparece al acercarse al borde');
     await page.mouse.up();
+    // Encajar desliza la ventana a su sitio (.os-anima): se mide cuando acaba.
+    const quieta = () => page.waitForFunction(() => !document.querySelector('.os-win.os-anima'));
+    await quieta();
     const geo = await page.$eval('#os-win-monitorizacion', e => [e.offsetLeft, e.offsetWidth]);
     const area = await page.$eval('#os-escritorio', e => e.clientWidth);
     ok(geo[0] < 12 && Math.abs(geo[1] - area / 2) < 20, `soltar en el borde encaja a la mitad izquierda (${geo[1]} de ${area})`);
+
+    // Asistente de ajuste: el hueco de la derecha se ofrece a Proyectos.
+    await page.waitForSelector('#os-asistente .os-snap-cand[data-p0="proyectos"]');
+    const hueco = await page.$eval('#os-asistente', e => e.offsetLeft);
+    ok(hueco > area / 2 - 12, 'el asistente ocupa el hueco que queda (mitad derecha)');
+    await page.screenshot({ path: `${CAPTURAS}/escritorio-asistente.png` });
+    await page.click('#os-asistente .os-snap-cand[data-p0="proyectos"]');
+    await quieta();
+    const pro = await page.$eval('#os-win-proyectos', e => [e.offsetLeft, e.offsetWidth, e.classList.contains('encajada'), e.classList.contains('activa')]);
+    ok(pro[0] > area / 2 - 12 && Math.abs(pro[1] - area / 2) < 20 && pro[2] && pro[3], 'elegir Proyectos la encaja en la mitad derecha y la trae delante');
+    ok(!(await page.$('#os-asistente')), 'con el hueco relleno, el asistente se va');
+
+    // Menú de disposiciones al dejar el ratón sobre Maximizar.
+    await page.hover('#os-win-proyectos .os-wmax');
+    await page.waitForSelector('#os-win-proyectos .os-snap-menu');
+    ok((await page.$$('#os-win-proyectos .os-snap-disp')).length === 5, 'el menú enseña las cinco disposiciones');
+    ok(await page.$eval('#os-win-proyectos .os-snap-celda[data-p1="der"]', e => e.classList.contains('actual')), 'y marca la zona en la que está (mitad derecha)');
+    await page.screenshot({ path: `${CAPTURAS}/escritorio-disposiciones.png` });
+    await page.click('#os-win-proyectos .os-snap-disp .os-snap-celda[data-p1="ad"]');
+    await quieta();
+    const cuarto = await page.$eval('#os-win-proyectos', e => [e.offsetLeft, e.offsetTop, e.offsetHeight]);
+    const alto = await page.$eval('#os-escritorio', e => e.clientHeight);
+    ok(cuarto[0] > area / 2 - 12 && cuarto[1] < 12 && Math.abs(cuarto[2] - alto / 2) < 20, 'una celda del menú la encaja arriba a la derecha');
+    ok(!(await page.$('.os-snap-menu')), 'y el menú se cierra');
+    await page.keyboard.press('Escape');
+    ok(!(await page.$('#os-asistente')), 'Esc deja el hueco libre');
+    await page.click('#os-win-monitorizacion .os-win-cab', { position: { x: 200, y: 20 } });
+
     await page.keyboard.press('Alt+Shift+ArrowRight');
+    await quieta();
     ok((await page.$eval('#os-win-monitorizacion', e => e.offsetLeft)) > area / 2 - 12, 'Alt+Mayús+→ la pasa a la derecha');
     await page.keyboard.press('Alt+Shift+ArrowUp');
     ok(await page.$eval('#os-win-monitorizacion', e => e.classList.contains('max')), 'Alt+Mayús+↑ maximiza');
@@ -192,7 +224,9 @@ try {
 
     // Minimizar, restaurar y cerrar
     await page.click('#os-win-monitorizacion [data-action="osMinimizar"]');
-    ok(!(await page.isVisible('#os-win-monitorizacion')), 'minimizar la esconde');
+    ok(await page.$eval('#os-win-monitorizacion', e => e.classList.contains('os-minimiza') || e.classList.contains('min')), 'minimizar la lleva hacia el dock');
+    await page.waitForSelector('#os-win-monitorizacion', { state: 'hidden', timeout: 2000 });
+    ok(true, 'minimizar la esconde');
     ok(await page.$eval('#os-win-proyectos', e => e.classList.contains('activa')), 'y la de detrás pasa delante');
     await page.click('.os-ditem[data-p0="monitorizacion"]');
     ok(await page.isVisible('#os-win-monitorizacion'), 'el dock la restaura');

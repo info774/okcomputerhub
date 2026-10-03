@@ -378,7 +378,11 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   ventana (`#/inicio` sigue siendo el escritorio). Los widgets van en columnas
   que se rellenan de arriba abajo hasta que se mueve uno. La disposición va en
   `localStorage.hub_os_<usuario>`; lo ÚNICO que va a la base son las fijas del
-  dock (abajo). Un módulo nuevo entra solo en el lanzador y, mientras nadie
+  dock (abajo). Ventanas (2026-10-03, como las de la app y mejoradas): cuerpo
+  OPACO en `fondo`, menú de disposiciones sobre Maximizar y asistente de ajuste
+  que rellena el hueco; abrir, cerrar, minimizar y encajar van animados
+  (`.os-anima`): un arnés que mida la geometría espera a que no quede
+  `.os-win.os-anima`, y cerrar quita el id AL MOMENTO. Un módulo nuevo entra solo en el lanzador y, mientras nadie
   haya elegido sus fijas, en el dock (las 12 primeras de `visibles()`). Los arneses usan
   el clásico salvo que pidan `preparar(…, { escritorio: 'defecto' })`. Arnés
   `verify-escritorio.mjs`.
