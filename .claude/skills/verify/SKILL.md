@@ -126,10 +126,13 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   aceptado / tasa, barras de importe por estado que filtran, filtros, por
   persona, buscador, ficha con líneas y enlaces, tema noche, móvil sin
   desbordar); solo lectura.
-- `verify-mantenimientos.mjs`: cartera por sede (quién cobra: Stripe, esperando
-  el primer pago, Zoho viva o cancelada, sin domiciliar; cobro torcido y en
-  curso; cuota NETA con el bruto heredado de Zoho sin IGIC), barras por plan
-  que filtran, la fila lleva al sitio, y un técnico en el móvil sin euros.
+- `verify-mantenimientos.mjs`: Resumen (cifras, barras por plan que abren
+  Locales filtrado, requieren atención, próximas visitas, garantías) y tabla
+  maestra (quién cobra: Stripe, esperando el primer pago, Zoho viva o
+  cancelada, sin domiciliar; cobro torcido y en curso; cuota NETA con el bruto
+  heredado de Zoho sin IGIC; certificado, copia, teléfonos, código; filtros de
+  ficha y búsqueda por teléfono), y un técnico en el móvil sin euros; solo
+  lectura.
   `comun.mjs` entiende `not.` (un NULL no cumple `not.in`, como en SQL).
 - `verify-oki.mjs`: portada de Oki (diagrama con 6 áreas y su dato, SLA y
   cerrados por día, «Oki dice» y «Necesita a una persona» desde
@@ -197,6 +200,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   trabajos (casillas en «Por facturar», líneas como la app, factura nueva,
   añadir a un borrador, presupuesto desde trabajos, sede sin cliente); Zoho
   SIMULADO; el mundo sin corte.
+- `verify-mantenimientos-escritura.mjs`: con las áreas cortadas, la fila de la
+  tabla maestra, la ficha de mantenimiento con teléfonos (9 cifras), el
+  checklist del plan por periodo, el seguimiento (alta y arrastre), planes solo
+  admin con sus tareas, checklists de visita, «+ Contrato» (a una sede en
+  Stripe no se le toca la cuota) y el checklist de la visita en el trabajo (el
+  del plan o el genérico; solo lectura con `trabajos` en la app).
 - `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
   producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
   por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de

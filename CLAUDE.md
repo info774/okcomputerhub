@@ -481,6 +481,19 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   (`sedeEnZoho`, `netoSede`; el bruto heredado de Zoho se divide por el IGIC
   del 7 %, que `mant_config` no viaja): si cambian allí, cambiarlas aquí. Euros
   y deuda solo para admins. Arnés `verify-mantenimientos.mjs`.
+  Desde el 2026-10-04 (paridad bloque 4, tanda 1, PREPARADO para el corte) con
+  las pestañas de la app: Resumen, Locales (tabla maestra; certificado, copia y
+  control horario se editan en la fila), ficha de cada sede (`ficha.ts`, `fm-`,
+  teléfonos con rol), Checklist (tareas del plan por periodo), Seguimiento
+  (`mse-`), Plantillas (planes SOLO admin y por NOMBRE —las sedes lo llevan
+  así, no se renombra—, sus tareas y checklists de visita) y «+ Contrato»
+  (`alta.ts`, `mal-`: a una sede con `stripe_subscription_id` NO se le tocan
+  plan, cuota ni frecuencia; eso es «Cambiar plan» de Cobros). Área
+  `mantenimiento` (`20261024_mantenimiento.sql`); las reglas de
+  `mant-estados.js` en `datos.ts` (compara `estado_pago` SIN acentos: Stripe
+  escribe «Ultimo aviso»). El checklist de la visita va en la ficha del
+  trabajo (`trabajos/checklist-visita.ts`, `tcv-`, `checklist_respuestas` en
+  el área `trabajos`). Arnés `verify-mantenimientos-escritura.mjs`.
 - **Inventario** (`src/modulos/inventario/`, `#/inventario`, 2026-10-02): el
   stock POR UBICACIÓN (furgonetas, tienda) y «Todas» sumando el mismo producto
   por `catalogo_id` o por nombre (la regla de «Total» de `furgonetas.js`), el

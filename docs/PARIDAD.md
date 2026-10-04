@@ -54,7 +54,15 @@ Fran, 2026-10-03).
    (PENDIENTE_FRAN §5).
 4. **Mantenimiento y cobros**: Stripe (domiciliar, enlace de pago, cambiar plan,
    abonos), libro de cuotas, contratos con firma y pago, renovaciones, tabla
-   maestra de Locales.
+   maestra de Locales. Decisiones de Fran (2026-10-04): Stripe «preparado, sin
+   conectar» (pantallas y funciones portadas con los botones apagados; el
+   webhook de Stripe sigue en la app hasta el corte, para no emitir dos
+   facturas) y contratos «igual que la app» (misma plantilla y cláusulas, firma
+   pública con pago en el mismo enlace, renovaciones). Tandas: 1 mantenimiento
+   sin dinero (HECHA 2026-10-04: Resumen, tabla maestra y ficha de cada sede,
+   Checklist, Seguimiento, Plantillas, «+ Contrato» y checklist de la visita en
+   el trabajo; `20261024_mantenimiento.sql`, área `mantenimiento`), 2 contratos
+   y firma, 3 motor de Stripe sin conectar, 4 cartera vieja de Zoho Billing.
 5. **WhatsApp completo**: webhook con menú y horario, medios, plantilla fuera de
    24 h, mandar documentos, enlaces rápidos, de WhatsApp a ticket.
 6. **Sistema**: usuarios y modo empleado, deshacer, cola offline, historial por
@@ -149,16 +157,18 @@ Fran, 2026-10-03).
 
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
-| Resumen (garantías, visitas, cuotas a 90 días, renovaciones) | Solo lectura | `#/mantenimientos` | Garantías, visitas, renovaciones. |
-| Locales: tabla maestra (`mant-ficha.js`) | Solo lectura | `#/mantenimientos` | Columnas de la ficha y modal `fm-`. |
+| Resumen (garantías, visitas, cuotas a 90 días, renovaciones) | Preparado | `#/mantenimientos` (cifras, por plan, requieren atención, próximas visitas, garantías ≤ 30 d) | Renovaciones (tanda 2). |
+| Locales: tabla maestra (`mant-ficha.js`) y ficha `fm-` | Preparado | `#/mantenimientos/locales` (certificado, copia y control horario editables en la fila; filtros de ficha) y `#/mantenimientos/ficha/<id>` (teléfonos con rol, código); disparadores del código y del certificado en `20261024_mantenimiento.sql` | Corte del área `clientes`. |
+| «+ Contrato» (`openNewMant`, `saveMantenimiento`) | Preparado | `#/mantenimientos/alta[/<id>]` (`alta.ts`): plan, cuota neta, frecuencia y próxima revisión; a una sede en Stripe no se le toca la cuota | Corte de `mantenimiento` y `clientes`. |
 | Cobros con Stripe (`mant-cobros.js`, `stripe-suscripcion`) | Falta | (`#/cobros` avisa del cobro torcido) | Portar `stripe-*` y `stripe-cobros.ts`. |
 | Libro de cuotas, «Emitir en Zoho», abonos | Falta | — | — |
 | Webhook de Stripe → factura MANT- en Zoho | Falta | — | — |
 | Cartera vieja de Zoho Billing | Falta | — | Solo se pinta (`sedeEnZoho`). |
-| Checklist, Seguimiento (kanban), Plantillas de planes | Falta | — | — |
+| Checklist, Seguimiento (kanban), Plantillas de planes | Preparado | `#/mantenimientos/checklist` (tareas del plan por periodo), `/seguimiento` (kanban con arrastre y formulario), `/plantillas` (planes solo admin, sus tareas y checklists de visita) | Corte de `mantenimiento` (y `clientes` para marcar tareas). |
+| Checklist de la visita en el trabajo (`loadChecklistForTrabajo`) | Preparado | Ficha del trabajo (`trabajos/checklist-visita.ts`, espejo `checklist_respuestas` en el área `trabajos`) | Corte de `trabajos`. |
 | Contratos: generar, editar, firmar, renovaciones | Falta | `#/firmas` es firma genérica | Contratos con cuota. |
 | Firma pública con pago (`firma.html`, `firma-contrato`), `mandato.html` | Falta | — | — |
-| Trabajo desde un mantenimiento | Falta | — | — |
+| Trabajo desde un mantenimiento (`generarTrabajoDesdeMant`) | No aplica | — | En la app no lo llama ningún botón (código muerto); las visitas se crean como trabajo de tipo Mantenimiento. |
 | Ficha del sitio, pestaña «Mant.» con cobro | Solo lectura | `#/sitios` | Botones de Stripe. |
 | Ajustes de cobro (`mant_config`) | Falta | — | — |
 

@@ -41,7 +41,9 @@ const fecha = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('es-ES
 /** Chip de caducidad (certificado, garantía): vencido, vence en ≤ 30 días o válido hasta. */
 export function chipCaducidad(d: string | null | undefined, que: string): string {
   if (!d) return '';
-  const dias = Math.ceil((new Date(`${d}T12:00:00`).getTime() - Date.now()) / 86_400_000);
+  // Días de calendario (los dos a mediodía): con la hora de ahora, por la
+  // mañana salía un día de más.
+  const dias = Math.round((new Date(`${d.slice(0, 10)}T12:00:00`).getTime() - new Date(`${new Date().toLocaleDateString('sv-SE')}T12:00:00`).getTime()) / 86_400_000);
   if (dias < 0) return `<span class="chip mal">${esc(que)} vencido</span>`;
   if (dias <= 30) return `<span class="chip aviso">${esc(que)}: vence en ${dias} d</span>`;
   return `<span class="chip bien">${esc(que)} hasta ${esc(fecha(d))}</span>`;

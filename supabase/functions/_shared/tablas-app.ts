@@ -26,7 +26,8 @@ export const TABLAS_APP: Record<string, TablaApp> = {
     alarma_contrato alarma_codigo alarma_telefono alarma_notas tipo drive_folder_id estado stripe_customer_id
     stripe_subscription_id stripe_estado stripe_mandato_estado stripe_ultimo_error stripe_sync_at zoho_estado
     zoho_deuda zoho_facturas_impagadas zoho_sync_at zoho_sync_error zoho_deuda_error lat lng geocodificado_at
-    importe_incluye_impuesto stripe_cobro_en_curso_at tiene_software`) },
+    importe_incluye_impuesto stripe_cobro_en_curso_at tiene_software cert_caducidad backup_tipo backup_destino
+    backup_comprobado control_horario control_horario_sistema control_horario_nuestro codigo_verificacion`) },
   contactos: { auditada: true, columnas: c(`id created_at nombre tipo empresa cargo telefono telefono2 email
     direccion notas favorito cliente_id activo google_resource_name google_synced_at etiquetas local_id`) },
   trabajos: { auditada: true, columnas: c(`id created_at cliente_id local_id tipo descripcion estado tecnicos
@@ -64,6 +65,15 @@ export const TABLAS_APP: Record<string, TablaApp> = {
     tecnico_id resolucion via_contacto numero contacto_id trabajo_id resolucion_categoria`) },
   presupuestos: { auditada: true, columnas: c(`id created_at cliente_id local_id titulo exigencias estado total
     tecnico_id zoho_estimate_id fecha oportunidad_id numero_presupuesto contacto_id`) },
+  // Mantenimiento sin dinero (paridad bloque 4, tanda 1). mantenimientos_programados
+  // está en el audit_log de la app; el resto, en la pasada nocturna.
+  planes_mantenimiento: { auditada: false, columnas: c(`id created_at updated_at nombre orden precio_mensual frecuencia_pago
+    revisiones_anuales descuento_mano_obra descuento_material coste_presencial_estandar coste_presencial_urgente color resumen
+    caracteristicas activo notas contrato_servicios contrato_plantilla stripe_product_id stripe_precios zoho_item_id horario_soporte`) },
+  mant_seguimiento: { auditada: false, columnas: c('id cliente_id local_id contacto_id estado tipo_respuesta notas recordatorio_fecha dias_recordatorio created_at updated_at') },
+  checklist_plantillas: { auditada: false, columnas: c('id plan nombre items activa created_at') },
+  checklist_respuestas: { auditada: false, columnas: c('id trabajo_id plantilla_id plantilla_nombre respuestas completado tecnico_id created_at') },
+  mantenimientos_programados: { auditada: true, columnas: c('id created_at cliente_id local_id plan proxima_fecha ultimo_generado activo contacto_id') },
   // Plantillas de presupuesto (paridad bloque 3): fuera del audit_log de la app.
   presupuesto_plantillas: { auditada: false, columnas: c('id created_at nombre descripcion icono activa lineas') },
   // Área del hub desde la fase 4: solo se importan sus ALTAS (hub.areas.importar_altas).

@@ -1,154 +1,238 @@
-// Vista de Mantenimientos (ver index.ts). Solo lectura.
-//
-// Reglas que vienen de la app (`public/js/modules/mant-estados.js`) y que hay
-// que tocar a la vez si allí cambian:
-//   · A una sede la cobra Stripe si tiene suscripción; la Zoho Billing vieja si
-//     tiene `zoho_subscription_id`, NO tiene Stripe y su estado no está muerto
-//     (`sedeEnZoho`). Con Stripe y sin mandato activo, falta el primer pago.
-//   · `importe_mantenimiento` es NETO y mensual, salvo la cartera heredada de
-//     Zoho (`importe_incluye_impuesto`), que lo guarda en BRUTO: se le quita el
-//     IGIC para sumarlo (`netoSede`). El 7 % es el tipo general de Canarias,
-//     el mismo por defecto de la facturación del hub; `mant_config` no se copia.
+// Vista de Mantenimientos (ver index.ts), con las pestañas de la app:
+//   #/mantenimientos            Resumen (cifras, por plan, lo que requiere
+//                               atención, próximas visitas, garantías)
+//   #/mantenimientos/locales    la TABLA MAESTRA: una fila por sede con plan,
+//                               cobro, certificado, copia, control horario,
+//                               revisiones, teléfonos y código de verificación
+//   #/mantenimientos/ficha/<id> la ficha de mantenimiento de una sede (ficha.ts)
+//   #/mantenimientos/alta[/<id>] «+ Contrato»: plan, cuota y frecuencia de una sede (alta.ts)
+//   #/mantenimientos/checklist  tareas del plan del periodo (checklist.ts)
+//   #/mantenimientos/seguimiento el kanban comercial (seguimiento.ts)
+//   #/mantenimientos/plantillas los planes, sus tareas y los checklists de visita (planes.ts)
+// Reglas de la app (mant-estados.js) en datos.ts. Prefijo de ids: mt-.
 import { API } from '../../core/api';
 import { esAdmin } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
-import { avisoSoloLectura } from '../../core/areas';
-import { esc } from '../../ui/dom';
+import { esDelHub, avisoSoloLectura } from '../../core/areas';
+import { esc, toast } from '../../ui/dom';
 import { barras } from '../../ui/barras';
-import { eur, enApp } from '../ventas/datos';
+import { eur, telWhatsApp } from '../ventas/datos';
+import {
+  type Sede, type Pasarela, type Telefono, colsSede, pasarela, netoMensual, esTorcido, sinAcentos, PAGO_MAL, estadosDelPlan, diasHasta,
+  fechaCorta, ROLES_SENSIBLES, textoCodigo, mesesDe,
+} from './datos';
 
-interface Sede {
-  id: string; nombre: string; cliente_id: string | null; plan: string | null; estado_pago: string | null;
-  frecuencia_pago: string | null; forma_pago: string | null; proxima_cuota: string | null; fecha_activacion: string | null;
-  zoho_subscription_id: string | null; zoho_estado: string | null; stripe_subscription_id: string | null; stripe_mandato_estado: string | null;
-  stripe_cobro_en_curso_at: string | null; stripe_ultimo_error: string | null;
-  importe_mantenimiento?: number | null; importe_incluye_impuesto?: boolean | null; zoho_deuda?: number | null;
-}
-type Pasarela = 'stripe' | 'espera' | 'zoho' | 'nadie';
-
-const IGIC = 7;
-const ZOHO_MUERTA = new Set(['cancelled', 'expired', 'cancelled_from_dunning', 'no_existe']);
-const PAGO_MAL = ['Último aviso', 'No paga'];
-const TORCIDO = ['Pendiente de pago', ...PAGO_MAL];
+export const PESTANAS: [string, string][] = [['', 'Resumen'], ['locales', 'Locales'], ['checklist', 'Checklist'], ['seguimiento', 'Seguimiento'], ['plantillas', 'Plantillas']];
 const PASARELA: Record<Pasarela, [string, string]> = {
   stripe: ['Stripe', 'bien'], espera: ['Esperando el primer pago', 'aviso'], zoho: ['Zoho (cartera vieja)', ''], nadie: ['Sin domiciliar', 'aviso'],
 };
 const FILTROS: [string, string][] = [['', 'Todas'], ['torcido', 'Cobro torcido'], ['en_curso', 'Cobro en curso'], ['nadie', 'Sin domiciliar'],
   ['espera', 'Esperando pago'], ['stripe', 'Stripe'], ['zoho', 'Zoho']];
+const FICHA: [string, string][] = [['', 'Ficha: todo'], ['cert', 'Certificado vencido o ≤ 30 días'], ['sin_cert', 'Sin fecha de certificado'],
+  ['backup', 'Copia del plan pendiente'], ['sin_backup', 'Sin copia en el plan'], ['ch', 'Control horario sin dato'], ['revision', 'Revisiones atrasadas'], ['sin_dueno', 'Sin teléfono de dueño']];
 
 let _lista: Sede[] = [];
 let _listaAt = 0;
-let _clientes = new Map<string, string>();
+let _clientes = new Map<string, { nombre: string; email: string | null }>();
+let _tels = new Map<string, Telefono[]>();
+let _backup = new Map<string, string>();
+let _revision = new Map<string, string>();
 let _q = '';
 let _filtro = '';
 let _plan = '';
+let _ficha = '';
 
-const enZoho = (s: Sede) => !!s.zoho_subscription_id && !s.stripe_subscription_id && !ZOHO_MUERTA.has((s.zoho_estado ?? '').toLowerCase());
-export const pasarela = (s: Sede): Pasarela => s.stripe_subscription_id ? (s.stripe_mandato_estado === 'activo' ? 'stripe' : 'espera') : enZoho(s) ? 'zoho' : 'nadie';
-export function netoMensual(s: Sede): number {
-  const g = Number(s.importe_mantenimiento ?? 0);
-  return !g || !s.importe_incluye_impuesto ? g : Math.round(g / (1 + IGIC / 100) * 100) / 100;
-}
-const diasEnCurso = (s: Sede) => s.stripe_cobro_en_curso_at ? Math.floor((Date.now() - Date.parse(s.stripe_cobro_en_curso_at)) / 86_400_000) : -1;
-const chipPago = (s: Sede) => `${s.estado_pago && s.estado_pago !== 'Al corriente'
-  ? `<span class="chip ${PAGO_MAL.includes(s.estado_pago) ? 'mal' : 'aviso'}">${esc(s.estado_pago)}</span>` : `<span class="chip bien">${esc(s.estado_pago ?? 'Al corriente')}</span>`}${
-  s.stripe_cobro_en_curso_at ? ` <span class="chip ${diasEnCurso(s) >= 10 ? 'aviso' : ''}" title="SEPA tarda unos 6 días hábiles en liquidar">Cobro en curso · ${diasEnCurso(s)} d</span>` : ''}${
-  s.stripe_ultimo_error ? ` <span class="chip mal" title="${esc(s.stripe_ultimo_error)}">Error de Stripe</span>` : ''}`;
-const fechaCorta = (f: string | null) => f ? esc(new Date(`${f.slice(0, 10)}T12:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: '2-digit' })) : '';
+/** Olvida la lista en caché (tras cambiar algo de una sede). */
+export function olvidarMantenimientos() { _lista = []; _listaAt = 0; }
+
+const chipPago = (s: Sede) => {
+  const n = sinAcentos(s.estado_pago);
+  const dias = s.stripe_cobro_en_curso_at ? Math.floor((Date.now() - Date.parse(s.stripe_cobro_en_curso_at)) / 86_400_000) : -1;
+  return `${s.estado_pago && n !== 'al corriente' ? `<span class="chip ${PAGO_MAL.includes(n) ? 'mal' : 'aviso'}">${esc(s.estado_pago)}</span>` : `<span class="chip bien">${esc(s.estado_pago ?? 'Al corriente')}</span>`}${
+    s.stripe_cobro_en_curso_at ? ` <span class="chip ${dias >= 10 ? 'aviso' : ''}" title="SEPA tarda unos 6 días hábiles en liquidar">Cobro en curso · ${dias} d</span>` : ''}${
+    s.stripe_ultimo_error ? ` <span class="chip mal" title="${esc(s.stripe_ultimo_error)}">Error de Stripe</span>` : ''}`;
+};
 
 async function cargar() {
   if (_lista.length && Date.now() - _listaAt < 5 * 60_000) return null;
-  const cols = `id,nombre,cliente_id,plan,estado_pago,frecuencia_pago,forma_pago,proxima_cuota,fecha_activacion,zoho_subscription_id,zoho_estado,stripe_subscription_id,stripe_mandato_estado,stripe_cobro_en_curso_at,stripe_ultimo_error${esAdmin() ? ',importe_mantenimiento,importe_incluye_impuesto,zoho_deuda' : ''}`;
-  const [ls, cs] = await Promise.all([
-    API.fetchAll<Sede>('locales', { select: cols, plan: 'not.in.("Sin mantenimiento","")', activo: 'neq.false', order: 'nombre' }),
-    _clientes.size ? Promise.resolve(null) : API.fetchAll<{ id: string; nombre: string }>('clientes', { select: 'id,nombre' }),
+  const [ls, cs, ts] = await Promise.all([
+    API.fetchAll<Sede>('locales', { select: colsSede(), plan: 'not.in.("Sin mantenimiento","")', activo: 'neq.false', order: 'nombre' }),
+    _clientes.size ? Promise.resolve(null) : API.fetchAll<{ id: string; nombre: string; email: string | null }>('clientes', { select: 'id,nombre,email' }),
+    API.fetchAll<Telefono>('local_telefonos', { select: 'id,local_id,nombre,numero,rol', order: 'created_at' }),
   ]);
-  if (cs && !cs.error) _clientes = new Map((cs.data ?? []).map(c => [c.id, c.nombre]));
+  if (cs && !cs.error) _clientes = new Map((cs.data ?? []).map(c => [c.id, { nombre: c.nombre, email: c.email }]));
   if (ls.error) return ls.error;
   _lista = ls.data ?? []; _listaAt = Date.now();
+  _tels = new Map();
+  for (const t of ts.data ?? []) _tels.set(t.local_id, [...(_tels.get(t.local_id) ?? []), t]);
+  ({ backup: _backup, revision: _revision } = await estadosDelPlan(_lista));
   return null;
 }
 
+const nombreCliente = (s: Sede) => _clientes.get(s.cliente_id ?? '')?.nombre ?? '';
+const certAlerta = (s: Sede) => { const d = diasHasta(s.cert_caducidad); return d != null && d <= 30; };
+const sinDueno = (s: Sede) => !(_tels.get(s.id) ?? []).some(t => ROLES_SENSIBLES.includes(t.rol ?? ''));
+
 function filtradas(): Sede[] {
-  const q = _q.toLowerCase();
+  const q = sinAcentos(_q), dq = _q.replace(/\D/g, '');
   return _lista.filter(s => {
-    if (_filtro === 'torcido' && !TORCIDO.includes(s.estado_pago ?? '') && !s.stripe_ultimo_error) return false;
+    if (_filtro === 'torcido' && !esTorcido(s) && !s.stripe_ultimo_error) return false;
     if (_filtro === 'en_curso' && !s.stripe_cobro_en_curso_at) return false;
     if (['nadie', 'espera', 'stripe', 'zoho'].includes(_filtro) && pasarela(s) !== _filtro) return false;
     if (_plan && s.plan !== _plan) return false;
-    return !q || [s.nombre, s.plan, _clientes.get(s.cliente_id ?? '')].some(x => (x ?? '').toLowerCase().includes(q));
+    if (_ficha === 'cert' && !certAlerta(s)) return false;
+    if (_ficha === 'sin_cert' && s.cert_caducidad) return false;
+    if (_ficha === 'backup' && _backup.get(s.id) !== 'pendiente') return false;
+    if (_ficha === 'sin_backup' && _backup.get(s.id) !== 'sin_backup') return false;
+    if (_ficha === 'ch' && s.control_horario != null) return false;
+    if (_ficha === 'revision' && _revision.get(s.id) !== 'atrasada') return false;
+    if (_ficha === 'sin_dueno' && !sinDueno(s)) return false;
+    if (!q) return true;
+    return [s.nombre, s.plan, nombreCliente(s), s.codigo_verificacion].some(x => sinAcentos(x).includes(q))
+      || (dq.length >= 3 && (_tels.get(s.id) ?? []).some(t => t.numero.replace(/\D/g, '').includes(dq)));
   });
 }
 
-function cifra(titulo: string, valor: string, sub: string, tono = '') {
-  return `<article class="tarjeta di-cifra ${tono}"><h3>${esc(titulo)}</h3><p class="di-valor">${valor}</p><p class="nota">${sub}</p></article>`;
+export const navPestanas = (actual: string) => `<nav class="pestanas" role="tablist" aria-label="Mantenimientos">${PESTANAS.map(([k, n]) =>
+  `<a role="tab" class="${k === actual ? 'activo' : ''}" aria-selected="${k === actual}" href="#/mantenimientos${k ? `/${k}` : ''}">${n}</a>`).join('')}</nav>`;
+
+function cifra(titulo: string, valor: string, sub: string, tono = '', href = '') {
+  return `<article class="tarjeta di-cifra ${tono}">${href ? `<a href="${href}">` : ''}<h3>${esc(titulo)}</h3><p class="di-valor">${valor}</p><p class="nota">${sub}</p>${href ? '</a>' : ''}</article>`;
 }
 
-function cabeza(): string {
-  const torcidas = _lista.filter(s => TORCIDO.includes(s.estado_pago ?? '') || !!s.stripe_ultimo_error);
-  const sinCobrar = _lista.filter(s => pasarela(s) === 'nadie' || pasarela(s) === 'espera');
+// ── Resumen ─────────────────────────────────────────────────────────────────
+async function pintarResumen(el: HTMLElement, escribe: boolean) {
   const admin = esAdmin();
+  const hoyS = new Date().toLocaleDateString('sv-SE');
+  const en = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
+  const [visitas, garantias] = await Promise.all([
+    API.get<any[]>('trabajos', { select: 'id,numero,titulo,fecha_programada,tecnicos,local_id', tipo: 'eq.Mantenimiento', estado: 'in.(Pendiente,"En progreso")', fecha_programada: `gte.${hoyS}`, order: 'fecha_programada', limit: '8' }),
+    API.get<any[]>('local_hardware', { select: 'id,local_id,nombre,tipo,garantia', and: `(garantia.gte.${hoyS},garantia.lte.${en(30)})`, order: 'garantia', limit: '12' }),
+  ]);
   const mes = _lista.reduce((t, s) => t + netoMensual(s), 0);
-  const deuda = _lista.reduce((t, s) => t + Number(s.zoho_deuda ?? 0), 0);
+  const cuotas = _lista.filter(s => s.proxima_cuota && s.proxima_cuota >= hoyS && s.proxima_cuota <= en(90)).sort((a, b) => (a.proxima_cuota ?? '').localeCompare(b.proxima_cuota ?? ''));
+  const pendientes = _lista.filter(s => sinAcentos(s.estado_pago) && sinAcentos(s.estado_pago) !== 'al corriente');
+  const atencion = _lista.filter(s => (s.proxima_cuota && s.proxima_cuota < hoyS) || esTorcido(s) || !!s.stripe_ultimo_error).slice(0, 12);
   const porPlan = new Map<string, Sede[]>();
   for (const s of _lista) porPlan.set(s.plan ?? '—', [...(porPlan.get(s.plan ?? '—') ?? []), s]);
-  const planes = [...porPlan.entries()].sort((a, b) => b[1].length - a[1].length);
-  // Admin: cuota neta al mes por plan (lo que deja cada plan); el resto, sedes por plan.
-  const filas = planes.map(([p, ss]) => {
+  const filas = [...porPlan.entries()].sort((a, b) => b[1].length - a[1].length).map(([p, ss]) => {
     const neto = ss.reduce((t, s) => t + netoMensual(s), 0);
     return admin
       ? { clave: p, etiqueta: p, valor: neto, texto: `${eur(neto)} <small class="nota">· ${ss.length}</small>`, detalle: `${p}: ${ss.length} sedes · ${eur(neto, 2)} al mes sin impuestos` }
       : { clave: p, etiqueta: p, valor: ss.length, texto: String(ss.length), detalle: `${p}: ${ss.length} sedes` };
   });
-  return `<div class="pp-cabeza">
-    <div class="di-cifras pp-cifras">
-      ${cifra('Sedes con mantenimiento', String(_lista.length), `${planes.length} ${planes.length === 1 ? 'plan' : 'planes'}`)}
-      ${admin ? cifra('Al mes, sin impuestos', eur(mes), `${eur(mes * 12)} al año`) : cifra('Cobra Stripe', String(_lista.filter(s => pasarela(s) === 'stripe').length), 'sedes domiciliadas')}
-      ${cifra('Cobro torcido', String(torcidas.length), torcidas.length ? 'pendiente, último aviso, no paga o error de Stripe' : 'todas al corriente', torcidas.length ? 'mal' : '')}
-      ${cifra('Sin cobrar todavía', String(sinCobrar.length), admin && deuda ? `sin domiciliar o esperando el primer pago · deuda Zoho ${eur(deuda)}` : 'sin domiciliar o esperando el primer pago', sinCobrar.length ? 'atento' : '')}
-    </div>
-    ${barras('mt-barras', admin ? 'Cuota mensual por plan' : 'Sedes por plan', filas, 'mtPlanBarra', _plan)}
-  </div>`;
+  const nombreSede = (id: string | null) => _lista.find(s => s.id === id)?.nombre ?? '';
+  const alta = escribe && await esDelHub('mantenimientos_programados', 'clientes');
+  el.innerHTML = `${escribe ? '' : avisoSoloLectura('Mantenimientos')}${navPestanas('')}
+    ${alta ? '<p class="acciones"><a class="btn" href="#/mantenimientos/alta">+ Contrato</a></p>' : ''}
+    <div class="pp-cabeza"><div class="di-cifras pp-cifras">
+      ${cifra('Contratos activos', String(_lista.length), `${porPlan.size} ${porPlan.size === 1 ? 'plan' : 'planes'}`, '', '#/mantenimientos/locales')}
+      ${admin ? cifra('Recurrente al mes', eur(mes), `sin impuestos · ${eur(mes * 12)} al año`) : cifra('Cobra Stripe', String(_lista.filter(s => pasarela(s) === 'stripe').length), 'sedes domiciliadas')}
+      ${cifra('Cuotas en 90 días', String(cuotas.length), cuotas[0] ? `la próxima, ${esc(fechaCorta(cuotas[0].proxima_cuota))} · ${esc(cuotas[0].nombre)}` : 'ninguna a la vista')}
+      ${cifra('Pagos pendientes', String(pendientes.length), pendientes.length ? 'no están al corriente' : 'todas al corriente', pendientes.length ? 'mal' : '', '#/mantenimientos/locales')}
+    </div>${barras('mt-barras', admin ? 'Cuota mensual por plan' : 'Sedes por plan', filas, 'mtPlanBarra', _plan)}</div>
+    <div class="me-grid">
+      <section class="tarjeta"><h3>⚠️ Requieren atención</h3>${atencion.length ? `<ul class="di-ultimo">${atencion.map(s => `<li><a href="#/sitios/${esc(s.id)}">${esc(s.nombre)}</a>
+        <span>${s.proxima_cuota && s.proxima_cuota < hoyS ? `cuota vencida el ${esc(fechaCorta(s.proxima_cuota))} · ` : ''}${chipPago(s)}</span></li>`).join('')}</ul>` : '<p class="nota">Nada: todas las cuotas al día.</p>'}</section>
+      <section class="tarjeta"><h3>🗓 Próximas visitas</h3>${(visitas.data ?? []).length ? `<ul class="di-ultimo">${(visitas.data ?? []).map(t => `<li><a href="#/trabajos/${t.numero}">#${t.numero} ${esc(t.titulo ?? '')}</a>
+        <span class="nota">${esc(fechaCorta(t.fecha_programada))} · ${esc(nombreSede(t.local_id))} · ${esc((t.tecnicos ?? []).join(', ') || 'sin técnico')}</span></li>`).join('')}</ul>` : '<p class="nota">No hay visitas de mantenimiento programadas.</p>'}
+        <p><a href="#/calendario">Ver el calendario →</a></p></section>
+      <section class="tarjeta"><h3>🛡 Garantías a punto de vencer</h3>${(garantias.data ?? []).length ? `<ul class="di-ultimo">${(garantias.data ?? []).map(h => `<li><a href="#/sitios/${esc(h.local_id)}/hardware">${esc([h.tipo, h.nombre].filter(Boolean).join(' · ') || 'Equipo')}</a>
+        <span class="nota">vence el ${esc(fechaCorta(h.garantia))}</span></li>`).join('')}</ul>` : '<p class="nota">Ninguna en los próximos 30 días.</p>'}</section>
+    </div>`;
 }
 
-export async function pintarMantenimientos(el: HTMLElement) {
-  el.innerHTML = '<p class="cargando">Cargando…</p>';
-  const error = await cargar();
-  if (error && !_lista.length) { el.innerHTML = `<p class="aviso mal">No se pudieron leer las sedes: ${esc(error.message)}</p>`; return; }
+// ── Locales: la tabla maestra ───────────────────────────────────────────────
+function celdaCert(s: Sede, escribe: boolean): string {
+  const d = diasHasta(s.cert_caducidad);
+  const nota = d == null ? '' : d < 0 ? '<small class="g-mal">Vencido</small>' : d <= 30 ? `<small class="g-aviso">En ${d} d</small>` : '';
+  return escribe
+    ? `<input type="date" value="${esc(s.cert_caducidad ?? '')}" aria-label="Caducidad del certificado de ${esc(s.nombre)}" data-on-change="mtCampo:${s.id},cert_caducidad,$value"> ${nota}`
+    : `${esc(fechaCorta(s.cert_caducidad)) || '—'} ${nota}`;
+}
+function celdaBackup(s: Sede, escribe: boolean): string {
+  const viejo = s.backup_tipo && s.backup_tipo !== 'ninguna' && (!s.backup_comprobado || (diasHasta(s.backup_comprobado) ?? 0) < -45);
+  const plan = _backup.get(s.id);
+  return `${esc([s.backup_tipo, s.backup_destino].filter(Boolean).join(' · ') || '—')}<br>
+    ${escribe ? `<input type="date" class="${viejo ? 'g-aviso' : ''}" value="${esc(s.backup_comprobado ?? '')}" aria-label="Copia comprobada el" title="Comprobada el" data-on-change="mtCampo:${s.id},backup_comprobado,$value">`
+      : `<small class="${viejo ? 'g-aviso' : 'nota'}">${s.backup_comprobado ? `comprobada ${esc(fechaCorta(s.backup_comprobado))}` : 'sin comprobar'}</small>`}
+    ${plan === 'al_dia' ? ' <span class="chip bien">Plan al día</span>' : plan === 'pendiente' ? ' <span class="chip aviso">Plan pendiente</span>' : ''}`;
+}
+function celdaCh(s: Sede, escribe: boolean): string {
+  const v = s.control_horario == null ? '' : s.control_horario ? 'si' : 'no';
+  const extra = [s.control_horario_sistema, s.control_horario_nuestro ? 'nuestro' : ''].filter(Boolean).join(' · ');
+  return `${escribe ? `<select aria-label="Control horario" data-on-change="mtCampo:${s.id},control_horario,$value">
+      <option value="" ${v === '' ? 'selected' : ''}>¿?</option><option value="si" ${v === 'si' ? 'selected' : ''}>Sí</option><option value="no" ${v === 'no' ? 'selected' : ''}>No</option></select>`
+    : ({ si: 'Sí', no: 'No', '': '¿?' } as Record<string, string>)[v]}${extra ? `<br><small class="nota">${esc(extra)}</small>` : ''}`;
+}
+function celdaTels(s: Sede): string {
+  const ts = _tels.get(s.id) ?? [];
+  if (!ts.length) return '<span class="g-mal">Sin teléfonos</span>';
+  const sens = ts.filter(t => ROLES_SENSIBLES.includes(t.rol ?? '')).slice(0, 2);
+  return `${sens.map(t => `<a href="tel:${esc(t.numero)}">${esc(t.numero)}</a> <small class="nota">${esc(t.nombre ?? '')}</small>`).join('<br>') || '<span class="g-aviso">Sin dueño</span>'}
+    ${ts.length > sens.length ? `<br><small class="nota">${ts.length} en total</small>` : ''}`;
+}
+function celdaCodigo(s: Sede): string {
+  if (!s.codigo_verificacion) return '—';
+  const tel = (_tels.get(s.id) ?? []).find(t => ROLES_SENSIBLES.includes(t.rol ?? ''));
+  const wa = telWhatsApp(tel?.numero);
+  const email = _clientes.get(s.cliente_id ?? '')?.email;
+  const txt = encodeURIComponent(textoCodigo(s.nombre, s.codigo_verificacion));
+  return `<code>${esc(s.codigo_verificacion)}</code><br>${wa ? `<a href="https://wa.me/${wa}?text=${txt}" target="_blank" rel="noopener" title="Mandar el código por WhatsApp">💬</a> ` : ''}${
+    email ? `<a href="mailto:${esc(email)}?subject=${encodeURIComponent(`Código de verificación · ${s.nombre}`)}&body=${txt}" title="Mandar el código por correo">✉️</a>` : ''}`;
+}
+
+async function pintarLocales(el: HTMLElement, escribe: boolean) {
   const admin = esAdmin();
   const planes = [...new Set(_lista.map(s => s.plan).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b));
   const lista = filtradas();
-  el.innerHTML = `${avisoSoloLectura('Mantenimientos')}
-    ${cabeza()}
+  const rev = (s: Sede) => ({ al_dia: '<span class="chip bien">Al día</span>', atrasada: '<span class="chip aviso">Atrasada</span>' } as Record<string, string>)[_revision.get(s.id) ?? ''] ?? '—';
+  el.innerHTML = `${escribe ? '' : avisoSoloLectura('La ficha de mantenimiento de las sedes')}${navPestanas('locales')}
     <div class="acciones mo-barra">
-      <input id="mt-filtro" type="search" placeholder="Buscar por sede, cliente o plan…" value="${esc(_q)}" data-on-input="mtFiltrar:$value" aria-label="Buscar sede">
+      <input id="mt-filtro" type="search" placeholder="Buscar por sede, cliente, plan, código o teléfono…" value="${esc(_q)}" data-on-input="mtFiltrar:$value" aria-label="Buscar sede">
       <select id="mt-plan" data-on-change="mtPlan:$value" aria-label="Plan"><option value="">Todos los planes</option>
         ${planes.map(p => `<option ${p === _plan ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>
-      <a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Altas, cambios de plan, enlaces de pago y contratos">Gestionar en la app ↗</a>
+      <select id="mt-ficha" data-on-change="mtFicha:$value" aria-label="Ficha">${FICHA.map(([k, n]) => `<option value="${k}" ${k === _ficha ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+      ${escribe && await esDelHub('mantenimientos_programados', 'clientes') ? '<a class="btn" href="#/mantenimientos/alta">+ Contrato</a>' : ''}
     </div>
     <div class="acciones mo-barra">${FILTROS.map(([k, n]) => `<button class="chip-boton ${_filtro === k ? 'activo' : ''}" data-action="mtFiltro" data-p0="${k}">${n}</button>`).join('')}</div>
     <p class="nota">Mostrando ${Math.min(lista.length, 300)} de ${lista.length}${admin ? ` · ${eur(lista.reduce((t, s) => t + netoMensual(s), 0), 2)} al mes sin impuestos` : ''}.</p>
-    <div class="tarjeta mo-scroll"><table class="tabla" id="mt-tabla"><thead><tr><th>Sede</th><th>Plan</th>${admin ? '<th class="num">Cuota/mes</th>' : ''}<th>Quién cobra</th><th>Pago</th><th>Próxima cuota</th></tr></thead>
+    <div class="tarjeta mo-scroll"><table class="tabla mt-maestra" id="mt-tabla"><thead><tr><th>Sede</th><th>Plan y cuota</th><th>Cobro</th><th>Cert. digital</th><th>Copia de seguridad</th>
+      <th>Control horario</th><th>Revisiones</th><th>Teléfonos</th><th>Código</th><th></th></tr></thead>
       <tbody>${lista.slice(0, 300).map(s => {
         const [txt, tono] = PASARELA[pasarela(s)];
-        return `<tr class="fila-clic" data-action="mtAbrir" data-p0="${esc(s.id)}">
-        <td><strong>${esc(s.nombre)}</strong>${_clientes.get(s.cliente_id ?? '') ? `<br><small class="nota">${esc(_clientes.get(s.cliente_id ?? ''))}</small>` : ''}</td>
-        <td>${esc(s.plan ?? '')}${s.frecuencia_pago && s.frecuencia_pago !== 'Mensual' ? ` <small class="nota">${esc(s.frecuencia_pago)}</small>` : ''}</td>
-        ${admin ? `<td class="num">${s.importe_mantenimiento ? eur(netoMensual(s), 2) : '—'}${s.importe_incluye_impuesto ? '<br><small class="nota" title="La cartera de Zoho guarda el importe con el IGIC dentro">bruto Zoho</small>' : ''}</td>` : ''}
-        <td><span class="chip ${tono}">${esc(txt)}</span></td>
-        <td>${chipPago(s)}</td>
-        <td>${fechaCorta(s.proxima_cuota)}</td></tr>`;
-      }).join('') || `<tr><td colspan="${admin ? 6 : 5}" class="vacio">Ninguna sede con ese filtro.</td></tr>`}</tbody></table></div>`;
+        return `<tr data-sede="${esc(s.id)}">
+        <td><a href="#/sitios/${esc(s.id)}"><strong>${esc(s.nombre)}</strong></a>${nombreCliente(s) ? `<br><small class="nota">${esc(nombreCliente(s))}</small>` : ''}${s.programa_tpv ? `<br><small class="nota">TPV ${esc(s.programa_tpv)}</small>` : ''}</td>
+        <td><span class="chip">${esc(s.plan ?? '')}</span>${admin && s.importe_mantenimiento ? `<br>${eur(netoMensual(s), 2)}/mes${mesesDe(s.frecuencia_pago) > 1 ? ` <small class="nota">· ${esc(s.frecuencia_pago)}</small>` : ''}` : ''}</td>
+        <td><span class="chip ${tono}">${esc(txt)}</span><br>${chipPago(s)}${s.proxima_cuota ? `<br><small class="${(diasHasta(s.proxima_cuota) ?? 99) <= 7 ? 'g-mal' : 'nota'}">Cuota ${esc(fechaCorta(s.proxima_cuota))}</small>` : ''}</td>
+        <td>${celdaCert(s, escribe)}</td><td>${celdaBackup(s, escribe)}</td><td>${celdaCh(s, escribe)}</td><td>${rev(s)}</td>
+        <td>${celdaTels(s)}</td><td>${celdaCodigo(s)}</td>
+        <td><a class="btn secundario" href="#/mantenimientos/ficha/${esc(s.id)}">Ficha</a></td></tr>`;
+      }).join('') || '<tr><td colspan="10" class="vacio">Ninguna sede con ese filtro.</td></tr>'}</tbody></table></div>`;
+}
+
+export async function pintarMantenimientos(el: HTMLElement, params: string[] = []) {
+  const [p, id, sub] = params;
+  if (p === 'ficha' && id) return (await import('./ficha')).pintarFicha(el, id);
+  if (p === 'alta') return (await import('./alta')).pintarAlta(el, id);
+  if (p === 'checklist') return (await import('./checklist')).pintarChecklist(el);
+  if (p === 'seguimiento') return (await import('./seguimiento')).pintarSeguimiento(el, id);
+  if (p === 'plantillas') return (await import('./planes')).pintarPlanes(el, id, sub);
+  el.innerHTML = '<p class="cargando">Cargando…</p>';
+  const [error, escribe] = await Promise.all([cargar(), esDelHub('locales')]);
+  if (error && !_lista.length) { el.innerHTML = `<p class="aviso mal">No se pudieron leer las sedes: ${esc(error.message)}</p>`; return; }
+  if (p === 'locales') await pintarLocales(el, escribe);
+  else await pintarResumen(el, escribe);
 }
 
 let _timer: number | undefined;
 registrarAcciones({
-  mtAbrir(id: string) { ir('sitios', id); },
   mtFiltro(k: string) { _filtro = k; resolver(); },
   mtPlan(v: string) { _plan = v; resolver(); },
-  // La barra de un plan filtra por él; pulsarla otra vez lo quita.
-  mtPlanBarra(v: string) { _plan = v === _plan ? '' : v; resolver(); },
+  mtFicha(v: string) { _ficha = v; resolver(); },
+  // La barra de un plan lleva a la tabla filtrada por él; pulsarla otra vez lo quita.
+  mtPlanBarra(v: string) { _plan = v === _plan ? '' : v; ir('mantenimientos', 'locales'); },
   mtFiltrar(v: string) {
     _q = v;
     clearTimeout(_timer);
@@ -156,5 +240,15 @@ registrarAcciones({
       resolver();
       window.setTimeout(() => { const f = document.getElementById('mt-filtro') as HTMLInputElement | null; f?.focus(); f?.setSelectionRange(v.length, v.length); }, 60);
     }, 250);
+  },
+  // mantSetCampo de la app: lo que se edita en la fila (certificado, copia comprobada, control horario).
+  async mtCampo(id: string, campo: string, valor: string) {
+    if (!['cert_caducidad', 'backup_comprobado', 'control_horario'].includes(campo)) return;
+    const v = campo === 'control_horario' ? (valor === 'si' ? true : valor === 'no' ? false : null) : (valor || null);
+    const r = await API.patch('locales', { id: `eq.${id}` }, { [campo]: v });
+    if (r.error) { toast(`No se pudo guardar: ${r.error.message}`, 'error'); return; }
+    const s = _lista.find(x => x.id === id);
+    if (s) (s as unknown as Record<string, unknown>)[campo] = v;
+    toast('Guardado');
   },
 });
