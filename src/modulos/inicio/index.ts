@@ -4,10 +4,12 @@
 import type { Modulo } from '../../core/modulo';
 import { modulos } from '../../core/router';
 import { esAdmin } from '../../core/estado';
+import { enMenuEmpleado } from '../../core/empleado';
 import { esc } from '../../ui/dom';
 
 export function visibles(): Modulo[] {
-  return modulos().filter(m => m.id !== 'inicio' && (!m.soloAdmin || esAdmin()));
+  // Quien no es admin, el menú reducido del técnico (modo empleado, core/empleado.ts).
+  return modulos().filter(m => m.id !== 'inicio' && (!m.soloAdmin || esAdmin()) && enMenuEmpleado(m.id));
 }
 
 export function hrefDe(m: Modulo): string {

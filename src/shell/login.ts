@@ -12,6 +12,7 @@ export function pintarLogin(raiz: HTMLElement, aviso = '') {
         <label>Contraseña <input id="lg-pass" type="password" autocomplete="current-password" required></label>
         <button class="btn" type="submit">Entrar</button>
         <button class="btn secundario" type="button" data-action="entrarGoogle">Entrar con Google</button>
+        <p class="nota"><a href="/privacidad.html" target="_blank" rel="noopener">Política de privacidad</a></p>
       </form>
     </main>`;
 }

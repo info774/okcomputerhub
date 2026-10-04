@@ -9,6 +9,7 @@ import { visibles, hrefDe } from '../modulos/inicio';
 import { pintarPantalla } from './pantalla';
 import { escritorioActivo, pintarEscritorio, mostrarEnEscritorio } from './escritorio';
 import { pintarWhatsapp } from './whatsapp';
+import { controlTexto } from './texto';
 
 export function pintarShell(raiz: HTMLElement) {
   const u = usuario();
@@ -55,7 +56,7 @@ function pintarMenu() {
           <span aria-hidden="true">${esc(m.icono)}</span> ${esc(m.titulo)}${m.enlaceExterno ? ' <small>↗</small>' : ''}
         </a>`).join('')}
     </div>`).join('')
-    + `<button class="menu-escritorio" data-action="osEntrar">🖥 Modo escritorio</button>`;
+    + `<button class="menu-escritorio" data-action="osEntrar">🖥 Modo escritorio</button>` + controlTexto();
 }
 
 export async function mostrarModulo(m: Modulo, params: string[]) {

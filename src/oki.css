@@ -510,3 +510,5 @@ body.os-modo .wa.cerrado .wa-num { position: absolute; top: 4px; right: 4px; }
 .wa-agente { padding: .75rem; display: flex; flex-direction: column; gap: .5rem; }
 .wa-agente h4 { margin: 0; }
 .wa-agente ul { margin: 0 0 0 1.1rem; padding: 0; font-size: .85rem; }
+/* Con el menú abierto en el móvil, la barra de WhatsApp no tapa su pie (tamaño del texto, modo escritorio). */
+@media (max-width: 767px) { body.menu-abierto .wa { display: none; } }

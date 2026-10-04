@@ -12,6 +12,7 @@ import { barras } from '../../ui/barras';
 import { enApp, eur } from '../ventas/datos';
 import { esMio } from '../direccion';
 import { botonChatFicha } from '../../ui/chat-ficha';
+import { enlaceHistorial } from '../../ui/historial';
 
 interface Presupuesto {
   id: string; created_at: string | null; cliente_id: string | null; local_id: string | null; contacto_id: string | null;
@@ -157,7 +158,7 @@ async function pintarFicha(el: HTMLElement, id: string) {
   el.innerHTML = `<p><a href="#/presupuestos">← Presupuestos</a></p>
     ${delHub ? '' : avisoSoloLectura('Presupuestos')}
     <div class="tarjeta-cab"><h2>${esc(nombre(p))}</h2>
-      <div class="acciones">${botonChatFicha('presupuesto', p.id, nombre(p), `#/presupuestos/${p.id}`)}
+      <div class="acciones">${botonChatFicha('presupuesto', p.id, nombre(p), `#/presupuestos/${p.id}`)}${enlaceHistorial('presupuestos', p.id)}
         <a class="btn secundario" href="#/presupuestos/${esc(p.id)}/pdf">🖨 PDF</a>
         ${delHub ? `<a class="btn secundario" href="#/presupuestos/${esc(p.id)}/editar">✎ Editar</a>
           <button class="btn secundario" data-action="ppDuplicar" data-p0="${esc(p.id)}">⧉ Duplicar</button>
