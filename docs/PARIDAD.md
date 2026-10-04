@@ -68,7 +68,12 @@ Fran, 2026-10-03).
    conectar (HECHA 2026-10-04: pestaña Cobros, funciones `stripe-suscripcion`
    y `stripe-webhook` desplegadas y SIN registrar en Stripe, pago tras firmar;
    `20261026_cobros.sql`; lo que falta para encenderlo, en PENDIENTE_FRAN
-   §8 bis), 4 cartera vieja de Zoho Billing.
+   §8 bis), 4 cartera vieja de Zoho Billing (HECHA 2026-10-04: función
+   `zoho-cartera` con comprobar, listar, vincular y el repaso diario por
+   pg_cron, que no escribe hasta el corte; «Comprobar en Zoho» en Cobros y
+   suscripciones de Zoho Billing en la ficha del cliente; `20261027_zoho_cartera.sql`).
+   **Bloque 4 HECHO** (2026-10-04), preparado para el corte de `mantenimiento`
+   (y de `clientes`): falta lo de Fran (PENDIENTE_FRAN §5 y §8 bis).
 5. **WhatsApp completo**: webhook con menú y horario, medios, plantilla fuera de
    24 h, mandar documentos, enlaces rápidos, de WhatsApp a ticket.
 6. **Sistema**: usuarios y modo empleado, deshacer, cola offline, historial por
@@ -169,7 +174,7 @@ Fran, 2026-10-03).
 | Cobros con Stripe (`mant-cobros.js`, `stripe-suscripcion`) | Preparado | `#/mantenimientos/cobros` (solo admin: cifras, sedes con sus botones, filtros, buscador, enlace de pago, cambiar plan, pausar, baja, desvincular de Zoho, ajustes) + función `stripe-suscripcion` (409 hasta el corte) | Corte de `mantenimiento` y las claves de Stripe (PENDIENTE_FRAN §8 bis). |
 | Libro de cuotas, «Emitir en Zoho», abonos | Preparado | Libro en Cobros y en la sede (`/cobros/sede/<id>`), abonar (`/cobros/abonar/<id>`); espejos `mant_facturas`, `mant_abonos` y los contadores de serie | Corte (y los permisos nuevos de Zoho, PENDIENTE_FRAN §5). |
 | Webhook de Stripe → factura MANT- en Zoho | Preparado | Función `stripe-webhook` (SIN_JWT, firma de Stripe; sin el corte no toca nada) | Registrarla en Stripe el día del corte (PENDIENTE_FRAN §8 bis). |
-| Cartera vieja de Zoho Billing | Falta | — | Solo se pinta (`sedeEnZoho`). |
+| Cartera vieja de Zoho Billing (`sync-zoho-subscription*`, `list-zoho-subscriptions`) | Preparado | Función `zoho-cartera` (comprobar, listar, vincular, `diario` a las 4:10 UTC por pg_cron); «Comprobar en Zoho» en Cobros (consulta ya; guarda tras el corte), «Desvincular», y «Zoho Billing» en la pestaña Sedes del cliente | Corte de `clientes` y `mantenimiento`; permisos ZohoSubscriptions en el Self Client (PENDIENTE_FRAN §5). |
 | Checklist, Seguimiento (kanban), Plantillas de planes | Preparado | `#/mantenimientos/checklist` (tareas del plan por periodo), `/seguimiento` (kanban con arrastre y formulario), `/plantillas` (planes solo admin, sus tareas y checklists de visita) | Corte de `mantenimiento` (y `clientes` para marcar tareas). |
 | Checklist de la visita en el trabajo (`loadChecklistForTrabajo`) | Preparado | Ficha del trabajo (`trabajos/checklist-visita.ts`, espejo `checklist_respuestas` en el área `trabajos`) | Corte de `trabajos`. |
 | Contratos: generar, editar, firmar, renovaciones | Preparado | `#/mantenimientos/documentos` (contratos, renovaciones con preaviso, avisado, no renovar; insignia), `#/mantenimientos/contrato/…` (generar/editar UN formulario, borrador, enlace, firmado imprimible, anular y eliminar solo admin); el contrato de cada sede en la tabla maestra | Corte de `mantenimiento`. «Domiciliar», «Cambiar forma de pago» y «Cambiar plan» desde el contrato: con Cobros (tanda 3). |

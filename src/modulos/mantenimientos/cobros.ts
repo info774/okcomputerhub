@@ -21,7 +21,7 @@ import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, toast } from '../../ui/dom';
 import { navPestanas, olvidarMantenimientos } from './vista';
-import { sedeEnZoho, sinAcentos, FRECUENCIAS, normalizaFrecuencia, mesesDe, fechaCorta, IGIC } from './datos';
+import { sedeEnZoho, sinAcentos, FRECUENCIAS, normalizaFrecuencia, mesesDe, fechaCorta, IGIC, urlZohoBilling } from './datos';
 import { planesActivos } from './planes';
 
 interface Cobro {
@@ -52,6 +52,10 @@ let _q = '';
 let _escribe = false;
 let _enlace: { url: string; sede: Cobro | null; caduca: string | null } | null = null;
 let _divergentes: { sede: string; app: number; stripe: number }[] = [];
+// Lo último que contestó Zoho Billing al «Comprobar en Zoho» de una sede.
+interface ZohoComprobado { local: string; sede: string; no_existe?: boolean; guardado: boolean; mensaje?: string; status?: string; plan?: string | null;
+  estado_pago?: string; deuda?: number | null; facturas_impagadas?: number | null; deuda_error?: string | null; importe?: number | null; proxima_cuota?: string | null; url?: string }
+let _zoho: ZohoComprobado | null = null;
 let _timer: number | undefined;
 
 const DIAS_SEPA = 10;
@@ -126,7 +130,7 @@ export async function pintarCobros(el: HTMLElement, sub?: string, id?: string) {
   const sedePor = new Map(_cobros.map(c => [c.local_id, c]));
   const facturas = q ? _facturas.filter(f => sinAcentos(f.numero_serie).includes(q) || sinAcentos(f.zoho_invoice_number).includes(q) || (sedePor.has(f.local_id ?? '') && coincide(sedePor.get(f.local_id!)!))) : _facturas;
   el.innerHTML = `${_escribe ? '' : avisoSoloLectura('El cobro de las cuotas')}${navPestanas('cobros')}
-    ${panelEnlace()}${panelDivergentes()}
+    ${panelEnlace()}${panelDivergentes()}${panelZoho()}
     <div class="di-cifras pp-cifras mcb-cifras">
       ${kpi(euros(enStripe.reduce((s, c) => s + netoSede(c), 0)), `Cuota mensual domiciliada (${_cfg?.precio_incluye_impuesto ? 'con impuestos' : `sin impuestos · +${pct()} %`})`)}
       ${kpi(euros(cobradoMes), 'Cobrado este mes (con impuestos)', 'bien')}
@@ -183,9 +187,11 @@ function botonesSede(c: Cobro): string {
       <button class="btn peligro" data-action="mcbCancelar" data-p0="${id}"${d}>✕ Dar de baja</button>`;
   }
   // Cartera vieja de Zoho Billing: la cobra Zoho; aquí solo se mira y se desvincula (tanda 4: comprobar).
-  if (sedeEnZoho(c)) return `<a class="btn secundario" href="https://billing.zoho.eu/app/20107733530#/subscriptions/${encodeURIComponent(c.zoho_subscription_id ?? '')}" target="_blank" rel="noopener">↗ Ver en Zoho</a>
+  // «Comprobar en Zoho» vale ya (solo lee; con el corte, además guarda en la sede).
+  const comprobar = c.zoho_subscription_id ? `<button class="btn secundario" data-action="mcbComprobarZoho" data-p0="${id}">⬇ Comprobar en Zoho</button>` : '';
+  if (sedeEnZoho(c)) return `<a class="btn secundario" href="${esc(urlZohoBilling(c.zoho_subscription_id))}" target="_blank" rel="noopener">↗ Ver en Zoho</a> ${comprobar}
       <button class="btn secundario" data-action="mcbDesvincular" data-p0="${id}"${d}>Desvincular de Zoho</button>`;
-  return `<button class="btn" data-action="mcbCrear" data-p0="${id}"${d}>＋ Domiciliar</button>${zohoDeBaja(c) ? ` <button class="btn secundario" data-action="mcbDesvincular" data-p0="${id}"${d}>Desvincular de Zoho</button>` : ''}`;
+  return `<button class="btn" data-action="mcbCrear" data-p0="${id}"${d}>＋ Domiciliar</button>${zohoDeBaja(c) ? ` ${comprobar} <button class="btn secundario" data-action="mcbDesvincular" data-p0="${id}"${d}>Desvincular de Zoho</button>` : ''}`;
 }
 
 function filaSede(c: Cobro): string {
@@ -231,6 +237,19 @@ function panelEnlace(): string {
     <p class="nota">${caduca ? `El enlace caduca el ${esc(fechaCorta(caduca))}.` : 'Es de un solo uso y dura 24 horas.'} Si caduca, genera otro desde aquí.</p></section>`;
 }
 
+function panelZoho(): string {
+  const z = _zoho;
+  if (!z) return '';
+  return `<section class="tarjeta" id="mcb-zoho"><h3>Zoho Billing · ${esc(z.sede)}</h3>
+    ${z.no_existe ? `<p class="g-aviso">${esc(z.mensaje ?? 'Esa suscripción ya no existe en Zoho Billing.')}</p>` : `<dl class="me-datos mcb-datos">
+      <div><dt>Estado en Zoho</dt><dd>${esc(z.status || '—')}</dd></div><div><dt>Estado de pago</dt><dd>${esc(z.estado_pago || '—')}</dd></div>
+      <div><dt>Debe</dt><dd>${z.deuda != null ? `${euros(z.deuda)}${z.facturas_impagadas ? ` (${z.facturas_impagadas} facturas)` : ''}` : `<span class="nota">sin consultar${z.deuda_error ? `: ${esc(z.deuda_error)}` : ''}</span>`}</dd></div>
+      <div><dt>Cuota (con impuesto)</dt><dd>${euros(z.importe)}</dd></div><div><dt>Próxima cuota</dt><dd>${esc(fechaCorta(z.proxima_cuota)) || '—'}</dd></div></dl>
+      ${z.url ? `<p><a href="${esc(z.url)}" target="_blank" rel="noopener">↗ Abrir en Zoho Billing</a></p>` : ''}`}
+    <p class="nota">${z.guardado ? 'Guardado en la sede.' : 'Solo consultado: hasta el cambio, la sede la actualiza la app cada noche.'}</p>
+    <button class="btn secundario" data-action="mcbCerrarZoho">Cerrar</button></section>`;
+}
+
 function panelDivergentes(): string {
   if (!_divergentes.length) return '';
   return `<section class="aviso" id="mcb-divergentes"><strong>${_divergentes.length} sede(s) tenían en la app una cuota distinta de la que cobra Stripe.</strong> Se ha guardado la de Stripe, que es la que se cobra; si la buena es la otra, cámbiala con «Cambiar plan».
@@ -247,7 +266,7 @@ function pintarSede(el: HTMLElement, id: string) {
   el.innerHTML = `${_escribe ? '' : avisoSoloLectura('El cobro de las cuotas')}${navPestanas('cobros')}
     <p><a href="#/mantenimientos/cobros">← Cobros</a> · <a href="#/sitios/${esc(c.local_id)}">Ficha del sitio</a></p>
     <h2>${esc(c.cliente_nombre || '—')} · ${esc(c.local_nombre || '—')}</h2>
-    ${panelEnlace()}
+    ${panelEnlace()}${panelZoho()}
     <section class="tarjeta" id="mcb-sede"><p class="mdo-cab">${deudaPlan(c) ? chipsSede(c) : chip('Sin mantenimiento')}</p>
       <dl class="me-datos mcb-datos">${dato('Cuota', neto ? `${euros(neto)}/mes <small class="nota">${_cfg?.precio_incluye_impuesto ? 'con impuestos' : 'sin impuestos'}</small><br><small class="nota">Se le cargan ${euros(conImpuesto(neto * meses))} ${cada(c.frecuencia_pago)}</small>${c.importe_incluye_impuesto ? `<br><small class="g-aviso">Heredado de Zoho (${euros(c.importe_mantenimiento)} con impuesto)</small>` : ''}` : '—')}
         ${dato('Frecuencia', esc(normalizaFrecuencia(c.frecuencia_pago) ?? c.frecuencia_pago ?? '—'))}${dato('Forma de pago', esc(c.forma_pago || '—'))}${dato('Estado de pago', esc(c.estado_pago || '—'))}
@@ -408,6 +427,15 @@ registrarAcciones({
     if (r.error) { toast(`No se pudo desvincular: ${r.error.message}`, 'error'); return; }
     toast('Sede desvinculada de Zoho. Ya se puede domiciliar'); olvidarMantenimientos(); resolver();
   },
+  async mcbComprobarZoho(id: string) {
+    const c = sede(id); if (!c) return;
+    const r = await llamarFuncion<ZohoComprobado>('zoho-cartera', { accion: 'comprobar', local_id: id });
+    if (r.error || !r.data) { toast(r.error ?? 'Zoho no contestó', 'error'); return; }
+    _zoho = { ...r.data, local: id, sede: [c.cliente_nombre, c.local_nombre].filter(Boolean).join(' · ') };
+    if (r.data.guardado) olvidarMantenimientos();
+    resolver();
+  },
+  mcbCerrarZoho() { _zoho = null; resolver(); },
   async mcbEmitir(facturaId: string) { if (await fn('emitir_zoho', { factura_id: facturaId })) resolver(); },
   async mcbCopiar() {
     try { await navigator.clipboard.writeText(_enlace?.url ?? ''); toast('Enlace copiado'); }

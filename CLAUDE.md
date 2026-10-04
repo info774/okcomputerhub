@@ -543,6 +543,17 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   la app. Arreglado al portar: el import que rompía «Emitir en Zoho», la
   frecuencia sin normalizar en «Cambiar plan» y la forma de pago
   («Stripe <frecuencia>»). Arnés `verify-cobros.mjs`.
+  La cartera vieja de Zoho Billing (tanda 4, `20261027_zoho_cartera.sql`):
+  función `zoho-cartera` (SIN_JWT: token del cron o persona del hub) que junta
+  las tres de la app — `comprobar` una sede, `listar` las suscripciones de un
+  cliente, `vincular` (admin) y `diario` (pg_cron 4:10 UTC). Hacia Zoho, solo
+  lectura; en la sede escribe SOLO con `locales` y `mant_facturas` del hub
+  (antes devuelve lo que dice Zoho con `guardado: false`: lo guarda la app).
+  «Esa suscripción no existe» desvincula la sede (`camposZohoBorrada`, la deuda
+  se queda) y las sedes con Stripe no se tocan. En el front: «Comprobar en
+  Zoho» en Cobros (vale ya) y «Zoho Billing» en la pestaña Sedes del cliente
+  (`mantenimientos/zoho-billing.ts`, `czb-`). El enlace a una suscripción sale
+  de `urlZohoBilling()` de `datos.ts`.
 - **Inventario** (`src/modulos/inventario/`, `#/inventario`, 2026-10-02): el
   stock POR UBICACIÓN (furgonetas, tienda) y «Todas» sumando el mismo producto
   por `catalogo_id` o por nombre (la regla de «Total» de `furgonetas.js`), el
