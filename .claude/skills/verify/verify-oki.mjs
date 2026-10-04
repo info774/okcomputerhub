@@ -8,7 +8,10 @@
 // la campana, «Trabajos completados», «Sí, contéstalo» (Oki redacta en el
 // ticket), la voz (pregunta → buscador; encargo → comanda tras confirmar con un
 // micrófono de mentira), órdenes rápidas, pie con el último sync y el repaso
-// de la mañana. Sin datos reales.
+// de la mañana. El centro de mando (2026-10-04): barra con marca, estado del
+// sistema, reloj, buscar y operador; núcleo de Oki, avisos en vivo con insignia
+// (también los informativos), agentes de Oki con su estado, hoy en la agenda,
+// memoria (documentos, wiki, comandas) y conexiones. Sin datos reales.
 //   npm run build && node .claude/skills/verify/verify-oki.mjs
 import { servidor, navegador, baseMemoria, preparar, contador, CAPTURAS, SB } from './comun.mjs';
 
@@ -16,16 +19,40 @@ const { ok, fallos } = contador();
 const srv = await servidor(4193);
 const ahora = Date.now();
 const iso = ms => new Date(ms).toISOString();
+const hoy0 = new Date().setHours(0, 0, 0, 0), hoy24 = hoy0 + 86400e3;
 const lunes = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); })();
 
 const INICIAL = {
   usuarios: [{ id: 'u-ana', nombre: 'Ana Admin', email: 'ana@ok.test', rol: 'admin', activo: true }],
   areas: [], proyectos: [], proyecto_tareas: [],
-  sync_estado: [{ clave: 'audit', ultima_ok: iso(ahora - 5 * 60e3), ultimo_error_at: null }],
+  sync_estado: [{ clave: 'audit', ultima_ok: iso(ahora - 5 * 60e3), ultimo_error_at: null },
+    { clave: 'zoho', ultima_ok: iso(ahora - 20 * 60e3), ultimo_error_at: null },
+    { clave: 'correo', ultima_ok: iso(ahora - 60e3), ultimo_error_at: iso(ahora) , ultimo_error: 'falló' }],
   sesiones: [{ id: 's1', entidad_tipo: 'trabajo', entidad_id: 'w1', fin: iso(ahora - 3600e3) }, { id: 's2', entidad_tipo: 'trabajo', entidad_id: 'w2', fin: iso(ahora - 3600e3) },
     { id: 's3', entidad_tipo: 'trabajo', entidad_id: 'w3', fin: iso(lunes - 86400e3) }],
   trabajos: [{ id: 'w1', numero: 1, estado: 'Completado' }, { id: 'w2', numero: 2, estado: 'En progreso' }, { id: 'w3', numero: 3, estado: 'Facturado' }],
   clientes: [], ticket_comentarios: [], plantillas_respuesta: [],
+  // Paneles del centro de mando
+  // Anclados al día de HOY (no a «ahora ± horas»): cerca de la medianoche se
+  // salían del día y el arnés fallaba según la hora a la que corriera.
+  agenda: [
+    { id: 'b1', trabajo_id: 'w1', titulo: 'Revisión TPV Costa Adeje', inicio: iso(hoy0 + 60e3), fin: iso(hoy0 + 120e3), tecnicos: ['Matteo'], estado: 'Completado', todo_el_dia: false },
+    { id: 'b2', trabajo_id: 'w2', titulo: 'Cambiar router La Laguna', inicio: iso(ahora - 600e3), fin: iso(Math.min(ahora + 3000e3, hoy24 - 120e3)), tecnicos: ['Ana'], estado: 'En progreso', todo_el_dia: false },
+    { id: 'b3', trabajo_id: null, titulo: 'Reunión con proveedor', inicio: iso(Math.min(ahora + 2 * 3600e3, hoy24 - 90e3)), fin: iso(Math.min(ahora + 3 * 3600e3, hoy24 - 60e3)), tecnicos: [], estado: null, todo_el_dia: false },
+    { id: 'b4', trabajo_id: 'w3', titulo: 'Ayer', inicio: iso(ahora - 30 * 3600e3), fin: iso(ahora - 29 * 3600e3), tecnicos: [], estado: null, todo_el_dia: false },
+  ],
+  claude_peticiones: [{ id: 'cp1', estado: 'en_curso' }, { id: 'cp2', estado: 'pendiente' }, { id: 'cp3', estado: 'hecha' }],
+  documentos: [
+    { id: 'd1', estado: 'indexado', fragmentos: 12, indexado_at: iso(ahora - 86400e3) },
+    { id: 'd2', estado: 'indexado', fragmentos: 8, indexado_at: iso(ahora - 3 * 86400e3) },
+    { id: 'd3', estado: 'pendiente', fragmentos: 0, indexado_at: null },
+  ],
+  paginas: [{ id: 'p1', archivada: false }, { id: 'p2', archivada: false }, { id: 'p3', archivada: true }],
+  comanda_tareas: [{ id: 'ct1', estado: 'hecha', hecha_at: iso(ahora - 3600e3) }, { id: 'ct2', estado: 'pendiente', hecha_at: null }],
+  telegram_vinculos: [{ usuario_id: 'u-ana', chat_id: 123, activo: true }],
+  informes_programados: [{ id: 'ip1', activo: true }, { id: 'ip2', activo: false }],
+  rmm_equipos: [{ id: 'e1', conectado: true }, { id: 'e2', conectado: true }, { id: 'e3', conectado: false }],
+  rmm_alertas: [],
   tickets: [
     { id: 't1', estado: 'Cerrado', created_at: iso(lunes + 3600e3), cerrado_at: iso(lunes + 7200e3), sla_respuesta_at: iso(lunes + 9000e3), primera_respuesta_at: iso(lunes + 5000e3) },
     { id: 't2', estado: 'Cerrado', created_at: iso(lunes + 3600e3), cerrado_at: iso(lunes + 9000e3), sla_respuesta_at: iso(lunes + 4000e3), primera_respuesta_at: iso(lunes + 8000e3) },
@@ -127,8 +154,46 @@ try {
   await page.click('.ok-campana summary');
   ok((await page.textContent('a.ok-fila-dato span')) === 'Trabajos completados' && (await page.textContent('a.ok-fila-dato b')) === '1', 'estadísticas: 1 trabajo completado (fichaje acabado esta semana y completado)');
   ok(await page.locator('.ok-orden').count() === 6 && await page.locator('.ok-orden[href="#/lista-dia"]').count() === 1, 'órdenes rápidas');
-  ok(await page.locator('.ok-aviso').count() === 2, 'Necesita a una persona: 2 avisos');
-  ok(await page.locator('.ok-aviso.mal').count() === 1, 'el grave va marcado');
+  ok(await page.locator('.ok-aviso').count() === 3, 'avisos en vivo: 3 (los 2 que necesitan a una persona y el informativo detrás)');
+  ok(await page.locator('.ok-aviso.mal').count() === 1 && (await page.textContent('.ok-aviso.mal .ok-insignia')).trim() === 'Urgente', 'el grave va marcado con la insignia «Urgente»');
+  ok((await page.textContent('.ok-aviso.info .ok-insignia')).trim() === 'Para saber' && await page.locator('.ok-aviso').last().evaluate(e => e.classList.contains('info')), 'el informativo va el último, «Para saber»');
+  // Barra de mando
+  ok((await page.textContent('.ok-marca-txt')).includes('OKI') && /\d\d:\d\d:\d\d/.test(await page.textContent('#ok-hora')), 'barra: marca OKI y reloj con segundos');
+  ok((await page.textContent('.ok-operador-txt')).includes('Ana') && (await page.textContent('.ok-operador-txt')).includes('al mando'), 'barra: operador con su nombre (admin = «al mando»)');
+  ok(await page.locator('.ok-buscar[data-action="abrirBuscador"]').count() === 1, 'barra: «Buscar o pedir algo» abre la paleta');
+  // Núcleo de Oki
+  await page.waitForFunction(() => document.querySelector('#ok-nuc-conexiones small')?.textContent.includes('de 9'));
+  const nuc = async id => (await page.textContent(`#ok-nuc-${id} small`)).trim();
+  ok(await nuc('oki') === 'En marcha' && await nuc('claude') === '1 en curso' && await nuc('memoria') === '2 documentos indexados', `núcleo: Oki en marcha, Claude 1 en curso, 2 documentos (${await nuc('oki')} · ${await nuc('claude')} · ${await nuc('memoria')})`);
+  ok(await nuc('sistema') === '1 urgente' && await page.getAttribute('#ok-nuc-sistema', 'data-tono') === 'mal', 'núcleo: sistema con 1 urgente en rojo');
+  ok(await nuc('voz') === 'Lista para escuchar', 'núcleo: la voz está lista');
+  // Agentes
+  await page.waitForFunction(() => document.querySelector('#ok-ag-vigia .ok-ag-est')?.textContent.includes('equipos'));
+  const ag = async id => [await page.getAttribute(`#ok-ag-${id}`, 'data-estado'), (await page.textContent(`#ok-ag-${id} .ok-ag-est`)).trim()];
+  ok((await ag('sync')).join('|').startsWith('activo|Última pasada'), 'agentes: el sincronizador está activo con su última pasada');
+  ok((await ag('claude')).join('|') === 'activo|Trabajando en 1 petición', 'agentes: el trabajador de Claude trabaja en 1 petición');
+  ok((await ag('vigia')).join('|') === 'activo|2 de 3 equipos en línea', 'agentes: el vigía ve 2 de 3 equipos');
+  ok((await ag('indexador')).join('|') === 'activo|Indexando 1', 'agentes: el indexador tiene 1 pendiente');
+  ok((await ag('bot')).join('|') === 'activo|1 informe programado', 'agentes: el bot con 1 informe programado');
+  ok(await page.locator('.ok-agente').count() === 6, 'agentes: 6 tarjetas');
+  // Hoy en la agenda
+  await page.waitForSelector('.ok-hito');
+  ok(await page.locator('.ok-hito').count() === 3, 'agenda de hoy: 3 bloques (el de ayer no)');
+  ok(await page.locator('.ok-hito.hecho').count() === 1 && await page.locator('.ok-hito.ahora').count() === 1, 'agenda de hoy: uno hecho y uno ahora');
+  ok((await page.textContent('.ok-hito:last-child em')).startsWith('En ') && await page.getAttribute('.ok-hito.ahora .ok-hito-txt', 'href') === '#/trabajos/w2', 'agenda de hoy: el que viene dice cuánto falta y el bloque enlaza a su trabajo');
+  // Memoria
+  await page.waitForSelector('.ok-mem-cifra');
+  const cifras = await page.$$eval('.ok-mem-cifra', els => els.map(e => `${e.querySelector('small').textContent}=${e.querySelector('b').textContent}`));
+  ok(cifras.join(' ') === 'Documentos=2 Fragmentos=20 Páginas de la wiki=2 Proyectos abiertos=0 Comandas hechas esta semana=1', `memoria: ${cifras.join(' · ')}`);
+  ok(await page.locator('.ok-constelacion polygon').count() === 14 && await page.locator('.ok-constelacion polygon.con').count() === 2, 'memoria: constelación de 14 días con 2 con documentos');
+  // Conexiones
+  await page.waitForFunction(() => document.querySelector('#ok-cx-claude small')?.textContent !== '…');
+  const cx = async id => [await page.getAttribute(`#ok-cx-${id}`, 'data-tono'), (await page.textContent(`#ok-cx-${id} small`)).trim()];
+  ok((await cx('app'))[1] === 'Conectada' && (await cx('zoho'))[0] === 'bien' && (await cx('whatsapp'))[1] === '1 por contestar', 'conexiones: app, Zoho y WhatsApp conectados');
+  ok((await cx('correo')).join('|') === 'aviso|El último repaso falló', 'conexiones: el correo avisa de que el último repaso falló');
+  ok((await cx('drive')).join('|') === 'aviso|Sin carpeta' && (await cx('telegram')).join('|') === 'bien|1 persona' && (await cx('breeze')).join('|') === 'bien|3 equipos' && (await cx('claude'))[0] === 'bien', 'conexiones: Drive sin carpeta; Telegram, Breeze y Claude conectados');
+  ok((await page.textContent('#ok-conex-n')) === '7 conectadas' && await nuc('conexiones') === '7 de 9 conectadas', 'conexiones: 7 de 9, también en el núcleo');
+  ok((await page.textContent('#ok-red b')) === 'En línea' && (await page.textContent('#ok-pie-hora')).match(/\d\d:\d\d/), 'pie: red en línea y la hora de Tenerife');
   ok(await page.locator('.baldosa').count() > 5, 'las baldosas siguen debajo');
   await page.screenshot({ path: `${CAPTURAS}/oki-portada.png`, fullPage: true });
 

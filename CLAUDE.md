@@ -629,6 +629,35 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   el despachador desactiva el botón mientras dura una acción asíncrona; una
   acción que espera a que la persona vuelva a pulsar (grabar) tiene que volver
   al momento y seguir aparte.
+  **Centro de mando** (2026-10-04, a imagen del puesto de mando que mandó
+  Fran, en VERDE y hexágonos, no en azul): la portada ocupa todo el ancho
+  (`.principal:has(.ok-portada)`), barra de mando arriba (marca OKI, «Estado
+  del sistema», reloj con segundos, Buscar, campana y operador) y rejilla de
+  SEIS pistas a partir de 1100 px de contenedor (`.ok-cuerpo`, por
+  `grid-template-areas`): núcleo y voz | Oki | avisos en vivo; «Oki dice»;
+  agentes | hoy en la agenda | órdenes; monitor del Desk | memoria |
+  conexiones. En el móvil, una columna en otro orden (las areas mandan).
+  Paneles nuevos, todos de SOLO LECTURA y que se degradan a «—» si algo no se
+  puede leer: NÚCLEO (`ok-nuc-*`: sync, documentos indexados, voz, peticiones
+  a Claude, conexiones, avisos graves), AVISOS EN VIVO (`panorama_direccion`
+  con insignia Urgente · Atento · Para saber; los informativos van detrás),
+  AGENTES (`ok-ag-*`, `data-estado` activo | espera | reposo | mal: la onda
+  solo se mueve en activo; sincronizador = `sync_estado`, trabajador de Claude
+  = `claude_peticiones`, vigía = `rmm_equipos`, indexador = `documentos`, bot =
+  `informes_programados`/`telegram_vinculos`, oído = `puedeDictar()`), HOY EN
+  LA AGENDA (bloques de hoy del espejo `agenda`, mismo filtro que el contador
+  del calendario; Hecho · Ahora · En X min), MEMORIA (constelación de
+  documentos indexados por día, 14 días, y cifras: documentos, fragmentos sumados
+  de `documentos.fragmentos` porque `documentos_fragmentos` no se lee desde el
+  front, wiki, proyectos abiertos, comandas hechas) y CONEXIONES (`ok-cx-*`: app
+  por `sync_estado.audit`, Zoho/correo/Drive por sus claves de `sync_estado`,
+  Breeze por `rmm_equipos`, WhatsApp y Claude por la acción `estado` de la
+  función `whatsapp`, Telegram por `telegram_vinculos`). Un agente o conexión
+  nuevos: una entrada en `AGENTES`/`CONEXIONES`, su icono en `ICO` y su
+  `ponAgente`/`ponConexion` en la función que lea el dato. El título y el
+  párrafo del shell se esconden en la portada a partir de 1340 px (la barra
+  ya lleva la marca). Los arneses que midan la portada: `.ok-ph-n` ya no es
+  `nowrap` (en 390 px desbordaba 2 px).
 - **Chat de WhatsApp fijo** (`src/shell/whatsapp.ts`, función `whatsapp`,
   2026-10-02, con el OK de Fran a escribir en la app para esto): ventana abajo a
   la derecha en TODAS las pantallas, plegada al entrar. Las conversaciones son
