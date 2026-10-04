@@ -18,7 +18,13 @@ const iso = ms => new Date(ms).toISOString();
 
 const INICIAL = {
   usuarios: [{ id: 'u-ana', nombre: 'Ana Admin', email: 'ana@ok.test', rol: 'admin', activo: true }],
-  areas: [], tickets: [], ticket_comentarios: [], plantillas_respuesta: [], trabajos: [], presupuestos: [], presupuesto_plantillas: [],
+  areas: [], ticket_comentarios: [],
+  tickets: [{ id: 'tk9', numero: 5009, titulo: 'Datáfono sin conexión', estado: 'Abierto', prioridad: 'Media', canal: 'whatsapp', created_at: iso(ahora - 3600e3),
+    sla_respuesta_at: iso(ahora + 3600e3), sla_resolucion_at: iso(ahora + 86400e3), cliente_id: 'cl1', local_id: 'l1' }],
+  ticket_adjuntos: [
+    { id: 'ad1', ticket_id: 'tk9', nombre: 'Foto WhatsApp 04/10/26 9:15', drive_url: 'https://ejemplo.test/datafono.jpg', mime_type: 'image/jpeg', usuario: 'WhatsApp · Marta', created_at: iso(ahora - 3500e3) },
+    { id: 'ad2', ticket_id: 'tk9', nombre: 'Factura.pdf', drive_url: 'https://ejemplo.test/f.pdf', mime_type: 'application/pdf', usuario: 'WhatsApp · Marta', created_at: iso(ahora - 3400e3) },
+  ], plantillas_respuesta: [], trabajos: [], presupuestos: [], presupuesto_plantillas: [],
   clientes: [
     { id: 'cl1', nombre: 'Restaurante Costa SL', nif: 'B11111111', telefono: '922000001', activo: true },
     { id: 'cl2', nombre: 'Bar Manolo', nif: 'B22222222', telefono: '922000002', activo: true },
@@ -85,6 +91,14 @@ async function parseFalso(route) {
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
 const browser = await navegador();
+let page;
+// La pantalla, recién pintada (ir a la misma URL no vuelve a pintarla).
+async function abrirDesde() {
+  await page.evaluate(() => { location.hash = '#/tickets'; });
+  await page.waitForSelector('a[href="#/tickets/whatsapp"]');
+  await page.evaluate(() => { location.hash = '#/tickets/whatsapp'; });
+  await page.waitForSelector('#wai-texto');
+}
 try {
   const base = baseMemoria(INICIAL, {});
   const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1440, height: 1000 } });
@@ -97,7 +111,7 @@ try {
     window.__abiertos = [];
     window.open = (u, ...r) => { if (u) { window.__abiertos.push(String(u)); return null; } return abrir(u, ...r); };
   });
-  const page = await ctx.newPage();
+  page = await ctx.newPage();
   const errores = [];
   page.on('pageerror', e => errores.push(String(e.stack ?? e)));
   page.on('dialog', d => d.accept());
@@ -109,7 +123,7 @@ try {
   await page.click('#wa-cab');
   await page.waitForSelector('.wa-fila');
   await page.click('.wa-fila >> nth=0');
-  await page.waitForSelector('#wa-atajos .chip-boton');
+  await page.waitForFunction(() => document.getElementById('wa-atajos')?.textContent?.includes('Silver'));
   const atajos = await page.textContent('#wa-atajos');
   ok(atajos.includes('Silver') && atajos.includes('Pendiente de pago'), 'chip del plan de la sede y el pago torcido');
   ok(await page.locator('#wa-atajos a[href="#/clientes/cl1"]').count() === 1 && await page.locator('#wa-atajos a[href="#/sitios/l1"]').count() === 1, 'enlaces a la ficha del cliente y de la sede');
@@ -166,11 +180,16 @@ try {
   await page.screenshot({ path: `${CAPTURAS}/whatsapp-ventana.png` });
   await page.click('#wa-cab');
 
+  // ── Adjuntos del ticket (los que cuelga el webhook) ──────────────────────
+  await page.goto(`${srv.base}/#/tickets/5009`);
+  await page.waitForSelector('.tk-adjuntos');
+  ok(await page.locator('.tk-adjuntos li').count() === 2 && await page.getAttribute('.tk-adjuntos img', 'src') === 'https://ejemplo.test/datafono.jpg'
+    && await page.locator('.tk-adjuntos img').count() === 1, 'ficha del ticket: adjuntos, la foto en miniatura y el PDF como enlace');
+
   // ── #/tickets/whatsapp ───────────────────────────────────────────────────
   analisis = { tipo: 'ticket', titulo: 'Impresora de cocina sin imprimir', descripcion: 'La impresora de cocina no imprime los pedidos.', prioridad: 'Alta',
     remitente: 'Marta', telefono: '600 111 222', cliente: '', fecha: '', hora: '', texto: '' };
-  await page.goto(`${srv.base}/#/tickets/whatsapp`);
-  await page.waitForSelector('#wai-texto');
+  await abrirDesde();
   await page.fill('#wai-texto', 'Hola, la impresora de cocina no imprime');
   await page.click('#wai-analizar');
   await page.waitForSelector('.wai-cand');
@@ -185,8 +204,7 @@ try {
 
   // Trabajo con fecha
   analisis = { ...analisis, tipo: 'trabajo', titulo: 'Instalar cámara en la entrada', fecha: '2026-10-10', hora: '10:00' };
-  await page.goto(`${srv.base}/#/tickets/whatsapp`);
-  await page.waitForSelector('#wai-texto');
+  await abrirDesde();
   await page.fill('#wai-texto', 'Queremos poner una cámara el sábado 10 a las 10');
   await page.click('#wai-analizar');
   await page.waitForSelector('#wai-cuando');
@@ -199,8 +217,7 @@ try {
 
   // IA caída → análisis de reserva y cliente por nombre
   analisis = null;
-  await page.goto(`${srv.base}/#/tickets/whatsapp`);
-  await page.waitForSelector('#wai-texto');
+  await abrirDesde();
   await page.fill('#wai-texto', '[12/7/26, 9:15] Bar Manolo: hola\n[12/7/26, 9:16] Bar Manolo: la impresora de cocina no imprime, urgente');
   await page.click('#wai-analizar');
   await page.waitForSelector('#wai-titulo');
@@ -211,9 +228,7 @@ try {
   // Captura
   analisis = { tipo: 'ticket', titulo: 'TPV bloqueado', descripcion: 'El TPV se queda bloqueado.', prioridad: 'Media', remitente: 'Bar Manolo', telefono: '', cliente: 'Bar Manolo', fecha: '', hora: '',
     texto: 'Hola\nEl TPV se queda bloqueado' };
-  await page.goto(`${srv.base}/#/tickets/whatsapp`);
-  await page.waitForSelector('#wai-file', { state: 'attached' });
-  await page.fill('#wai-texto', '');
+  await abrirDesde();
   await page.setInputFiles('#wai-file', { name: 'captura.png', mimeType: 'image/png', buffer: PNG });
   await page.waitForSelector('#wai-titulo');
   const pc = llamadas.filter(l => l.fn === 'parse-whatsapp').at(-1);

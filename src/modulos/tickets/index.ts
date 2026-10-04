@@ -158,13 +158,14 @@ async function pintarFicha(el: HTMLElement, numero: string) {
   const { data: t } = await API.single<Ticket>('tickets', { select: '*', numero: `eq.${Number(numero) || 0}` });
   if (!t) { el.innerHTML = '<p class="aviso mal">No existe ese ticket.</p><p><a href="#/tickets">← Tickets</a></p>'; return; }
   _actual = t;
-  const [coms, personas, pls, cli, loc, con, trab] = await Promise.all([
+  const [coms, personas, pls, cli, loc, con, trab, adj] = await Promise.all([
     API.get<Comentario[]>('ticket_comentarios', { select: '*', ticket_id: `eq.${t.id}`, order: 'created_at' }),
     equipo(), plantillas(),
     t.cliente_id ? API.single<any>('clientes', { select: 'id,nombre,telefono,email', id: `eq.${t.cliente_id}` }) : Promise.resolve({ data: null }),
     t.local_id ? API.single<any>('locales', { select: 'id,nombre,direccion', id: `eq.${t.local_id}` }) : Promise.resolve({ data: null }),
     t.contacto_id ? API.single<any>('contactos', { select: 'id,nombre,telefono,email', id: `eq.${t.contacto_id}` }) : Promise.resolve({ data: null }),
     t.trabajo_id ? API.single<any>('trabajos', { select: 'id,numero,titulo,estado', id: `eq.${t.trabajo_id}` }) : Promise.resolve({ data: null }),
+    API.get<any[]>('ticket_adjuntos', { select: 'id,nombre,drive_url,mime_type,usuario,created_at', ticket_id: `eq.${t.id}`, order: 'created_at' }),
   ]);
   const c = cli.data, k = con.data;
   _ctx = { contacto: k?.nombre ?? null, cliente: c?.nombre ?? null, email: t.email_de ?? k?.email ?? c?.email ?? null, telefono: k?.telefono ?? c?.telefono ?? null };
@@ -215,6 +216,10 @@ async function pintarFicha(el: HTMLElement, numero: string) {
             <dt>SLA</dt><dd>Respuesta: ${t.primera_respuesta_at ? `hecha ${esc(fechaHora(t.primera_respuesta_at))}` : esc(fechaHora(t.sla_respuesta_at))}<br>
               Resolución: ${cerrado ? `cerrado ${esc(fechaHora(t.cerrado_at))}` : esc(fechaHora(t.sla_resolucion_at))}</dd>
           </dl></section>
+        ${adj.data?.length ? `<section class="tarjeta"><h3>Adjuntos <span class="chip">${adj.data.length}</span></h3>
+          <ul class="tk-adjuntos">${adj.data.map(a => `<li>${a.drive_url ? `<a href="${esc(a.drive_url)}" target="_blank" rel="noopener">${String(a.mime_type ?? '').startsWith('image/')
+            ? `<img src="${esc(a.drive_url)}" alt="${esc(a.nombre)}" loading="lazy">` : ''}${esc(a.nombre)}</a>` : esc(a.nombre)}
+            <small class="nota">${esc([a.usuario, hace(a.created_at)].filter(Boolean).join(' · '))}</small></li>`).join('')}</ul></section>` : ''}
         <section class="tarjeta"><h3>Trabajo</h3>
           ${trab.data ? `<p>🛠 Trabajo #${trab.data.numero} ${esc(trab.data.titulo ?? '')} · ${esc(trab.data.estado)} <button class="btn secundario" data-action="tkDesvincular">Quitar</button></p>`
             : `<form class="acciones" data-on-submit="tkVincular" data-prevent="1"><input id="tk-trabajo" type="number" min="1" placeholder="Nº de trabajo" aria-label="Número de trabajo">
