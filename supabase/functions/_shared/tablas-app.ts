@@ -74,6 +74,11 @@ export const TABLAS_APP: Record<string, TablaApp> = {
   checklist_plantillas: { auditada: false, columnas: c('id plan nombre items activa created_at') },
   checklist_respuestas: { auditada: false, columnas: c('id trabajo_id plantilla_id plantilla_nombre respuestas completado tecnico_id created_at') },
   mantenimientos_programados: { auditada: true, columnas: c('id created_at cliente_id local_id plan proxima_fecha ultimo_generado activo contacto_id') },
+  // Contratos de mantenimiento con su firma (paridad bloque 4, tanda 2); en el audit_log de la app.
+  contratos: { auditada: true, columnas: c(`id created_at token plan_nombre cliente_id local_id contacto_id cliente_nombre cliente_nif
+    direccion municipio precio_mensual cuerpo_html estado firmante_nombre firma_img firmante_ip firmante_user_agent firmado_at
+    created_by notas frecuencia_pago stripe_customer_id stripe_checkout_session_id mandato_estado mandato_at servicios
+    tarifa_estandar tarifa_urgente fecha_inicio vigencia_meses renovacion_automatica renovacion_avisada_at`) },
   // Plantillas de presupuesto (paridad bloque 3): fuera del audit_log de la app.
   presupuesto_plantillas: { auditada: false, columnas: c('id created_at nombre descripcion icono activa lineas') },
   // Área del hub desde la fase 4: solo se importan sus ALTAS (hub.areas.importar_altas).

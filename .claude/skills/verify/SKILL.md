@@ -206,6 +206,14 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   admin con sus tareas, checklists de visita, «+ Contrato» (a una sede en
   Stripe no se le toca la cuota) y el checklist de la visita en el trabajo (el
   del plan o el genérico; solo lectura con `trabajos` en la app).
+- `verify-contratos.mjs`: Documentos (estado del contrato y del cobro;
+  renovaciones a 60 días sin la sede de baja, preaviso, avisado, no renovar,
+  insignia), el contrato de cada sede en la tabla maestra, generar desde una
+  sede (cuota del periodo con IGIC, borrador con cliente, dirección, código,
+  servicios y tarifas), editar pendiente y firmado, enlace, firmado, anular y
+  eliminar solo admin, el mundo sin corte, y las páginas públicas
+  `contrato.html` (firmar con nombre + firma + casilla, estados, primera cuota
+  cuando la haya) y `mandato.html`; `firma-contrato` SIMULADA.
 - `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
   producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
   por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de

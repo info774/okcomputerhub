@@ -511,6 +511,22 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   escribe «Ultimo aviso»). El checklist de la visita va en la ficha del
   trabajo (`trabajos/checklist-visita.ts`, `tcv-`, `checklist_respuestas` en
   el área `trabajos`). Arnés `verify-mantenimientos-escritura.mjs`.
+- **Contratos de mantenimiento** (paridad bloque 4, tanda 2, 2026-10-04,
+  PREPARADO para el corte): `#/mantenimientos/documentos` (`documentos.ts`,
+  `mdo-`) y `#/mantenimientos/contrato/nuevo[/<sede>]`, `/<id>`, `/<id>/enlace`,
+  `/<id>/ver` (`contrato.ts`, `mco-`). El documento es el de la app copiado
+  LITERAL (`contrato-doc.ts`: `CONTRATO_BOILERPLATE` + `renderContratoDoc`; si
+  cambia allí, cambiarlo aquí). Pendiente = se cambia todo y se rehace el
+  documento; firmado = solo sede, cliente y contacto. Importe vacío: al generar
+  = el del plan; al editar = sin cuota. La renovación NO se guarda: es el
+  aniversario de `fecha_inicio`, que pone la base al firmar
+  (`renovacionDe` en `datos.ts`). Firma pública: `contrato.html?token=` (otra
+  entrada de Vite, `src/contrato/`) + función `firma-contrato` (SIN_JWT, por el
+  token; sin el área del hub contesta 409); al firmar baja plan, cuota NETA y
+  frecuencia a la sede salvo que ya se cobre. El pago tras firmar (`pagar`)
+  espera al motor de Stripe. `sync-app` repasa tablas sueltas con
+  `{ modo: 'completo', tablas: [...] }` (así entra una tabla auditada nueva).
+  Arnés `verify-contratos.mjs`.
 - **Inventario** (`src/modulos/inventario/`, `#/inventario`, 2026-10-02): el
   stock POR UBICACIÓN (furgonetas, tienda) y «Todas» sumando el mismo producto
   por `catalogo_id` o por nombre (la regla de «Total» de `furgonetas.js`), el

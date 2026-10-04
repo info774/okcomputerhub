@@ -79,3 +79,79 @@ export const ROLES_SENSIBLES = ['dueno', 'administracion'];
 /** Texto del código para mandarlo (enviarCodigoWa / enviarCodigoEmail de la app). */
 export const textoCodigo = (local: string, codigo: string) =>
   `Hola. Le enviamos el código de verificación de ${local}: ${codigo}\n\nSe lo pediremos por WhatsApp antes de enviarle facturas, presupuestos o información de su contrato. Guárdelo y no lo comparta.\n\nOk Computer Tenerife`;
+
+// ── Contratos (mantenimientos.js de la app) ─────────────────────────────────
+export interface Contrato {
+  id: string; token: string; created_at: string; plan_nombre: string; cliente_id: string | null; local_id: string | null; contacto_id: string | null;
+  cliente_nombre: string | null; cliente_nif: string | null; direccion: string | null; municipio: string | null; precio_mensual: number | null;
+  frecuencia_pago: string | null; estado: string; firmante_nombre: string | null; firmado_at: string | null; mandato_estado: string | null;
+  servicios: { incluidos?: string[]; no_incluidos?: string[] } | null; tarifa_estandar: number | null; tarifa_urgente: number | null;
+  fecha_inicio: string | null; vigencia_meses: number | null; renovacion_automatica: boolean | null; renovacion_avisada_at: string | null;
+}
+// Sin cuerpo_html ni firma_img (pesan): se piden al abrir un contrato.
+export const COLS_CONTRATO = 'id,token,created_at,plan_nombre,cliente_id,local_id,contacto_id,cliente_nombre,cliente_nif,direccion,municipio,precio_mensual,'
+  + 'frecuencia_pago,estado,firmante_nombre,firmado_at,mandato_estado,servicios,tarifa_estandar,tarifa_urgente,fecha_inicio,vigencia_meses,renovacion_automatica,renovacion_avisada_at';
+
+/** El contrato que le toca a una sede: el PENDIENTE de firma y, si no, el último firmado (lista por fecha desc); los anulados no cuentan. */
+export function contratoDeSede<T extends Pick<Contrato, 'local_id' | 'estado'>>(contratos: T[], localId: string | null): T | null {
+  if (!localId) return null;
+  const suyos = contratos.filter(c => c.local_id === localId && c.estado !== 'anulado');
+  return suyos.find(c => c.estado === 'pendiente') ?? suyos.find(c => c.estado === 'firmado') ?? null;
+}
+
+export const RENOV_AVISO_DIAS = 60;    // los dos meses de antelación
+export const RENOV_PREAVISO_DIAS = 30; // lo que pide la cláusula 18 para no renovar
+
+// Fechas ISO sin pasar por el huso: 31 de enero + 1 mes es el 28 (o 29).
+export function sumaMeses(iso: string, meses: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const total = (m - 1) + meses;
+  const ny = y + Math.floor(total / 12), nm = (total % 12 + 12) % 12 + 1;
+  const ultimo = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
+  return `${ny}-${String(nm).padStart(2, '0')}-${String(Math.min(d, ultimo)).padStart(2, '0')}`;
+}
+export function diasEntre(desde: string, hasta: string): number {
+  const p = (s: string) => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+  return Math.round((p(hasta) - p(desde)) / 86_400_000);
+}
+export function restaDias(iso: string, n: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10);
+}
+export const hoyIso = () => new Date().toLocaleDateString('sv-SE');
+
+export interface Renovacion { inicio: string; fecha: string; periodo: number; dias: number; preaviso: string; auto: boolean; avisado: boolean }
+/** El periodo en curso de un contrato FIRMADO: cuándo acaba, qué año va y hasta cuándo se puede decir que no. La fecha no se guarda: es el aniversario de la firma. */
+export function renovacionDe(c: Pick<Contrato, 'estado' | 'fecha_inicio' | 'firmado_at' | 'vigencia_meses' | 'renovacion_automatica' | 'renovacion_avisada_at'> | null): Renovacion | null {
+  if (!c || c.estado !== 'firmado') return null;
+  const inicio = c.fecha_inicio || (c.firmado_at ?? '').slice(0, 10) || null;
+  if (!inicio) return null;
+  const meses = Math.max(1, Number(c.vigencia_meses) || 12);
+  const hoy = hoyIso();
+  let periodo = 1, fecha = sumaMeses(inicio, meses);
+  while (fecha <= hoy && periodo < 200) { periodo++; fecha = sumaMeses(inicio, meses * periodo); }
+  return { inicio, fecha, periodo, dias: diasEntre(hoy, fecha), preaviso: restaDias(fecha, RENOV_PREAVISO_DIAS), auto: c.renovacion_automatica !== false, avisado: !!c.renovacion_avisada_at };
+}
+
+/** El contrato que manda en cada sede: el ÚLTIMO firmado (lista por fecha desc); sin sede, cada uno aparte. */
+export function contratosVigentes<T extends Pick<Contrato, 'id' | 'local_id' | 'estado'>>(contratos: T[]): T[] {
+  const vistos = new Set<string>();
+  return contratos.filter(c => {
+    if (c.estado !== 'firmado') return false;
+    const k = c.local_id ?? `sin-sede:${c.id}`;
+    if (vistos.has(k)) return false;
+    vistos.add(k); return true;
+  });
+}
+
+/** Lo que entra en renovación en los próximos 60 días (sin las sedes de baja), por fecha. */
+export function renovacionesProximas<T extends Contrato>(contratos: T[], sedeDeBaja: (localId: string | null) => boolean) {
+  return contratosVigentes(contratos).map(c => ({ c, r: renovacionDe(c)! })).filter(x => x.r && x.r.dias <= RENOV_AVISO_DIAS && !sedeDeBaja(x.c.local_id))
+    .sort((a, b) => a.r.fecha.localeCompare(b.r.fecha));
+}
+
+/** Lo que se le cobra por periodo con el IGIC (los precios son NETOS y mensuales). */
+export const cuotaPeriodo = (netoMes: number, frecuencia: string | null | undefined) => {
+  const meses = mesesDe(frecuencia);
+  return { meses, neto: netoMes * meses, bruto: Math.round(netoMes * meses * (1 + IGIC / 100) * 100) / 100 };
+};

@@ -9,7 +9,10 @@
 //     la app en el momento de leer.
 //   · completo (cada noche): copia enteras las tablas sin auditoría en la app
 //     y las marcadas `nocturna`, y borra del hub lo que ya no está en la app.
-//     Con `{ modo: 'completo', todas: true }` repasa todas (a mano).
+//     Con `{ modo: 'completo', todas: true }` repasa todas (a mano), y con
+//     `{ modo: 'completo', tablas: [...] }` solo esas: es como entra una tabla
+//     auditada nueva (si no, solo llegaría lo que se toque desde ese día) sin
+//     leer la app entera.
 //
 // Regla: UN SYNC QUE FALLA NO MUEVE EL CORTE (hub.sync_estado.corte_id).
 //
@@ -252,7 +255,7 @@ async function ultimoIdLog(): Promise<number> {
   return ultimo ? Number(ultimo.id) : 0
 }
 
-async function completo(todas: boolean): Promise<Fila> {
+async function completo(todas: boolean, solo: string[] | null = null): Promise<Fila> {
   // ¿Carga inicial? Sin corte, se apunta el log ANTES de copiar.
   const e = await estado('audit')
   const log = await hayLog()
@@ -260,7 +263,7 @@ async function completo(todas: boolean): Promise<Fila> {
   const cargaInicial = todas && e.corte_id == null && e.corte_ts == null
   const cortePendiente = cargaInicial && log ? await ultimoIdLog() : null
   if (!log) todas = true // sin log, los cambios y borrados solo llegan aquí
-  const tablas = (await tablasDeLaApp()).filter(t => todas || !TABLAS_APP[t].auditada || TABLAS_APP[t].nocturna)
+  const tablas = (await tablasDeLaApp()).filter(t => solo ? solo.includes(t) : todas || !TABLAS_APP[t].auditada || TABLAS_APP[t].nocturna)
   const detalle: Record<string, number> = {}
   let filas = 0
   for (const tabla of tablas) {
@@ -283,6 +286,8 @@ async function completo(todas: boolean): Promise<Fila> {
     detalle[tabla] = enApp.size + idos.length
     filas += detalle[tabla]
   }
+  // Una pasada de unas tablas sueltas no es la nocturna: no se apunta como tal.
+  if (solo) return { filas, detalle, solo: tablas }
   await guardarEstado('completo', { ultima_ok: new Date().toISOString(), filas, detalle, ultimo_error: null })
   detalle.altas = Object.values(await altas(true)).reduce((a, b) => a + b, 0)
   if (cortePendiente != null) {
@@ -320,7 +325,9 @@ Deno.serve(async req => {
   const modo = body?.modo === 'completo' ? 'completo' : 'incremental'
   const clave = modo === 'completo' ? 'completo' : 'audit'
   try {
-    const r = modo === 'completo' ? await completo(body?.todas === true) : await incremental()
+    const solo = Array.isArray(body?.tablas) ? (body.tablas as unknown[]).map(String).filter(t => t in TABLAS_APP) : null
+    if (solo && !solo.length) return json({ error: 'tablas: ninguna es de las que se copian' }, 400, cors)
+    const r = modo === 'completo' ? await completo(body?.todas === true && !solo, solo) : await incremental()
     return json({ ok: true, modo, ...r }, 200, cors)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

@@ -9,6 +9,8 @@
 //   #/mantenimientos/checklist  tareas del plan del periodo (checklist.ts)
 //   #/mantenimientos/seguimiento el kanban comercial (seguimiento.ts)
 //   #/mantenimientos/plantillas los planes, sus tareas y los checklists de visita (planes.ts)
+//   #/mantenimientos/documentos los contratos y sus renovaciones (documentos.ts)
+//   #/mantenimientos/contrato/… generar, editar, enlace y firmado (contrato.ts)
 // Reglas de la app (mant-estados.js) en datos.ts. Prefijo de ids: mt-.
 import { API } from '../../core/api';
 import { esAdmin } from '../../core/estado';
@@ -20,10 +22,10 @@ import { barras } from '../../ui/barras';
 import { eur, telWhatsApp } from '../ventas/datos';
 import {
   type Sede, type Pasarela, type Telefono, colsSede, pasarela, netoMensual, esTorcido, sinAcentos, PAGO_MAL, estadosDelPlan, diasHasta,
-  fechaCorta, ROLES_SENSIBLES, textoCodigo, mesesDe,
+  fechaCorta, ROLES_SENSIBLES, textoCodigo, mesesDe, type Contrato, COLS_CONTRATO, contratoDeSede, renovacionesProximas,
 } from './datos';
 
-export const PESTANAS: [string, string][] = [['', 'Resumen'], ['locales', 'Locales'], ['checklist', 'Checklist'], ['seguimiento', 'Seguimiento'], ['plantillas', 'Plantillas']];
+export const PESTANAS: [string, string][] = [['', 'Resumen'], ['locales', 'Locales'], ['checklist', 'Checklist'], ['seguimiento', 'Seguimiento'], ['plantillas', 'Plantillas'], ['documentos', 'Documentos']];
 const PASARELA: Record<Pasarela, [string, string]> = {
   stripe: ['Stripe', 'bien'], espera: ['Esperando el primer pago', 'aviso'], zoho: ['Zoho (cartera vieja)', ''], nadie: ['Sin domiciliar', 'aviso'],
 };
@@ -38,6 +40,9 @@ let _clientes = new Map<string, { nombre: string; email: string | null }>();
 let _tels = new Map<string, Telefono[]>();
 let _backup = new Map<string, string>();
 let _revision = new Map<string, string>();
+let _contratos: Contrato[] = [];
+let _bajas = new Set<string>();
+let _renovSinAvisar = 0;  // la insignia de «Documentos»: renovaciones a 60 días sin avisar
 let _q = '';
 let _filtro = '';
 let _plan = '';
@@ -56,20 +61,27 @@ const chipPago = (s: Sede) => {
 
 async function cargar() {
   if (_lista.length && Date.now() - _listaAt < 5 * 60_000) return null;
-  const [ls, cs, ts] = await Promise.all([
+  const [ls, cs, ts, ks, bs] = await Promise.all([
     API.fetchAll<Sede>('locales', { select: colsSede(), plan: 'not.in.("Sin mantenimiento","")', activo: 'neq.false', order: 'nombre' }),
     _clientes.size ? Promise.resolve(null) : API.fetchAll<{ id: string; nombre: string; email: string | null }>('clientes', { select: 'id,nombre,email' }),
     API.fetchAll<Telefono>('local_telefonos', { select: 'id,local_id,nombre,numero,rol', order: 'created_at' }),
+    API.fetchAll<Contrato>('contratos', { select: COLS_CONTRATO, order: 'created_at.desc' }),
+    API.fetchAll<{ id: string }>('locales', { select: 'id', activo: 'eq.false' }),
   ]);
+  _bajas = new Set((bs.data ?? []).map(b => b.id));
+  _contratos = ks.data ?? [];
   if (cs && !cs.error) _clientes = new Map((cs.data ?? []).map(c => [c.id, { nombre: c.nombre, email: c.email }]));
   if (ls.error) return ls.error;
   _lista = ls.data ?? []; _listaAt = Date.now();
   _tels = new Map();
   for (const t of ts.data ?? []) _tels.set(t.local_id, [...(_tels.get(t.local_id) ?? []), t]);
   ({ backup: _backup, revision: _revision } = await estadosDelPlan(_lista));
+  _renovSinAvisar = renovaciones().filter(x => !x.r.avisado).length;
   return null;
 }
 
+// Las sedes de baja no cuentan para las renovaciones (como en la app).
+const renovaciones = () => renovacionesProximas(_contratos, id => !!id && _bajas.has(id));
 const nombreCliente = (s: Sede) => _clientes.get(s.cliente_id ?? '')?.nombre ?? '';
 const certAlerta = (s: Sede) => { const d = diasHasta(s.cert_caducidad); return d != null && d <= 30; };
 const sinDueno = (s: Sede) => !(_tels.get(s.id) ?? []).some(t => ROLES_SENSIBLES.includes(t.rol ?? ''));
@@ -94,8 +106,13 @@ function filtradas(): Sede[] {
   });
 }
 
-export const navPestanas = (actual: string) => `<nav class="pestanas" role="tablist" aria-label="Mantenimientos">${PESTANAS.map(([k, n]) =>
-  `<a role="tab" class="${k === actual ? 'activo' : ''}" aria-selected="${k === actual}" href="#/mantenimientos${k ? `/${k}` : ''}">${n}</a>`).join('')}</nav>`;
+/** Las pestañas; «Documentos» lleva las renovaciones a 60 días sin avisar (`renov` la pone al día quien las acaba de contar). */
+export const navPestanas = (actual: string, renov?: number) => {
+  if (renov != null) _renovSinAvisar = renov;
+  return `<nav class="pestanas" role="tablist" aria-label="Mantenimientos">${PESTANAS.map(([k, n]) =>
+    `<a role="tab" class="${k === actual ? 'activo' : ''}" aria-selected="${k === actual}" href="#/mantenimientos${k ? `/${k}` : ''}">${n}${k === 'documentos' && _renovSinAvisar
+      ? ` <span class="insignia" title="Renovaciones en los próximos 2 meses sin avisar">${_renovSinAvisar}</span>` : ''}</a>`).join('')}</nav>`;
+};
 
 function cifra(titulo: string, valor: string, sub: string, tono = '', href = '') {
   return `<article class="tarjeta di-cifra ${tono}">${href ? `<a href="${href}">` : ''}<h3>${esc(titulo)}</h3><p class="di-valor">${valor}</p><p class="nota">${sub}</p>${href ? '</a>' : ''}</article>`;
@@ -138,6 +155,10 @@ async function pintarResumen(el: HTMLElement, escribe: boolean) {
       <section class="tarjeta"><h3>🗓 Próximas visitas</h3>${(visitas.data ?? []).length ? `<ul class="di-ultimo">${(visitas.data ?? []).map(t => `<li><a href="#/trabajos/${t.numero}">#${t.numero} ${esc(t.titulo ?? '')}</a>
         <span class="nota">${esc(fechaCorta(t.fecha_programada))} · ${esc(nombreSede(t.local_id))} · ${esc((t.tecnicos ?? []).join(', ') || 'sin técnico')}</span></li>`).join('')}</ul>` : '<p class="nota">No hay visitas de mantenimiento programadas.</p>'}
         <p><a href="#/calendario">Ver el calendario →</a></p></section>
+      <section class="tarjeta"><h3>🔁 Renovaciones (2 meses)</h3>${renovaciones().length ? `<ul class="di-ultimo" id="mt-renovaciones">${renovaciones().slice(0, 8).map(({ c, r }) => `<li>
+        <a href="#/mantenimientos/contrato/${esc(c.id)}/ver">${esc(c.cliente_nombre || nombreSede(c.local_id) || '—')}</a>
+        <span class="nota">${r.auto ? 'renueva' : '<span class="g-mal">vence</span>'} el ${esc(fechaCorta(r.fecha))}${r.avisado ? ' · avisado' : ''}</span></li>`).join('')}</ul>` : '<p class="nota">Ningún contrato cumple año en los próximos 2 meses.</p>'}
+        <p><a href="#/mantenimientos/documentos">Ver los contratos →</a></p></section>
       <section class="tarjeta"><h3>🛡 Garantías a punto de vencer</h3>${(garantias.data ?? []).length ? `<ul class="di-ultimo">${(garantias.data ?? []).map(h => `<li><a href="#/sitios/${esc(h.local_id)}/hardware">${esc([h.tipo, h.nombre].filter(Boolean).join(' · ') || 'Equipo')}</a>
         <span class="nota">vence el ${esc(fechaCorta(h.garantia))}</span></li>`).join('')}</ul>` : '<p class="nota">Ninguna en los próximos 30 días.</p>'}</section>
     </div>`;
@@ -183,7 +204,18 @@ function celdaCodigo(s: Sede): string {
     email ? `<a href="mailto:${esc(email)}?subject=${encodeURIComponent(`Código de verificación · ${s.nombre}`)}&body=${txt}" title="Mandar el código por correo">✉️</a>` : ''}`;
 }
 
+// El documento de cada sede (contratoDeSede): firmar el pendiente, ver el
+// firmado o crearlo relleno con lo que la sede ya tiene pactado.
+let _escribeContratos = false;
+function celdaContrato(s: Sede, escribe: boolean): string {
+  const c = contratoDeSede(_contratos, s.id);
+  if (c?.estado === 'pendiente') return `<a class="chip aviso" href="#/mantenimientos/contrato/${esc(c.id)}/enlace" title="Firmar el contrato">Sin firmar</a>`;
+  if (c?.estado === 'firmado') return `<a class="chip bien" href="#/mantenimientos/contrato/${esc(c.id)}/ver" title="Ver el contrato firmado">Contrato firmado</a>`;
+  return escribe && _escribeContratos ? `<a class="mt-crear" href="#/mantenimientos/contrato/nuevo/${esc(s.id)}">+ Crear contrato</a>` : '<small class="nota">Sin contrato</small>';
+}
+
 async function pintarLocales(el: HTMLElement, escribe: boolean) {
+  _escribeContratos = await esDelHub('contratos');
   const admin = esAdmin();
   const planes = [...new Set(_lista.map(s => s.plan).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b));
   const lista = filtradas();
@@ -204,7 +236,7 @@ async function pintarLocales(el: HTMLElement, escribe: boolean) {
         const [txt, tono] = PASARELA[pasarela(s)];
         return `<tr data-sede="${esc(s.id)}">
         <td><a href="#/sitios/${esc(s.id)}"><strong>${esc(s.nombre)}</strong></a>${nombreCliente(s) ? `<br><small class="nota">${esc(nombreCliente(s))}</small>` : ''}${s.programa_tpv ? `<br><small class="nota">TPV ${esc(s.programa_tpv)}</small>` : ''}</td>
-        <td><span class="chip">${esc(s.plan ?? '')}</span>${admin && s.importe_mantenimiento ? `<br>${eur(netoMensual(s), 2)}/mes${mesesDe(s.frecuencia_pago) > 1 ? ` <small class="nota">· ${esc(s.frecuencia_pago)}</small>` : ''}` : ''}</td>
+        <td><span class="chip">${esc(s.plan ?? '')}</span> ${celdaContrato(s, escribe)}${admin && s.importe_mantenimiento ? `<br>${eur(netoMensual(s), 2)}/mes${mesesDe(s.frecuencia_pago) > 1 ? ` <small class="nota">· ${esc(s.frecuencia_pago)}</small>` : ''}` : ''}</td>
         <td><span class="chip ${tono}">${esc(txt)}</span><br>${chipPago(s)}${s.proxima_cuota ? `<br><small class="${(diasHasta(s.proxima_cuota) ?? 99) <= 7 ? 'g-mal' : 'nota'}">Cuota ${esc(fechaCorta(s.proxima_cuota))}</small>` : ''}</td>
         <td>${celdaCert(s, escribe)}</td><td>${celdaBackup(s, escribe)}</td><td>${celdaCh(s, escribe)}</td><td>${rev(s)}</td>
         <td>${celdaTels(s)}</td><td>${celdaCodigo(s)}</td>
@@ -219,6 +251,8 @@ export async function pintarMantenimientos(el: HTMLElement, params: string[] = [
   if (p === 'checklist') return (await import('./checklist')).pintarChecklist(el);
   if (p === 'seguimiento') return (await import('./seguimiento')).pintarSeguimiento(el, id);
   if (p === 'plantillas') return (await import('./planes')).pintarPlanes(el, id, sub);
+  if (p === 'documentos') return (await import('./documentos')).pintarDocumentos(el);
+  if (p === 'contrato' && id) return (await import('./contrato')).pintarContrato(el, id, sub);
   el.innerHTML = '<p class="cargando">Cargando…</p>';
   const [error, escribe] = await Promise.all([cargar(), esDelHub('locales')]);
   if (error && !_lista.length) { el.innerHTML = `<p class="aviso mal">No se pudieron leer las sedes: ${esc(error.message)}</p>`; return; }
