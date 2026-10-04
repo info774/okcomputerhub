@@ -46,7 +46,7 @@ function pintarKanban(verCerrados: boolean): string {
         data-on-drop="proyectosSoltar:${f.id}" >
       <header><h3>${esc(f.nombre)}</h3><span class="chip">${col.length}</span></header>
       <p class="nota">${esc(f.ayuda)}</p>
-      <div class="pr-col-cuerpo">${col.map(tarjeta).join('') || '<p class="vacio">—</p>'}</div>
+      <div class="pr-col-cuerpo">${col.map(tarjeta).join('') || '<p class="vacio col-vacia">—</p>'}</div>
     </section>`;
   }).join('')}</div>`;
 }

@@ -202,7 +202,7 @@ async function tabTareas(): Promise<string> {
     return `<section class="pr-columna" data-on-dragover="pfTareaSobre:$this" data-prevent="1" data-on-dragleave="pfTareaFuera:$this"
         data-on-drop="pfTareaSoltar:${estado}">
       <header><h3>${nombre}</h3><span class="chip">${lista.length}</span></header>
-      <div class="pr-col-cuerpo">${lista.map(t => tarjetaTarea(t)).join('') || '<p class="vacio">—</p>'}</div>
+      <div class="pr-col-cuerpo">${lista.map(t => tarjetaTarea(t)).join('') || '<p class="vacio col-vacia">—</p>'}</div>
     </section>`;
   };
   return `<form class="tarjeta acciones" data-on-submit="pfNuevaTarea" data-prevent="1">

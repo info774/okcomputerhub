@@ -571,6 +571,19 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   libro de movimientos (`#/inventario/movimientos`; llegan cada noche) y la
   ficha del producto. Espejo en SOLO LECTURA (área `inventario`); lo agregado
   por material y «qué pedir» siguen en `#/almacen`. Arnés `verify-inventario.mjs`.
+- **Sistema común de pantallas** (2026-10-04): el bloque «Sistema común» al
+  final de `src/estilo.css` da a TODAS las pantallas el acabado del modo
+  escritorio (cabecera de cristal, botones, tablas con cabecera en versalitas y
+  pie de totales, `.segmentado` en píldora, `.di-cifra` con rótulo pequeño,
+  `p.vacio` con hexágono hueco, columna vacía de tablero `p.vacio.col-vacia`,
+  barra `.pr-barra` con campos alineada a la izquierda). Una pantalla nueva usa
+  esas clases y no se pinta las suyas. Cabecera de pantalla = `.pantalla-cab`
+  con el hexágono de su módulo (`iconoHex`, el del dock) y el menú lateral
+  también; los iconos de línea de la interfaz salen de `src/shell/linea.ts`
+  (`svgLinea`), nada de emojis en el cromo. Los grupos del puesto de mando
+  usan `AVISO_PANTALLA` (en `direccion/`, compartido con el centro de avisos).
+  Para repasar el aspecto de todo: `verify-galeria.mjs` (captura de cada
+  pantalla del menú; `GALERIA_NOCHE=1`, `GALERIA_MOVIL=1`, `GALERIA=a,b`).
 - **Barras de una serie**: `src/ui/barras.ts` (tabla de verdad, `--serie-1`,
   etiqueta directa, la fila filtra con su `data-action` y la `activa` lleva el
   hexágono). `.chip.aviso` es una

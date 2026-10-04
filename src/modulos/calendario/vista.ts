@@ -162,7 +162,7 @@ function vistaSemana(evs: Ev[], desde: Date, solapa: Set<string>, tras: Map<stri
     return `<section class="tarjeta ca-dia ${ds === hoy ? 'ca-hoy' : ''}" data-dia="${ds}" ${_escribe ? `data-on-dragover="caSobre:$this" data-prevent="1" data-on-dragleave="caFuera:$this" data-on-drop="caSoltarDia:${ds}"` : ''}>
       <h3><button class="ca-ir-dia" data-action="caIrDia" data-p0="${ds}">${esc(d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }))}</button></h3>
       ${cargaHtml(evs, ds, equipo)}
-      ${evs.filter(e => dia(e.inicio) === ds).map(e => tarjeta(e, solapa, tras)).join('') || '<p class="vacio">—</p>'}
+      ${evs.filter(e => dia(e.inicio) === ds).map(e => tarjeta(e, solapa, tras)).join('') || '<p class="vacio col-vacia">—</p>'}
       ${_ses.filter(s => dia(new Date(s.inicio)) === ds && (filtro === 'todo' || (filtro === 'mios' ? mismaPersona(s.tecnico_nombre ?? '', usuario()?.nombre ?? '') : mismaPersona(s.tecnico_nombre ?? '', filtro)))).map(real).join('')}</section>`;
   }).join('')}</div>`;
 }
@@ -288,7 +288,8 @@ export async function pintar(el: HTMLElement, params: string[] = []) {
   if (conTraslados) {
     for (const ds of [...new Set(visibles.map(e => dia(e.inicio)))]) {
       for (const t of trasladosDelDia(visibles, ds, equipoVista, _coords)) {
-        tras.set(t.ev.key, `${tras.get(t.ev.key) ?? ''}<small class="ca-tras${t.tarde ? ' g-mal' : ''}">🚗 ${t.min} min desde ${esc(t.desde)}${t.km != null ? ` · ${t.km < 10 ? t.km.toFixed(1) : Math.round(t.km)} km` : ' · sede sin coordenadas'}${t.tarde ? ` · llega ${t.tarde} min tarde` : ''}${equipoVista.length > 1 ? ` (${esc(t.tecnico)})` : ''}</small>`);
+        const texto = `🚗 ${t.min} min desde ${t.desde}${t.km != null ? ` · ${t.km < 10 ? t.km.toFixed(1) : Math.round(t.km)} km` : ' · sede sin coordenadas'}${t.tarde ? ` · llega ${t.tarde} min tarde` : ''}${equipoVista.length > 1 ? ` (${t.tecnico})` : ''}`;
+        tras.set(t.ev.key, `${tras.get(t.ev.key) ?? ''}<small class="ca-tras${t.tarde ? ' g-mal' : ''}" title="${esc(texto)}">${esc(texto)}</small>`);
       }
     }
   }

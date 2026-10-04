@@ -69,7 +69,7 @@ const kanban = () => {
       <header><h3>${esc(e)}</h3><span class="chip">${col.length}</span></header>
       <div class="pr-col-cuerpo">${col.map(t => `<article class="pr-tarjeta" ${_escribe ? `draggable="true" data-on-dragstart="trArrastrar:${t.id}"` : ''} data-action="trAbrir" data-p0="${t.numero}">
         <strong>#${t.numero} ${esc(t.titulo ?? '')}</strong><small class="nota">${esc(_nombres.get(t.cliente_id ?? '') ?? '')}</small>
-        <small class="nota">${esc((t.tecnicos ?? []).join(', ') || 'Sin técnico')}${t.fecha_programada ? ` · ${esc(t.fecha_programada)}` : ''}</small></article>`).join('') || '<p class="vacio">—</p>'}</div>
+        <small class="nota">${esc((t.tecnicos ?? []).join(', ') || 'Sin técnico')}${t.fecha_programada ? ` · ${esc(t.fecha_programada)}` : ''}</small></article>`).join('') || '<p class="vacio col-vacia">—</p>'}</div>
     </section>`;
   }).join('')}</div>`;
 };
