@@ -69,7 +69,8 @@ async function cargar(mas = false) {
   const { data, error } = await llamarFuncion<{ filas: Fila[]; mas: boolean; app_ok: boolean }>('historial', { ..._filtro, ...(mas && _ultimo ? { antes_de: _ultimo } : {}) }, 30000);
   if (!document.getElementById('rg-lista')) return;
   btn.disabled = false;
-  if (error || !data) { lista.innerHTML = `<p class="aviso mal">No se pudo leer el registro: ${esc(error)}</p>`; btn.hidden = true; return; }
+  // Una respuesta sin filas (función vieja, arnés) no tumba la pantalla.
+  if (error || !Array.isArray(data?.filas)) { lista.innerHTML = `<p class="aviso mal">No se pudo leer el registro: ${esc(error ?? 'respuesta sin filas')}</p>`; btn.hidden = true; return; }
   const html = data.filas.map(fila).join('');
   const aviso = data.app_ok ? '' : '<p class="aviso">No se ha podido leer el registro de la app: solo sale lo cambiado en el hub.</p>';
   if (!mas) lista.innerHTML = data.filas.length ? `${aviso}<ul class="rg-items">${html}</ul>`

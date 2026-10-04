@@ -1062,6 +1062,7 @@ details > summary { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .btn, .icono-btn, .buscador-btn, .segmentado > *, .pestanas > *, .tabla td, .marca .hex, .di-cifra { transition: none; }
   .di-cifra:has(> a):hover { transform: none; }
+}
 
 /* ---- Usuarios (us-) y Registro de cambios (rg-) ---- */
 .us-tabla tr.apagado td { opacity: .6; }
