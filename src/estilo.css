@@ -1062,4 +1062,30 @@ details > summary { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .btn, .icono-btn, .buscador-btn, .segmentado > *, .pestanas > *, .tabla td, .marca .hex, .di-cifra { transition: none; }
   .di-cifra:has(> a):hover { transform: none; }
+
+/* ---- Usuarios (us-) y Registro de cambios (rg-) ---- */
+.us-tabla tr.apagado td { opacity: .6; }
+.us-tabla input[type=tel] { max-width: 11rem; }
+.rg-items { list-style: none; margin: 0; padding: 0; }
+.rg-item { padding: .6rem 0; border-bottom: 1px solid var(--borde); }
+.rg-cab { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.rg-que { font-weight: 600; }
+.rg-quien { color: var(--texto-suave); }
+.rg-cambios { margin: .35rem 0 0 1.1rem; padding: 0; font-size: .9rem; }
+.rg-antes { text-decoration: line-through; color: var(--texto-suave); }
+#rg-mas[hidden] { display: none; }
+
+/* ---- Versión nueva, tamaño del texto (bloque 6) ---- */
+.version-nueva { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 88px); z-index: 1200;
+  display: flex; align-items: center; gap: .75rem; padding: .5rem .6rem .5rem 1rem; border-radius: 999px; background: var(--noche); color: #fff;
+  box-shadow: 0 10px 28px rgb(11 31 20 / .3); max-width: calc(100vw - 32px); font-size: .9rem; }
+.version-nueva .btn { min-height: 34px; }
+.texto-tam { display: none; align-items: center; gap: .35rem; margin: .5rem .75rem 1rem; color: var(--texto-suave); font-size: .85rem; }
+.texto-tam span { flex: 1; }
+.texto-tam button { width: 44px; height: 44px; border: 1.5px solid var(--borde); border-radius: 10px; background: var(--superficie); color: var(--texto); font-weight: 700; cursor: pointer; }
+.texto-tam button[aria-pressed="true"] { border-color: var(--accion); background: var(--primario-suave); color: var(--primario); }
+@media (max-width: 767px) {
+  .texto-tam { display: flex; }
+  html[data-fs="grande"] { font-size: 112.5%; }
+  html[data-fs="xl"] { font-size: 125%; }
 }
