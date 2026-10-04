@@ -69,14 +69,14 @@ async function cargar(mas = false) {
   const { data, error } = await llamarFuncion<{ filas: Fila[]; mas: boolean; app_ok: boolean }>('historial', { ..._filtro, ...(mas && _ultimo ? { antes_de: _ultimo } : {}) }, 30000);
   if (!document.getElementById('rg-lista')) return;
   btn.disabled = false;
-  // Una respuesta sin filas (función vieja, arnés) no tumba la pantalla.
-  if (error || !Array.isArray(data?.filas)) { lista.innerHTML = `<p class="aviso mal">No se pudo leer el registro: ${esc(error ?? 'respuesta sin filas')}</p>`; btn.hidden = true; return; }
-  const html = data.filas.map(fila).join('');
+  if (error || !data) { lista.innerHTML = `<p class="aviso mal">No se pudo leer el registro: ${esc(error)}</p>`; btn.hidden = true; return; }
+  const filas = data.filas ?? [];
+  const html = filas.map(fila).join('');
   const aviso = data.app_ok ? '' : '<p class="aviso">No se ha podido leer el registro de la app: solo sale lo cambiado en el hub.</p>';
-  if (!mas) lista.innerHTML = data.filas.length ? `${aviso}<ul class="rg-items">${html}</ul>`
-    : `${aviso}<p class="nota">${_ficha ? 'Sin cambios registrados en esta ficha (el registro empieza el día que se activó la auditoría).' : 'Nada que coincida.'}</p>`;
+  if (!mas) lista.innerHTML = filas.length ? `${aviso}<ul class="rg-items">${html}</ul>`
+    : `${aviso}<p class="vacio">${_ficha ? 'Sin cambios registrados en esta ficha (el registro empieza el día que se activó la auditoría).' : 'Nada que coincida.'}</p>`;
   else lista.querySelector('.rg-items')?.insertAdjacentHTML('beforeend', html);
-  _ultimo = data.filas.at(-1)?.ts ?? _ultimo;
+  _ultimo = filas.at(-1)?.ts ?? _ultimo;
   btn.hidden = !data.mas;
 }
 
