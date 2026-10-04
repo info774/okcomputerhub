@@ -531,32 +531,73 @@ body.os-modo .os-win-cuerpo .ma-mapa { height: 60vh; }
 .os-litem.ext .hex { background: var(--fondo); }
 .os-litem small { display: block; font-weight: 400; font-size: 10.5px; color: var(--texto-suave); }
 
-/* ── Centro de avisos ──────────────────────────────────────────────────── */
+/* ── Centro de avisos ──────────────────────────────────────────────────
+   Panel flotante (cristal, como barra y dock) que entra desde la derecha.
+   Avisos agrupados por gravedad, cada uno con el icono de su pantalla, una
+   franja de su color, el importe si es dinero y la acción con su verbo. */
 #os-avisos {
-  position: absolute; right: 0; top: var(--os-barra); bottom: 0; width: 380px; z-index: 6; display: flex; flex-direction: column;
-  background: color-mix(in srgb, var(--superficie) 92%, transparent); backdrop-filter: blur(18px); border-left: 1px solid var(--borde); box-shadow: var(--sombra-alta);
+  position: absolute; right: 10px; top: calc(var(--os-barra) + 8px); bottom: 10px; width: 400px; z-index: 6;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: color-mix(in srgb, var(--superficie) 90%, transparent); backdrop-filter: blur(22px) saturate(1.4);
+  border: 1px solid var(--borde); border-radius: 20px; box-shadow: var(--sombra-alta), 0 2px 6px rgb(11 31 20 / .06);
+  animation: os-av-entra .22s cubic-bezier(.2, .8, .2, 1);
 }
+@keyframes os-av-entra { from { opacity: 0; transform: translateX(24px); } }
 #os-avisos[hidden] { display: none; }
-.os-av-cab { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; font-size: 15px; }
-.os-av-filtros { display: flex; gap: 6px; padding: 0 16px 10px; }
-.os-av-filtros .chip-boton { min-height: 30px; font-size: 11.5px; }
-.os-av-lista { flex: 1; overflow: auto; padding: 0 16px 12px; display: flex; flex-direction: column; gap: 8px; }
-.os-av { display: flex; gap: 10px; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 12px; background: var(--superficie); font-size: 12px; }
-.os-av.g-mal { border-color: color-mix(in srgb, #d64545 45%, var(--borde)); }
-.os-av-ic { width: 32px; height: 36px; background: var(--primario-suave); font-size: 15px; }
-.os-av.g-mal .os-av-ic { background: var(--mal-fondo); }
-.os-av.g-aviso .os-av-ic { background: var(--aviso-fondo); }
-.os-av-cuerpo { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.os-av-cab { display: flex; align-items: center; gap: 8px; padding: 14px 10px 10px 18px; font-size: 16px; }
+.os-av-cab > b { letter-spacing: -.02em; }
+.os-av-nuevos { padding: 2px 8px; border-radius: 999px; background: var(--mal-fondo); color: var(--mal); font-size: 11px; font-weight: 700; }
+.os-av-cab .os-wbtn .os-bico { width: 15px; height: 15px; }
+.os-av-filtros { padding: 0 16px 8px; }
+/* Todos / Los míos: un interruptor de dos posiciones. */
+.os-av-seg { display: flex; padding: 3px; border-radius: 999px; background: var(--fondo); border: 1px solid var(--borde); }
+.os-av-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 10px; border: none; border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 600; color: var(--texto-suave); cursor: pointer; }
+.os-av-seg button.activo { background: var(--superficie); color: var(--texto); box-shadow: 0 1px 3px rgb(11 31 20 / .12); }
+.os-av-seg button span, .os-av-tipo span { min-width: 16px; padding: 0 5px; border-radius: 999px; background: var(--primario-suave); color: var(--primario); font-size: 10.5px; font-weight: 700; line-height: 16px; }
+.os-av-tipos { display: flex; gap: 6px; padding: 0 16px 10px; overflow-x: auto; scrollbar-width: none; }
+.os-av-tipo { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 999px; border: 1px solid var(--borde); background: var(--superficie); font: inherit; font-size: 11.5px; font-weight: 600; color: var(--texto-suave); cursor: pointer; white-space: nowrap; }
+.os-av-tipo:hover { border-color: color-mix(in srgb, var(--verde) 50%, var(--borde)); color: var(--texto); }
+.os-av-tipo.activo { background: var(--texto); color: var(--fondo); border-color: var(--texto); }
+.os-av-lista { flex: 1; overflow: auto; padding: 2px 14px 14px; display: flex; flex-direction: column; gap: 14px; scrollbar-width: thin; }
+.os-av-sec { display: flex; flex-direction: column; gap: 8px; }
+.os-av-sec h3 { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--texto-suave); }
+.os-av-sec h3 span { margin-left: auto; letter-spacing: 0; }
+.os-av-sec.g-mal h3 .hex-punto { background: #d64545; }
+.os-av-sec.g-aviso h3 .hex-punto { background: #d9a441; }
+.os-av-sec.g-info h3 .hex-punto { background: var(--texto-suave); }
+.os-av {
+  position: relative; display: flex; gap: 12px; padding: 12px 12px 12px 14px; border: 1px solid var(--borde); border-radius: 14px;
+  background: var(--superficie); font-size: 12px; box-shadow: var(--sombra); transition: border-color .15s, transform .15s;
+}
+.os-av::before { content: ''; position: absolute; left: -1px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--texto-suave); opacity: .5; }
+.os-av.g-mal::before { background: #d64545; opacity: 1; }
+.os-av.g-aviso::before { background: #d9a441; opacity: 1; }
+.os-av:hover { border-color: color-mix(in srgb, var(--verde) 40%, var(--borde)); }
+.os-av.nuevo { background: color-mix(in srgb, var(--primario-suave) 45%, var(--superficie)); }
+.os-av-hex { width: 34px; height: auto; flex: none; }
+.os-av-cuerpo { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
 .os-av-f1 { display: flex; gap: 6px; align-items: center; font-size: 10.5px; color: var(--texto-suave); }
-.os-av-f1 b { text-transform: uppercase; letter-spacing: .06em; }
-.os-av-cuando { margin-left: auto; }
-.os-av-t { font-weight: 600; }
+.os-av-f1 b { text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+.os-av-nuevo { padding: 0 6px; border-radius: 999px; background: var(--verde); color: #102516; font-size: 9.5px; font-weight: 700; line-height: 15px; }
+.os-av-cuando { margin-left: auto; white-space: nowrap; }
+.os-av-t { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; line-height: 1.3; }
+.os-av-t > span { flex: 1; min-width: 0; }
+.os-av-eur { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.os-av.g-mal .os-av-eur { color: var(--mal); }
 .os-av-s { color: var(--texto-suave); line-height: 1.35; }
-.os-av-acc { align-self: flex-start; margin-top: 6px; padding: 4px 10px; border-radius: 7px; border: 1px solid color-mix(in srgb, var(--primario) 45%, transparent); font-size: 11.5px; font-weight: 700; text-decoration: none; }
-.os-av-acc:hover { background: var(--primario-suave); }
-.os-av-vacio { padding: 24px 0; text-align: center; }
-.os-av-pie { display: flex; justify-content: space-between; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--borde); font-size: 11.5px; color: var(--texto-suave); }
+.os-av-pie-f { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.os-av-quien { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--texto-suave); }
+.os-av-acc { padding: 5px 12px; border-radius: 999px; background: var(--primario-suave); color: var(--primario); font-size: 11.5px; font-weight: 700; text-decoration: none; white-space: nowrap; transition: background .15s, color .15s; }
+.os-av-acc:hover { background: var(--accion); color: var(--accion-texto); }
+.os-av-acc { display: inline-flex; align-items: center; gap: 5px; }
+.os-av-acc .os-bico { width: 12px; height: 12px; }
+.os-av-vacio { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 48px 16px; text-align: center; color: var(--texto-suave); font-size: 12.5px; }
+.os-av-vacio b { color: var(--texto); font-size: 15px; }
+.os-av-vacio-hex { width: 56px; height: 64px; margin-bottom: 6px; background: var(--primario-suave); color: var(--primario); }
+.os-av-vacio-hex svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.os-av-pie { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 18px 12px; border-top: 1px solid var(--borde); font-size: 11px; color: var(--texto-suave); }
 .os-av-pie a { font-weight: 700; text-decoration: none; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { #os-avisos { animation: none; } }
 
 /* La paleta Ctrl+K (compartida con el hub clásico) */
 .bus-modos { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: .6rem; }
@@ -655,3 +696,6 @@ body.os-modo .os-win-cuerpo .ma-mapa { height: 60vh; }
 }
 /* Con el menú del clic derecho abierto, los nombres del dock no salen encima. */
 #os-root:has(#os-dmenu) .os-dlabel { opacity: 0 !important; }
+/* Con el centro de avisos abierto, el chat de WhatsApp plegado se aparta (su
+   botón flotante tapaba la esquina del panel); abierto, se queda. */
+body.os-modo:has(#os-avisos:not([hidden])) .wa.cerrado { visibility: hidden; }

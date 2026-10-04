@@ -117,7 +117,14 @@ código el 2026-09-28. Convive con el hub clásico y no lo toca.
   Panel, Oki, Claude y Todas no se mueven. Sin elegir nada, las 12 primeras
   pantallas del menú. Lo abierto que no está fijo sale mientras esté abierto.
 - **Centro de avisos** (campana): la lista completa, con «Los míos» (misma regla
-  `esMio` del puesto de mando) y el enlace de cada aviso.
+  `esMio` del puesto de mando) y el enlace de cada aviso. Desde el 2026-10-04,
+  panel flotante que entra por la derecha (Esc lo cierra): avisos agrupados
+  en Urgente · Atento · Para saber, cada uno con el icono de su pantalla (los
+  del dock), franja de su color, importe si es dinero, quién y la acción con su
+  verbo («Reclamar», «Asignar», «Facturar»…); interruptor Todos / Los míos y
+  chips por tipo con su número; «N nuevos» marca lo que no estaba la vez
+  anterior que se abrió (la primera vez, nada); botón Actualizar y, en el pie,
+  cuándo se leyó. Mientras está abierto, el chat de WhatsApp plegado se aparta.
 
 ## La paleta Ctrl+K (también en el hub clásico)
 

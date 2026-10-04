@@ -405,7 +405,13 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   delante>» junto a la marca (`#os-frente`, lo pone `pintarDock`), número de
   ventanas por escritorio (`contarVentanas`, desde `guardarEstado`), sync con
   hexágono de estado, reloj con el día que abre `#/calendario` y menú del
-  avatar con iconos y «Nuevo escritorio». Un módulo nuevo entra solo en el lanzador y, mientras nadie
+  avatar con iconos y «Nuevo escritorio». Centro de avisos (2026-10-04): panel flotante por
+  gravedad (Urgente · Atento · Para saber), icono de la pantalla de cada tipo
+  (`AVISO_PANTALLA`: tipo → icono del dock y verbo de la acción; un tipo nuevo
+  del motor sin entrada sale con su inicial y «Abrir»), Todos/Los míos + chips
+  por tipo, «N nuevos» = claves que no estaban la vez anterior que se abrió
+  (`localStorage.hub_os_avisos_vistos_<usuario>`; la primera vez, ninguno),
+  Actualizar, Esc cierra y pie con la hora de la última lectura. Un módulo nuevo entra solo en el lanzador y, mientras nadie
   haya elegido sus fijas, en el dock (las 12 primeras de `visibles()`). Los arneses usan
   el clásico salvo que pidan `preparar(…, { escritorio: 'defecto' })`. Arnés
   `verify-escritorio.mjs`.
