@@ -133,6 +133,17 @@ ahí los mensajes nuevos se ven en el hub y no en la app.
 4. Los avisos («💬 WhatsApp de…», «🎫 Ticket #… por WhatsApp») llegan por
    Telegram a los administradores que lo tengan vinculado (Informes →
    **Vincular mi Telegram**).
+5. **Solo si usáis el Agente de Meta** (en la app, el botón «Agente de Meta»
+   de la bandeja): antes del paso 2 añade también las dos variables que tiene
+   la app (el token del conector es el texto largo que se inventó al darlo de
+   alta; si no lo tienes, invéntate otro de 24 caracteres o más):
+   ```
+   WHATSAPP_MODO=meta_agente
+   META_AGENTE_MCP_TOKEN=un-texto-largo-de-24-o-mas-caracteres
+   ```
+   y, después del paso 3, en el hub: ventana de WhatsApp (abajo a la derecha)
+   → **🤖 Agente de Meta** (al pie de la lista) → **Actualizar conector y
+   skills**. El agente pasa a usar las herramientas del hub.
 
 ## 2 · Google: correo, Drive (una vez, ~10 minutos)
 

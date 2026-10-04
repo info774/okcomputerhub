@@ -84,7 +84,10 @@ Fran, 2026-10-03).
    rápidos, chip del plan) y «Desde WhatsApp» (pegado o captura → ticket o
    trabajo). Tanda 2 HECHA (2026-10-04): el webhook preparado y sin conectar
    (espejos `wa_*`, adjuntos del ticket, órdenes del equipo, corte en
-   `supabase/cortes/corte_whatsapp.sql`).
+   `supabase/cortes/corte_whatsapp.sql`). Tanda 3 HECHA (2026-10-04): el
+   conector del Agente de Meta, preparado. **Bloque 5 HECHO** (2026-10-04),
+   preparado para el cambio de WhatsApp: falta lo de Fran (PENDIENTE_FRAN §1
+   quater y §1 quinquies, y `GROQ_API_KEY` §3).
 6. **Sistema**: usuarios y modo empleado, deshacer, cola offline, historial por
    ficha, configuración, push y APK, aviso de versión.
 7. **Resto**: inventario completo (albaranes, historial, Excel), VeriFactu,
@@ -237,7 +240,7 @@ Fran, 2026-10-03).
 | Bandeja de notificaciones (`inbox.js`) | Falta | (campana de avisos) | — |
 | Bandeja de WhatsApp: leer y contestar (`wa-bandeja.js`) | Hecho | `shell/whatsapp.ts`, función `whatsapp`: plantilla fuera de 24 h, documentos de Zoho, fotos en la conversación y «Ver foto» pedida a Meta, enlaces rápidos (Cliente, Sede, Remoto, Ticket, Presupuesto) y chip del plan (2026-10-04) | Vincular un teléfono a una ficha (en la app). |
 | Webhook de WhatsApp: menú, horario, ticket u oportunidad, órdenes del equipo, adjuntos | Preparado | Función `whatsapp-webhook` (SIN_JWT, firma de Meta) + `equipo.ts`, espejos `hub.wa_*` y `ticket_adjuntos` (`20261028_whatsapp.sql`); la ventana fija cambia sola de fuente con el área `whatsapp` | El cambio de WhatsApp (`supabase/cortes/corte_whatsapp.sql` + la URL en Meta, PENDIENTE_FRAN §1 quinquies). Avisos por Telegram en vez de push. Las órdenes del equipo que tocan trabajos, tareas o fichajes esperan a su corte (lo dicen y no escriben). |
-| Agente de Meta por MCP (`meta-agente-mcp`) | Falta | — | — |
+| Agente de Meta por MCP (`meta-agente-mcp`) | Preparado | Función `meta-agente-mcp` (SIN_JWT, token `x-mcp-token`; skills LITERALES en `_shared/meta-agente-skills.ts`); «🤖 Agente de Meta» en la ventana de WhatsApp (admin: ver el estado; registrar/repuntar al hub, solo tras el cambio) | El cambio de WhatsApp y `META_AGENTE_MCP_TOKEN` (PENDIENTE_FRAN §1 quinquies, paso 5). |
 | WhatsApp pegado o captura a ticket/trabajo (`parse-whatsapp`) | Hecho | `#/tickets/whatsapp` (`tickets/whatsapp.ts`, `wai-`) + función `parse-whatsapp` (Groq, el mismo prompt); abre el alta de ticket o trabajo rellena (`ui/borrador.ts`) | `GROQ_API_KEY` en el hub (PENDIENTE_FRAN §3). «Compartir» desde el móvil (share target) al hub. |
 | Asistente de voz (`voice.js`, `groq-proxy`) | Falta | (notas de voz → comandas) | — |
 | Repaso matinal y cierre | Hecho | `informes-enviar`, `telegram-bot` | — |
