@@ -94,7 +94,8 @@ Fran, 2026-10-03).
    no hacen falta (las cubre el modo escritorio); la APK, para el corte final.
    Tanda 1 HECHA (2026-10-04): usuarios, modo empleado y registro de cambios.
    Tanda 2 HECHA (2026-10-04): aviso de versión, F5, tamaño del texto,
-   privacidad y configuración.
+   privacidad y configuración. Tanda 3 HECHA (2026-10-04): deshacer, cola sin
+   red (también el fichaje) y la última copia de las lecturas.
 7. **Resto**: inventario completo (albaranes, historial, Excel), VeriFactu,
    facturas de compra, gastos y cobros de la app, control de equipos, Google
    (Calendar, Contactos, Drive).
@@ -275,9 +276,9 @@ Fran, 2026-10-03).
 | Dashboard / Mi jornada | Hecho | `#/inicio` (Oki), `#/direccion`, `#/hoy`; «Mi lista de hoy» es la baldosa de `#/lista-dia` | — |
 | Búsqueda global | Hecho | Ctrl+K | Los trabajos se abren en la app. |
 | Auditoría por ficha y registro de cambios | Hecho | `#/registro` y «🕘 Historial» en cliente, sitio, trabajo, ticket y presupuesto (admin); función `historial`: junta `hub.auditoria` y el `audit_log` de la app (leído) | — |
-| Deshacer (Ctrl+Z) | Falta | — | — |
-| Cola offline | Falta | — | — |
-| Caché de arranque | Falta | — | — |
+| Deshacer (Ctrl+Z) | Hecho | `core/deshacer.ts` (observador del cliente de datos, un gesto = una acción), chip «↩ Deshacer» con su panel y Ctrl+Z | — |
+| Cola offline | Hecho | `core/cola.ts` (IndexedDB, FIFO, id del móvil, lista blanca) y chip «☁ sin enviar»; el fichaje (`hub.fichar`) sale con la hora de la pulsación (`20261029_fichar_cuando.sql`) | Background Sync del service worker (aquí sale al volver la red, al entrar y cada minuto). |
+| Caché de arranque | Hecho | `core/lecturas.ts`: sin red, la última copia de las lecturas de la calle (por persona) con lo pendiente encima | Pintar al instante con la copia ANTES de que llegue la red (aquí la copia solo entra si la red falla). |
 | Feedback a Claude Code (`report-to-claude`) | Falta | — | — |
 | Capa de repaso visual | No aplica | — | Herramienta de desarrollo de la app. |
 | Modo escritorio | Hecho | `shell/escritorio.ts` | — |

@@ -745,6 +745,13 @@ commit;`);
     'reloj: tras el corte, ficha a nombre de la persona y la auditoría la apunta');
   ok(!psql(como('service_role', null, `select hub.reloj_fichar(id, 'traslado') from hub.usuarios where email = 'tito@ok.test';`), { esperaError: true }).ok,
     'reloj: las reglas son las de hub.fichar (no hay dos sesiones abiertas)');
+  // Fichaje guardado sin red (20261029): con la hora de la pulsación, dentro de 72 h y sin fines antes del inicio.
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.fichar('fin', null, null, null, null, now() - interval '4 days');`), { esperaError: true }).ok, 'fichar sin red: una hora de hace más de 72 h no vale');
+  psql(como('authenticated', 'tito@ok.test', `select hub.fichar('inicio', 'ticket', '00000000-0000-0000-0000-0000000000f1', null, null, now() - interval '30 minutes');`));
+  ok(psql(`select round(extract(epoch from now() - inicio) / 60) from hub.sesiones where entidad_id = '00000000-0000-0000-0000-0000000000f1'`) === '30', 'fichar sin red: el inicio queda a la hora de la pulsación');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.fichar('fin', null, null, null, null, now() - interval '1 hour');`), { esperaError: true }).ok, 'fichar sin red: un fin anterior al inicio no vale');
+  psql(como('authenticated', 'tito@ok.test', `select hub.fichar('fin', null, null, null, null, now() - interval '5 minutes');`));
+  ok(psql(`select duracion_min from hub.sesiones where entidad_id = '00000000-0000-0000-0000-0000000000f1'`) === '25', 'fichar sin red: el fin, también a su hora (25 min)');
   psql(como('authenticated', 'tito@ok.test', `select hub.reloj_revocar(id) from hub.reloj_dispositivos;`));
   ok(psql(como('service_role', null, `select count(*) from hub.reloj_validar('${rtok}');`)).split('\n').pop() === '0', 'reloj: desvinculado deja de valer');
   ok(psql(`select count(*) from cron.job where jobname in ('hub-sync-app', 'hub-sync-app-completo')`) === '0', 'corte final: el sync con la app se apaga');

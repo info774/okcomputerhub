@@ -18,6 +18,9 @@ import { empezarTour, tourSiguiente, tourCerrar, tourSiEsNuevo } from './shell/t
 import { iniciarVersion, recargarVersion } from './shell/version';
 import { aplicarTexto } from './shell/texto';
 import './shell/atajos';
+import { pintarPendientes, enviarAlEntrar } from './shell/pendientes';
+import { limpiarHistorial } from './core/deshacer';
+import { borrarLecturas } from './core/lecturas';
 
 const raiz = document.getElementById('app')!;
 let arrancado = false;
@@ -47,6 +50,9 @@ registrarAcciones({
     if (err) avisoLogin(err);
   },
   async salir() {
+    // El historial de deshacer y la copia de las lecturas son de quien sale (la cola no: sale con su sesión).
+    limpiarHistorial();
+    await borrarLecturas();
     await salir();
     arrancado = false;
     pintarLogin(raiz);
@@ -81,6 +87,8 @@ async function arrancarUnaVez() {
     history.replaceState(null, '', '#/hoy');
   }
   pintarShell(raiz);
+  pintarPendientes(raiz);
+  enviarAlEntrar();
   iniciarRouter(mostrarModulo);
   tourSiEsNuevo();
 }

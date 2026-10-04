@@ -8,15 +8,33 @@
 //   · un reintento si el JWT caducó (401 PGRST303) con el token refrescado;
 //   · fetchAll() para pasar del tope de 1000 filas, que PROPAGA el error: una
 //     caída a mitad de paginación no puede parecer una lista completa.
-// Lo que (aún) no: cola offline y deshacer. Llegarán con los módulos que los
-// necesiten.
+// Y desde la paridad del bloque 6 (2026-10-04), como la app:
+//   · cola sin red (core/cola.ts): las escrituras de la calle se guardan en el
+//     móvil y salen solas al volver la red; los POST llevan su id de cliente;
+//   · última copia de las lecturas de la calle (core/lecturas.ts) cuando falla
+//     la red, con lo pendiente de la cola superpuesto;
+//   · deshacer (core/deshacer.ts): un observador de escrituras que fotografía
+//     lo que va a cambiar (registrarObservadorEscrituras).
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY, ESQUEMA } from './config';
 import { token, refrescarToken } from './auth';
+import { usuario } from './estado';
+import { encolable, soloSinRed, encolar, conIdCliente, aplicarPendientes, registrarEnviador } from './cola';
+import { LECTURAS_OFFLINE, claveLectura, guardarLectura, leerLectura } from './lecturas';
 
 export type Fila = Record<string, any>;
 export interface ErrorApi { status?: number; message: string; code?: string }
-export interface Resultado<T> { data: T | null; error: ErrorApi | null; total?: number | null }
+// `encolado`: sin red, guardado en el móvil (saldrá solo). `deCache`: lectura sin red, con la última copia (su fecha).
+export interface Resultado<T> { data: T | null; error: ErrorApi | null; total?: number | null; encolado?: boolean; deCache?: number }
+
+// El deshacer se engancha aquí (como en la app): `antes` fotografía lo que se va
+// a tocar y `despues` lo apunta si salió bien. Sin import circular: se registra.
+export interface ObservadorEscrituras {
+  antes(metodo: string, tabla: string, params: Params, body: unknown): Promise<unknown>;
+  despues(ctx: unknown, res: Resultado<unknown>): void;
+}
+let _observador: ObservadorEscrituras | null = null;
+export function registrarObservadorEscrituras(o: ObservadorEscrituras) { _observador = o; }
 type Params = Record<string, string>;
 type Metodo = 'GET' | 'HEAD' | 'POST' | 'PATCH' | 'DELETE';
 
@@ -55,9 +73,49 @@ async function unaVez(method: Metodo, url: string, extra: Record<string, string>
   }
 }
 
+type Opciones = { single?: boolean; contar?: boolean; upsert?: boolean };
+
 export class API {
-  static async req<T = Fila[]>(method: Metodo, tabla: string, params: Params = {}, body: unknown = null,
-    opciones: { single?: boolean; contar?: boolean; upsert?: boolean } = {}): Promise<Resultado<T>> {
+  static async req<T = Fila[]>(method: Metodo, tabla: string, params: Params = {}, body: unknown = null, opciones: Opciones = {}): Promise<Resultado<T>> {
+    if (method === 'GET') return this.leer<T>(tabla, params, opciones);
+    if (method === 'HEAD') return this._raw<T>(method, tabla, params, body, opciones);
+    // Escrituras: cola sin red y deshacer.
+    const cola = encolable(method, tabla, !!opciones.upsert);
+    if (cola && navigator.onLine === false) return this.aCola<T>(method, tabla, params, body);
+    // El id del POST se pone ANTES del primer intento: si la respuesta se pierde, el reenvío lleva el mismo.
+    const cuerpo = cola && method === 'POST' && !tabla.startsWith('rpc/') ? conIdCliente(body) : body;
+    const foto = _observador && !tabla.startsWith('rpc/') && !opciones.upsert ? await _observador.antes(method, tabla, params, cuerpo) : null;
+    const res = await this._raw<T>(method, tabla, params, cuerpo, opciones);
+    if (cola && res.error && !res.error.status && !soloSinRed(tabla)) return this.aCola<T>(method, tabla, params, cuerpo);
+    if (foto) _observador!.despues(foto, res as Resultado<unknown>);
+    return res;
+  }
+
+  private static async aCola<T>(method: Metodo, tabla: string, params: Params, body: unknown): Promise<Resultado<T>> {
+    const { body: cuerpo } = await encolar(method, tabla, params, body);
+    const data = method === 'POST' && !tabla.startsWith('rpc/') ? (Array.isArray(cuerpo) ? cuerpo : [cuerpo]) : null;
+    return { data: data as T, error: null, encolado: true };
+  }
+
+  // Lectura con la última copia si falla la red (solo las tablas de la calle) y lo pendiente encima.
+  private static async leer<T>(tabla: string, params: Params, opciones: Opciones): Promise<Resultado<T>> {
+    const res = await this._raw<T>('GET', tabla, params, null, opciones);
+    const u = usuario()?.id;
+    const guardable = u && LECTURAS_OFFLINE.has(tabla);
+    const clave = guardable ? claveLectura(u, tabla, params, !!opciones.single) : '';
+    if (!res.error) {
+      if (guardable) guardarLectura(clave, res.data);
+      return { ...res, data: aplicarPendientes(tabla, res.data, params) };
+    }
+    if (guardable && !res.error.status) {
+      const copia = await leerLectura(clave);
+      if (copia) return { data: aplicarPendientes(tabla, copia.data, params) as T, error: null, deCache: copia.at };
+    }
+    return res;
+  }
+
+  // La petición tal cual, sin cola, copia ni deshacer (la usan la cola al vaciarse y el deshacer al revertir).
+  static async _raw<T = Fila[]>(method: Metodo, tabla: string, params: Params = {}, body: unknown = null, opciones: Opciones = {}): Promise<Resultado<T>> {
     const url = new URL(`${API_BASE}/${tabla}`);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
@@ -131,3 +189,6 @@ export class API {
     return { data: todo, error: null };
   }
 }
+
+// La cola manda por aquí (es quien tiene el token y la URL).
+registrarEnviador(op => API._raw(op.method as Metodo, op.table, op.params, op.body));
