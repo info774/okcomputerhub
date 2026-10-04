@@ -93,6 +93,8 @@ Fran, 2026-10-03).
    Decisiones de Fran (2026-10-04): push web además de Telegram; las pestañas
    no hacen falta (las cubre el modo escritorio); la APK, para el corte final.
    Tanda 1 HECHA (2026-10-04): usuarios, modo empleado y registro de cambios.
+   Tanda 2 HECHA (2026-10-04): aviso de versión, F5, tamaño del texto,
+   privacidad y configuración.
 7. **Resto**: inventario completo (albaranes, historial, Excel), VeriFactu,
    facturas de compra, gastos y cobros de la app, control de equipos, Google
    (Calendar, Contactos, Drive).
@@ -282,13 +284,13 @@ Fran, 2026-10-03).
 | Paleta Ctrl+K con acciones | Hecho | `shell/buscador.ts` | Acciones sobre lo encontrado. |
 | Centro de avisos | Hecho | campana del escritorio | — |
 | Pestañas tipo navegador (`tabs.js`) | No aplica | — | Decisión de Fran (2026-10-04): lo cubre el modo escritorio (ventanas). |
-| Atajos ESC y F5 | Falta | (solo ESC) | F5 guarda. |
+| Atajos ESC y F5 | Hecho | ESC (buscador, dock, ventanas) y F5 guarda el formulario de delante (`shell/atajos.ts`) | — |
 | Tema oscuro | Hecho | `shell/tema.ts` | — |
-| Tamaño del texto en el móvil | Falta | — | — |
+| Tamaño del texto en el móvil | Hecho | Pie del menú en el móvil (`shell/texto.ts`, `data-fs`, por dispositivo) | — |
 | Guía de operaciones | Hecho | `shell/tour.ts` | — |
-| Aviso de versión nueva | Falta | — | — |
-| Configuración (empresa, IGIC, tarifas, colores, Google) | Falta | (`#/facturacion`, `#/datos`) | — |
-| Política de privacidad | Falta | — | — |
+| Aviso de versión nueva | Hecho | `shell/version.ts` (lee `version.json` cada 5 min y al volver) → «Recargar» | — |
+| Configuración (empresa, IGIC, tarifas, colores, Google) | Hecho | `#/configuracion` (admin): empresa = `facturacion_emisor`, IGIC, tarifa sin mantenimiento (las de los planes, en sus plantillas), en `hub.config` para todos | No se portan los colores de estado (los fija la marca) ni la contraseña de borrado (la RLS ya lo limita a admin). Google y Zoho: PENDIENTE_FRAN. |
+| Política de privacidad | Hecho | `public/privacidad.html` (copia literal, colores del hub) y enlace en la entrada | — |
 | APK Android | Falta | — | Decisión de Fran (2026-10-04): se deja para el corte final (cambiar la URL de la APK de la app al hub, paso 7); hasta entonces el hub es PWA instalable. |
 
 ### 13. Integraciones y programados

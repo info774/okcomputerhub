@@ -4,7 +4,12 @@
 // (global con filtros, «Cargar más» por la fecha del último, de una ficha y el
 // enlace «🕘 Historial» de las fichas, solo admin; la función `historial`
 // SIMULADA) y el modo empleado (menú reducido del técnico y, en el móvil,
-// entrada a «Hoy»). Sin datos reales.
+// entrada a «Hoy»).
+// Tanda 2: aviso de versión nueva (version.json cambia → barra «Recargar»),
+// F5 guarda el formulario de delante, tamaño del texto en el móvil, política
+// de privacidad (y su enlace en la entrada) y Configuración (empresa en la
+// fila facturacion_emisor sin perder lo demás, IGIC, tarifa sin
+// mantenimiento y las de los planes desde su plantilla). Sin datos reales.
 //   npm run build && node .claude/skills/verify/verify-sistema.mjs
 import { servidor, navegador, baseMemoria, preparar, contador, CAPTURAS, SB } from './comun.mjs';
 
@@ -20,6 +25,8 @@ const USUARIOS = [
 const inicial = areas => ({
   usuarios: USUARIOS, areas,
   clientes: [{ id: 'cl1', nombre: 'Bar Manolo', activo: true }],
+  config: [{ clave: 'facturacion_emisor', valor: { nombre: 'Dalmon Sistemas S.L.', iban: 'ES00 1234', email: 'info@ok.test' } }],
+  planes_mantenimiento: [{ id: 'pl1', nombre: 'Silver', coste_presencial_estandar: 35, coste_presencial_urgente: 55, activo: true, orden: 1 }],
   sesiones: [], trabajos: [], agenda: [], tareas: [], tickets: [],
 });
 
@@ -82,6 +89,24 @@ try {
   await page.waitForFunction(() => document.querySelector('.us-tabla')?.textContent.includes('Desactivado'));
   ok(base.db.usuarios.find(u => u.id === 'u-tito')?.activo === false, 'usuarios: desactivar (no se borra)');
 
+  // Configuración
+  await page.goto(`${srv.base}/#/configuracion`);
+  await page.waitForSelector('#cfg-e-nombre');
+  ok(await page.inputValue('#cfg-e-nombre') === 'Dalmon Sistemas S.L.' && await page.inputValue('#cfg-igic') === '7' && (await page.textContent('.tabla')).includes('Silver'),
+    'configuración: la empresa de facturacion_emisor, IGIC 7 por defecto y la tarifa de cada plan');
+  await page.fill('#cfg-e-nif', 'B38000000');
+  await page.fill('#cfg-igic', '7.5');
+  await page.keyboard.press('F5');
+  await page.waitForFunction(() => document.body.textContent.includes('Datos de la empresa guardados'));
+  const emi = base.db.config.find(c => c.clave === 'facturacion_emisor')?.valor;
+  ok(emi?.nif === 'B38000000' && emi?.iban === 'ES00 1234' && base.db.config.find(c => c.clave === 'igic_pct')?.valor === 7.5,
+    'configuración: F5 guarda; el emisor conserva lo que no está en el formulario (IBAN) y el IGIC va a su clave');
+  await page.fill('#cfg-sin-std', '45');
+  await page.fill('#cfg-sin-urg', '70');
+  await page.click('[data-action="cfgTarifas"]');
+  await page.waitForFunction(() => document.body.textContent.includes('Tarifa guardada'));
+  ok(JSON.stringify(base.db.config.find(c => c.clave === 'tarifa_sin_mantenimiento')?.valor) === '{"estandar":45,"urgente":70}', 'configuración: tarifa de «Sin mantenimiento»');
+
   // Registro global
   await page.goto(`${srv.base}/#/registro`);
   await page.waitForSelector('.rg-item');
@@ -103,6 +128,32 @@ try {
   await page.screenshot({ path: `${CAPTURAS}/sistema-registro.png`, fullPage: true });
   await ctx.close();
 
+  // ── Versión nueva y privacidad ───────────────────────────────────────────
+  let build = 'aaa';
+  ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 900 } });
+  await preparar(ctx, { email: 'ana@ok.test', base: baseMemoria(inicial([]), {}) });
+  await ctx.route(`${srv.base}/version.json`, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ build }) }));
+  page = await ctx.newPage();
+  page.on('pageerror', e => errores.push(String(e.stack ?? e)));
+  await page.goto(`${srv.base}/#/inicio`);
+  await page.waitForSelector('#menu .menu-item');
+  await page.waitForTimeout(300);
+  ok(await page.locator('#version-nueva').count() === 0, 'versión: con la misma, sin aviso');
+  build = 'bbb';
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await page.waitForSelector('#version-nueva');
+  ok((await page.textContent('#version-nueva')).includes('versión nueva') && await page.locator('#version-nueva [data-action="recargarVersion"]').count() === 1, 'versión: otra en el servidor → «Recargar»');
+  const priv = await page.request.get(`${srv.base}/privacidad.html`);
+  ok(priv.ok() && (await priv.text()).includes('Dalmon Sistemas'), 'privacidad: la página pública con el responsable');
+  await ctx.close();
+  ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 900 } });
+  await preparar(ctx, { base: baseMemoria(inicial([]), {}) });
+  page = await ctx.newPage();
+  await page.goto(`${srv.base}/`);
+  await page.waitForSelector('.login');
+  ok(await page.getAttribute('.login a[href="/privacidad.html"]', 'target') === '_blank', 'entrada: enlace a la política de privacidad');
+  await ctx.close();
+
   // ── Técnico: modo empleado ───────────────────────────────────────────────
   base = baseMemoria(inicial([]), {});
   ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, isMobile: true });
@@ -118,6 +169,16 @@ try {
   await page.goto(`${srv.base}/#/clientes/cl1`);
   await page.waitForSelector('.tarjeta-cab');
   ok(await page.locator('a[href^="#/registro/"]').count() === 0, 'técnico: sin «🕘 Historial» en las fichas');
+  // Tamaño del texto (solo móvil): al pie del menú, y se recuerda
+  await page.click('[data-action="alternarMenu"]');
+  const antes = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+  await page.click('.texto-tam button[data-p0="xl"]');
+  const despues = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+  ok(despues > antes && await page.getAttribute('html', 'data-fs') === 'xl' && await page.getAttribute('.texto-tam button[data-p0="xl"]', 'aria-pressed') === 'true',
+    `tamaño del texto: «Muy grande» agranda la letra (${antes} → ${despues} px)`);
+  await page.reload();
+  await page.waitForSelector('#menu .menu-item', { state: 'attached' });
+  ok(await page.getAttribute('html', 'data-fs') === 'xl', 'tamaño del texto: se recuerda en el dispositivo');
 
   ok(!errores.length, `sin errores JS${errores.length ? ': ' + errores.join(' | ') : ''}`);
 } finally {

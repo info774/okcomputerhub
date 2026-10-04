@@ -37,6 +37,7 @@ import { moduloHoy } from './hoy';
 import { modulosAppActual } from './app-actual';
 import { moduloUsuarios } from './usuarios';
 import { moduloRegistro } from './registro';
+import { moduloConfiguracion } from './configuracion';
 
 export const MODULOS: Modulo[] = [
   moduloInicio,
@@ -73,6 +74,7 @@ export const MODULOS: Modulo[] = [
   moduloDatos,
   moduloUsuarios,
   moduloRegistro,
+  moduloConfiguracion,
   moduloConector,
   moduloReloj,
 ];
