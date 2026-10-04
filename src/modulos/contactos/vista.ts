@@ -7,6 +7,7 @@ import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esAdmin } from '../../core/estado';
 import { esc, hace, fechaHora, toast } from '../../ui/dom';
 import { enApp, telWhatsApp } from '../ventas/datos';
+import { esqueleto } from '../../ui/esqueleto';
 
 interface Contacto {
   id: string; nombre: string; tipo: string | null; empresa: string | null; cargo: string | null;
@@ -57,7 +58,7 @@ async function cargar() {
 }
 
 async function pintarLista(el: HTMLElement) {
-  el.innerHTML = '<p class="cargando">Cargando…</p>';
+  el.innerHTML = esqueleto('tabla');
   const [error, escribe] = await Promise.all([cargar(), esDelHub('contactos')]);
   if (error && !_lista.length) { el.innerHTML = `<p class="aviso mal">No se pudieron leer los contactos: ${esc(error.message)}</p>`; return; }
   const q = _q.toLowerCase();
@@ -120,7 +121,7 @@ async function tabTickets(c: Contacto): Promise<string> {
 }
 
 async function pintarFicha(el: HTMLElement, id: string, pestana = 'datos') {
-  el.innerHTML = '<p class="cargando">Cargando…</p>';
+  el.innerHTML = esqueleto('lineas');
   const [{ data: c, error }] = await Promise.all([API.single<Contacto>('contactos', { select: COLS, id: `eq.${id}` }), _clientes.size ? null : cargar()]);
   if (error || !c) { el.innerHTML = '<p class="aviso mal">No se encontró el contacto.</p><p><a href="#/contactos">← Contactos</a></p>'; return; }
   _actual = c;
@@ -136,7 +137,7 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'datos') {
     <p class="nota">${esc([NOMBRE_TIPO[c.tipo ?? 'otro'] ?? c.tipo, c.empresa, c.cargo].filter(Boolean).join(' · '))}</p>
     <nav class="pestanas" role="tablist">${PESTANAS.map(([k, n]) =>
       `<button role="tab" aria-selected="${k === p}" class="${k === p ? 'activo' : ''}" data-action="coPestana" data-p0="${esc(id)}" data-p1="${k}">${n}</button>`).join('')}</nav>
-    <div id="co-cuerpo"><p class="cargando">Cargando…</p></div>`;
+    <div id="co-cuerpo">${esqueleto('lineas')}</div>`;
   const cuerpo = p === 'trabajos' ? await tabTrabajos(c) : p === 'tickets' ? await tabTickets(c) : tabDatos(c);
   const caja = el.querySelector('#co-cuerpo');
   if (caja && _actual?.id === id) caja.innerHTML = cuerpo;

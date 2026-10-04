@@ -11,6 +11,7 @@ import { descargarCsv } from '../../ui/csv';
 import { tabEquipamiento, tabSeguimiento } from './equipamiento';
 import { esc, hace, fechaHora, toast } from '../../ui/dom';
 import { eur, enApp, telWhatsApp } from '../ventas/datos';
+import { esqueleto } from '../../ui/esqueleto';
 
 interface Sitio {
   id: string; nombre: string; cliente_id: string | null; direccion: string | null; tipo: string | null; activo: boolean | null;
@@ -85,7 +86,7 @@ async function cargar() {
 }
 
 async function pintarLista(el: HTMLElement) {
-  el.innerHTML = '<p class="cargando">Cargando…</p>';
+  el.innerHTML = esqueleto('tabla');
   const [error, escribe] = await Promise.all([cargar(), esDelHub('locales')]);
   _escribe = escribe;
   if (error && !_lista.length) { el.innerHTML = `<p class="aviso mal">No se pudieron leer los sitios: ${esc(error.message)}</p>`; return; }
@@ -220,7 +221,7 @@ async function tabEquipos(l: Sitio): Promise<string> {
 }
 
 async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
-  el.innerHTML = '<p class="cargando">Cargando…</p>';
+  el.innerHTML = esqueleto('lineas');
   const [{ data: l, error }] = await Promise.all([API.single<Sitio & Record<string, any>>('locales', { select: '*', id: `eq.${id}` }), _rmm.size ? null : cargar()]);
   if (error || !l) { el.innerHTML = '<p class="aviso mal">No se encontró el sitio.</p><p><a href="#/sitios">← Sitios</a></p>'; return; }
   if (!esAdmin()) delete l.importe_mantenimiento;
@@ -246,7 +247,7 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
     <p class="nota">${cliente ? `<a href="#/clientes/${esc(l.cliente_id)}">${esc(cliente)}</a>` : 'Sin cliente'}${l.direccion ? ` · ${esc(l.direccion)}` : ''} ${chipPago(SIN_MANT(l.plan) ? null : l.estado_pago)}</p>
     <nav class="pestanas" role="tablist">${pestanas.map(([k, n]) =>
       `<button role="tab" aria-selected="${k === p}" class="${k === p ? 'activo' : ''}" data-action="siPestana" data-p0="${esc(id)}" data-p1="${k}">${n}</button>`).join('')}</nav>
-    <div id="si-cuerpo"><p class="cargando">Cargando…</p></div>`;
+    <div id="si-cuerpo">${esqueleto('lineas')}</div>`;
   const cuerpo = await ({ resumen: tabResumen, telefonos: tabTelefonos,
     software: () => tabEquipamiento('software', l.id, _escribe), hardware: () => tabEquipamiento('hardware', l.id, _escribe),
     camaras: () => tabEquipamiento('camaras', l.id, _escribe), seguimiento: () => tabSeguimiento(l.id, l.plan, _escribe), contactos: tabContactos, trabajos: tabTrabajos, tickets: tabTickets, equipos: tabEquipos }[p]!)(l);

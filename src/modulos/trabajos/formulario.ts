@@ -38,7 +38,9 @@ function horaIso(fecha: string, hora: string): string | null {
 }
 const horaDe = (iso: string | null) => (iso ? new Date(iso).toTimeString().slice(0, 5) : '');
 
-export async function pintarFormulario(el: HTMLElement, numero?: string) {
+// `desdeOportunidad`: alta que nace de una oportunidad ganada (#/trabajos/nuevo/o/<id>):
+// trae cliente, sede, contacto, título y descripción, y el trabajo queda enlazado a ella.
+export async function pintarFormulario(el: HTMLElement, numero?: string, desdeOportunidad?: string) {
   const [personas, escribe, escribeCli] = await Promise.all([equipo(), esDelHub('trabajos'), esDelHub('clientes', 'locales')]);
   let t: any = null;
   if (numero) {
@@ -47,19 +49,25 @@ export async function pintarFormulario(el: HTMLElement, numero?: string) {
     if (!t) { el.innerHTML = '<p class="aviso mal">No existe ese trabajo.</p><p><a href="#/trabajos">← Trabajos</a></p>'; return; }
   }
   _editando = t ? { id: t.id, numero: t.numero, estado: t.estado } : null;
+  let op: any = null;
+  if (!t && desdeOportunidad) {
+    op = (await API.single<any>('oportunidades', { select: 'id,titulo,descripcion,cliente_id,local_id,contacto_id', id: `eq.${desdeOportunidad}` })).data;
+  }
+  // Valores de partida: los del trabajo que se edita o los de la oportunidad.
+  const v: any = t ?? (op ? { cliente_id: op.cliente_id, local_id: op.local_id, contacto_id: op.contacto_id, titulo: op.titulo, descripcion: op.descripcion } : null);
   const [cli, locs, cons, pres] = await Promise.all([
-    t?.cliente_id ? API.single<any>('clientes', { select: 'id,nombre', id: `eq.${t.cliente_id}` }) : Promise.resolve({ data: null }),
-    t?.cliente_id ? API.get<any[]>('locales', { select: 'id,nombre', cliente_id: `eq.${t.cliente_id}`, activo: 'eq.true', order: 'nombre' }) : Promise.resolve({ data: [] }),
-    t?.cliente_id ? API.get<any[]>('contactos', { select: 'id,nombre', cliente_id: `eq.${t.cliente_id}`, activo: 'eq.true', order: 'favorito.desc,nombre' }) : Promise.resolve({ data: [] }),
-    t?.cliente_id ? API.get<any[]>('presupuestos', { select: 'id,numero,titulo', cliente_id: `eq.${t.cliente_id}`, order: 'created_at.desc', limit: '30' }) : Promise.resolve({ data: [] }),
+    v?.cliente_id ? API.single<any>('clientes', { select: 'id,nombre', id: `eq.${v.cliente_id}` }) : Promise.resolve({ data: null }),
+    v?.cliente_id ? API.get<any[]>('locales', { select: 'id,nombre', cliente_id: `eq.${v.cliente_id}`, activo: 'eq.true', order: 'nombre' }) : Promise.resolve({ data: [] }),
+    v?.cliente_id ? API.get<any[]>('contactos', { select: 'id,nombre', cliente_id: `eq.${v.cliente_id}`, activo: 'eq.true', order: 'favorito.desc,nombre' }) : Promise.resolve({ data: [] }),
+    v?.cliente_id ? API.get<any[]>('presupuestos', { select: 'id,numero,titulo', cliente_id: `eq.${v.cliente_id}`, order: 'created_at.desc', limit: '30' }) : Promise.resolve({ data: [] }),
   ]);
   const plantillas = t ? [] : await (await import('./plantillas')).plantillasActivas();
   _plantillas = plantillas;
   const modo = modoInicial();
   const opt = (v: string, txt: string, sel: boolean) => `<option value="${esc(v)}" ${sel ? 'selected' : ''}>${esc(txt)}</option>`;
-  const atras = t ? `#/trabajos/${t.numero}` : '#/trabajos';
-  el.innerHTML = `<p><a href="${atras}">← ${t ? `Trabajo #${t.numero}` : 'Trabajos'}</a></p>
-    <h2>${t ? `Editar el trabajo #${t.numero}` : 'Nuevo trabajo'}</h2>
+  const atras = t ? `#/trabajos/${t.numero}` : op ? `#/oportunidades/${op.id}` : '#/trabajos';
+  el.innerHTML = `<p><a href="${atras}">← ${t ? `Trabajo #${t.numero}` : op ? 'Oportunidad' : 'Trabajos'}</a></p>
+    <h2>${t ? `Editar el trabajo #${t.numero}` : op ? `Nuevo trabajo de la oportunidad «${esc(op.titulo)}»` : 'Nuevo trabajo'}</h2>
     ${escribe ? '' : avisoSoloLectura('Los trabajos')}
     <form class="tarjeta tf-form" id="tf-form" data-modo="${modo}" data-on-submit="tfGuardar" data-prevent="1">
       <div class="segmentado tf-modo" role="tablist" aria-label="Cuántos campos">
@@ -71,10 +79,10 @@ export async function pintarFormulario(el: HTMLElement, numero?: string) {
         <a class="nota" href="#/trabajos/plantillas">Gestionar plantillas</a></label>` : ''}
       <div class="in-campos">
         <label>Cliente <input id="tf-cliente-q" autocomplete="off" placeholder="Buscar por nombre o NIF…" value="${esc(cli.data?.nombre ?? '')}" data-on-input="tfBuscarCliente:$value"></label>
-        <label class="tf-completa">Sede <select id="tf-local"><option value="">— Sin sede —</option>${(locs.data ?? []).map(l => opt(l.id, l.nombre, l.id === t?.local_id)).join('')}</select></label>
-        <label class="tf-completa">Contacto <select id="tf-contacto"><option value="">—</option>${(cons.data ?? []).map(k => opt(k.id, k.nombre, k.id === t?.contacto_id)).join('')}</select></label>
+        <label class="tf-completa">Sede <select id="tf-local"><option value="">— Sin sede —</option>${(locs.data ?? []).map(l => opt(l.id, l.nombre, l.id === v?.local_id)).join('')}</select></label>
+        <label class="tf-completa">Contacto <select id="tf-contacto"><option value="">—</option>${(cons.data ?? []).map(k => opt(k.id, k.nombre, k.id === v?.contacto_id)).join('')}</select></label>
       </div>
-      <input type="hidden" id="tf-cliente" value="${esc(t?.cliente_id ?? '')}"><ul id="tf-cliente-res" class="resultados"></ul>
+      <input type="hidden" id="tf-cliente" value="${esc(v?.cliente_id ?? '')}"><input type="hidden" id="tf-oportunidad" value="${esc(op?.id ?? '')}"><ul id="tf-cliente-res" class="resultados"></ul>
       ${escribeCli ? `<div class="acciones tf-rapido">
         <button type="button" class="btn secundario" data-action="tfRapido" data-p0="nc" aria-expanded="false">+ Nuevo cliente</button>
         <button type="button" class="btn secundario" data-action="tfRapido" data-p0="nl" aria-expanded="false">+ Nueva sede</button></div>
@@ -91,23 +99,23 @@ export async function pintarFormulario(el: HTMLElement, numero?: string) {
         <div class="in-campos"><label>Nombre <input id="tf-nl-nombre" maxlength="200"></label><label>Dirección <input id="tf-nl-direccion"></label></div>
         <input type="hidden" id="tf-nl-maps">
         <div class="acciones"><button type="button" class="btn" data-action="tfNlCrear">Crear sede y elegirla</button></div></fieldset>` : ''}
-      <label>Título <span class="nota">(obligatorio)</span> <input id="tf-titulo" required maxlength="200" value="${esc(t?.titulo ?? '')}" placeholder="Ej: Instalación cámaras, Revisión alarma…"></label>
-      <label class="tf-completa">Descripción <textarea id="tf-descripcion" rows="4" placeholder="Detalles del trabajo…">${esc(t?.descripcion ?? '')}</textarea></label>
+      <label>Título <span class="nota">(obligatorio)</span> <input id="tf-titulo" required maxlength="200" value="${esc(v?.titulo ?? '')}" placeholder="Ej: Instalación cámaras, Revisión alarma…"></label>
+      <label class="tf-completa">Descripción <textarea id="tf-descripcion" rows="4" placeholder="Detalles del trabajo…">${esc(v?.descripcion ?? '')}</textarea></label>
       <div class="in-campos">
-        <label>Tipo <select id="tf-tipo">${TIPOS.map(x => opt(x, x, x === (t?.tipo ?? 'Asistencia'))).join('')}</select></label>
-        <label class="tf-completa">Estado <select id="tf-estado">${ESTADOS.map(x => opt(x, x, x === (t?.estado ?? 'Pendiente'))).join('')}</select></label>
-        <label class="tf-completa">Prioridad <select id="tf-prioridad"><option value="">Sin prioridad</option>${PRIORIDADES.map(x => opt(x, x, x === t?.prioridad)).join('')}</select></label>
-        <label>Fecha <input id="tf-fecha" type="date" value="${esc(t?.fecha_programada ?? '')}"></label>
-        <label>Hora <input id="tf-hora" type="time" value="${esc(horaDe(t?.hora_llegada))}"></label>
-        <label class="tf-completa">Duración estimada (min) <input id="tf-duracion" type="number" min="15" max="600" step="15" value="${esc(t?.duracion_teorica ?? '')}"></label>
+        <label>Tipo <select id="tf-tipo">${TIPOS.map(x => opt(x, x, x === (v?.tipo ?? 'Asistencia'))).join('')}</select></label>
+        <label class="tf-completa">Estado <select id="tf-estado">${ESTADOS.map(x => opt(x, x, x === (v?.estado ?? 'Pendiente'))).join('')}</select></label>
+        <label class="tf-completa">Prioridad <select id="tf-prioridad"><option value="">Sin prioridad</option>${PRIORIDADES.map(x => opt(x, x, x === v?.prioridad)).join('')}</select></label>
+        <label>Fecha <input id="tf-fecha" type="date" value="${esc(v?.fecha_programada ?? '')}"></label>
+        <label>Hora <input id="tf-hora" type="time" value="${esc(horaDe(v?.hora_llegada))}"></label>
+        <label class="tf-completa">Duración estimada (min) <input id="tf-duracion" type="number" min="15" max="600" step="15" value="${esc(v?.duracion_teorica ?? '')}"></label>
       </div>
       <fieldset class="tf-tecnicos"><legend>Técnicos asignados</legend>
-        ${personas.map(p => `<label class="check"><input type="checkbox" value="${esc(p.nombre)}" ${(t?.tecnicos ?? []).includes(p.nombre) ? 'checked' : ''}> ${esc(p.nombre)}</label>`).join('')}</fieldset>
+        ${personas.map(p => `<label class="check"><input type="checkbox" value="${esc(p.nombre)}" ${(v?.tecnicos ?? []).includes(p.nombre) ? 'checked' : ''}> ${esc(p.nombre)}</label>`).join('')}</fieldset>
       <details class="tf-completa tf-mas" ${t && (t.ubicacion || t.presupuesto_id || t.materiales || t.observaciones) ? 'open' : ''}><summary>Ubicación, presupuesto y notas</summary>
-        <label>Ubicación (si no es la de la sede) <input id="tf-ubicacion" value="${esc(t?.ubicacion ?? '')}" placeholder="Dirección del trabajo…"></label>
-        <label>Presupuesto <select id="tf-presupuesto"><option value="">— Sin presupuesto —</option>${(pres.data ?? []).map(p => opt(p.id, `#${p.numero} ${p.titulo ?? ''}`, p.id === t?.presupuesto_id)).join('')}</select></label>
-        <label>Materiales <textarea id="tf-materiales" rows="2">${esc(t?.materiales ?? '')}</textarea></label>
-        <label>Observaciones <textarea id="tf-observaciones" rows="2">${esc(t?.observaciones ?? '')}</textarea></label>
+        <label>Ubicación (si no es la de la sede) <input id="tf-ubicacion" value="${esc(v?.ubicacion ?? '')}" placeholder="Dirección del trabajo…"></label>
+        <label>Presupuesto <select id="tf-presupuesto"><option value="">— Sin presupuesto —</option>${(pres.data ?? []).map(p => opt(p.id, `#${p.numero} ${p.titulo ?? ''}`, p.id === v?.presupuesto_id)).join('')}</select></label>
+        <label>Materiales <textarea id="tf-materiales" rows="2">${esc(v?.materiales ?? '')}</textarea></label>
+        <label>Observaciones <textarea id="tf-observaciones" rows="2">${esc(v?.observaciones ?? '')}</textarea></label>
       </details>
       ${t ? '' : `<label class="check"><input type="checkbox" id="tf-lista"> Añadir a la lista del día de los técnicos</label>`}
       <div class="acciones"><button class="btn" type="submit" ${escribe ? '' : 'disabled'}>${t ? 'Guardar cambios' : 'Crear trabajo'}</button>
@@ -256,6 +264,7 @@ const acciones = {
     if (!_editando) {
       // Completado exige fichaje: un alta nunca nace completada.
       cuerpo.estado = estado === 'Completado' ? 'Pendiente' : estado;
+      if (val('tf-oportunidad')) cuerpo.oportunidad_id = val('tf-oportunidad');
       const r = await API.post<any[]>('trabajos', cuerpo);
       if (r.error || !r.data?.[0]) { toast(`No se pudo crear: ${r.error?.message ?? 'sin respuesta'}`, 'error'); return; }
       // Lo recién creado entra directo en la lista de quien lo va a hacer, el día en que toca (_aListaDia de la app).

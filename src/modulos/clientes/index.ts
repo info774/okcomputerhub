@@ -16,6 +16,7 @@ import { esc, toast, hace, fechaHora } from '../../ui/dom';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
 import { descargarCsv } from '../../ui/csv';
+import { esqueleto } from '../../ui/esqueleto';
 import {
   type Cliente, type Crm, type Evento, type Oportunidad,
   TIPOS_ACTIVIDAD, ICONO_EVENTO, CLASE_TONO, eur, clases, olvidarClases, telWhatsApp, enApp,
@@ -43,7 +44,7 @@ async function cargarLista() {
 }
 
 async function pintarLista(el: HTMLElement) {
-  el.innerHTML = '<p class="cargando">Cargando…</p>';
+  el.innerHTML = esqueleto('tabla');
   const [, cs, crm, escribe] = await Promise.all([cargarLista(), clases(), API.get<Crm[]>('clientes_crm', { select: 'cliente_id,siguiente_fecha,siguiente_texto' }), esDelHub('clientes')]);
   // Los de baja van aparte, en su propia lista (como en la app: no ensucian los buscadores).
   if (_bajas) {
@@ -208,7 +209,7 @@ async function tabOportunidades(c: Cliente): Promise<string> {
 }
 
 async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
-  el.innerHTML = '<p class="cargando">Cargando…</p>';
+  el.innerHTML = esqueleto('lineas');
   const { data: c, error } = await API.single<Cliente>('clientes', { select: '*', id: `eq.${id}` });
   if (error || !c) { el.innerHTML = `<p class="aviso mal">No se encontró el cliente.</p><p><a href="#/clientes">← Clientes</a></p>`; return; }
   _cliente = c;
@@ -233,7 +234,7 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
     <p class="nota">${[c.nif, c.direccion].filter(Boolean).map(x => esc(x)).join(' · ')}</p>
     <nav class="pestanas" role="tablist">${PESTANAS.map(([k, n]) =>
       `<button role="tab" aria-selected="${k === p}" class="${k === p ? 'activo' : ''}" data-action="clPestana" data-p0="${esc(id)}" data-p1="${k}">${n}</button>`).join('')}</nav>
-    <div id="cl-cuerpo"><p class="cargando">Cargando…</p></div>`;
+    <div id="cl-cuerpo">${esqueleto('lineas')}</div>`;
   const cuerpo = await ({ resumen: tabResumen, actividad: tabActividad, sedes: tabSedes, contactos: tabContactos, oportunidades: tabOportunidades }[p]!)(c);
   const caja = document.getElementById('cl-cuerpo');
   if (caja && _cliente?.id === id) caja.innerHTML = cuerpo;

@@ -10,11 +10,16 @@ export interface Cliente { id: string; nombre: string; nif: string | null; telef
 export interface Crm { cliente_id: string; clase_manual: 'A' | 'B' | 'C' | null; siguiente_fecha: string | null; siguiente_texto: string | null;
   responsable_id: string | null; etiquetas: string[] }
 export interface Clase { cliente_id: string; clase: 'A' | 'B' | 'C'; clase_auto: 'A' | 'B' | 'C' }
-export interface Etapa { clave: string; nombre: string; probabilidad: number; tipo: 'abierta' | 'ganada' | 'perdida' }
+// Reglas al ENTRAR en la etapa (20261025_embudo_reglas.sql): el próximo paso
+// lo pone la base; lo de «proponer» lo ofrece la pantalla y lo confirma una persona.
+export type Propuesta = 'presupuesto' | 'trabajo' | 'comanda';
+export interface Etapa { clave: string; nombre: string; probabilidad: number; tipo: 'abierta' | 'ganada' | 'perdida';
+  seguimiento_dias?: number | null; seguimiento_texto?: string | null; proponer?: Propuesta | null; comanda_texto?: string | null }
 export interface Pipeline { id: string; nombre: string; etapas: Etapa[]; por_defecto: boolean; orden: number; activo: boolean }
 export interface Oportunidad { id: string; created_at: string; titulo: string; cliente_id: string | null; descripcion: string | null;
   estado: string; valor_estimado: number | null; tecnico_id: string | null; fecha_seguimiento: string | null; motivo_perdida: string | null;
-  origen: string | null; local_id: string | null; contacto_id: string | null; pipeline_id: string; orden: number; cerrada_at: string | null }
+  origen: string | null; local_id: string | null; contacto_id: string | null; pipeline_id: string; orden: number; cerrada_at: string | null;
+  siguiente_texto: string | null }
 export interface Evento { fecha: string | null; tipo: string; titulo: string; detalle: string | null; importe: number | null;
   enlace: string | null; autor: string | null; ref_id: string }
 
@@ -25,6 +30,7 @@ export const TIPOS_ACTIVIDAD: Record<string, { nombre: string; icono: string }> 
 export const ICONO_EVENTO: Record<string, string> = {
   trabajo: '🛠', ticket: '🎫', presupuesto: '📄', oportunidad: '🎯', factura: '💶', cobro: '✅',
   ...Object.fromEntries(Object.entries(TIPOS_ACTIVIDAD).map(([k, v]) => [`actividad_${k}`, v.icono])),
+  actividad_etapa: '🔀',
 };
 export const ORIGENES = ['web', 'whatsapp', 'teléfono', 'recomendación', 'visita', 'cliente actual', 'otro'];
 export const CLASE_TONO: Record<string, string> = { A: 'bien', B: 'aviso', C: 'neutro' };

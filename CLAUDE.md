@@ -296,6 +296,23 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   se define en `hub.pipelines` (la valida un trigger). Recordatorios de cobro:
   se PREPARAN (`hub.preparar_recordatorios`) y los manda una persona; nunca
   salen solos hacia un cliente.
+- **Embudo a lo Bitrix24** (2026-10-04, `20261025_embudo_reglas.sql`,
+  embudo ÚNICO «Ventas» por decisión de Fran): barra de etapas en flechas en
+  la ficha, zonas «Ganado / Perdido» al pie del kanban para soltar, alta
+  rápida por columna y PRÓXIMO PASO (`fecha_seguimiento` = cuándo,
+  `siguiente_texto` = qué; abierta sin fecha = «sin próximo paso», avisado en
+  tarjeta, columna y baldosa). Reglas por etapa DENTRO de `pipelines.etapas`:
+  `seguimiento_dias`/`seguimiento_texto` las aplica la BASE al cambiar de
+  etapa (trigger `hub.oportunidad_etapa`, salvo que el cambio traiga su
+  fecha; al CREAR las aplica la pantalla con `conRegla`); `proponer`
+  (`presupuesto` | `trabajo` | `comanda`, + `comanda_texto` con `{cliente}`,
+  `{titulo}`, `{valor}`) solo lo PROPONE la pantalla y lo confirma una
+  persona; nada sale hacia el cliente. Cada cambio de etapa queda como
+  actividad `tipo = 'etapa'` (trigger `etapa_traza`). Trabajo desde una
+  oportunidad: `#/trabajos/nuevo/o/<id>` (enlaza `oportunidad_id`).
+  Esqueletos de carga: `esqueleto(forma)` de `src/ui/esqueleto.ts` (lleva
+  `.cargando`, así que los arneses que esperan a que se vaya siguen valiendo;
+  sin degradados). Arnés `verify-embudo.mjs`.
 - Buscador (RAG): `public` está cerrado también al `service_role`, así que los
   vectores (`public.vector(384)`, gte-small) solo entran y salen como TEXTO por
   `hub.guardar_fragmentos` / `hub.buscar_fragmentos` (security definer). Algo

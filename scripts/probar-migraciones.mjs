@@ -372,6 +372,12 @@ try {
   ok(psql(`select cerrada_at is not null from hub.oportunidades where id = '${op}'`) === 't', 'ventas: ganar la cierra (cerrada_at)');
   psql(como('authenticated', 'tito@ok.test', `update hub.oportunidades set estado = 'Propuesta' where id = '${op}';`));
   ok(psql(`select cerrada_at is null from hub.oportunidades where id = '${op}'`) === 't', 'ventas: reabrirla la vuelve a abrir');
+  ok(psql(`select (fecha_seguimiento = current_date + 7)::text || siguiente_texto from hub.oportunidades where id = '${op}'`) === 'truePreguntar por la propuesta',
+    'embudo: entrar en Propuesta pone el próximo paso de su regla');
+  ok(psql(`select string_agg(texto, '|' order by fecha) from hub.actividades where oportunidad_id = '${op}' and tipo = 'etapa' and usuario_id = '${titoId}'`) === 'Detectado → Ganado|Ganado → Propuesta',
+    'embudo: cada cambio de etapa queda en la línea de tiempo, a nombre de quien lo hizo');
+  psql(como('authenticated', 'tito@ok.test', `update hub.oportunidades set estado = 'Negociando', fecha_seguimiento = '2030-01-01' where id = '${op}';`));
+  ok(psql(`select fecha_seguimiento from hub.oportunidades where id = '${op}'`) === '2030-01-01', 'embudo: una fecha puesta en el mismo cambio manda sobre la regla');
   psql(como('authenticated', 'tito@ok.test', `delete from hub.oportunidades where id = '${op}';`));
   ok(psql(`select count(*) from hub.oportunidades where id = '${op}'`) === '1', 'ventas: un técnico no borra oportunidades');
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.pipelines (nombre, etapas) values ('x', '[]');`), { esperaError: true }).ok, 'ventas: un técnico no crea embudos');
@@ -381,8 +387,8 @@ try {
     'ventas: apuntar una actividad (a su nombre)');
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.actividades (texto, usuario_id) values ('suplantar', '${anaId}');`), { esperaError: true }).ok,
     'ventas: nadie apunta actividades a nombre de otro');
-  psql(como('authenticated', 'ana@ok.test', `update hub.actividades set texto = 'cambiado' where usuario_id = '${titoId}';`));
-  ok(psql(`select texto from hub.actividades where usuario_id = '${titoId}'`) === 'cambiado', 'ventas: un admin corrige actividades');
+  psql(como('authenticated', 'ana@ok.test', `update hub.actividades set texto = 'cambiado' where usuario_id = '${titoId}' and tipo = 'llamada';`));
+  ok(psql(`select texto from hub.actividades where usuario_id = '${titoId}' and tipo = 'llamada'`) === 'cambiado', 'ventas: un admin corrige actividades');
   psql(como('authenticated', 'tito@ok.test', `insert into hub.clientes_crm (cliente_id, siguiente_fecha, siguiente_texto, responsable_id)
     values ('00000000-0000-0000-0000-0000000000e2', current_date - 2, 'Llamar para la renovación', '${titoId}');`));
   ok(una('tito@ok.test', `select clase from hub.clases_clientes() where cliente_id = '00000000-0000-0000-0000-0000000000e1';`) === 'A',

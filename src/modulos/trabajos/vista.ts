@@ -178,7 +178,7 @@ async function vistaFicha(numero: string): Promise<string> {
 
 export async function pintar(el: HTMLElement, params: string[]) {
   el.innerHTML = '<p class="cargando">Cargando…</p>';
-  if (params[0] === 'nuevo') { await pintarFormulario(el); return; }
+  if (params[0] === 'nuevo') { await pintarFormulario(el, undefined, params[1] === 'o' ? params[2] : undefined); return; }
   if (params[0] && params[1] === 'editar') { await pintarFormulario(el, params[0]); return; }
   if (params[0] === 'plantillas') { await (await import('./plantillas')).pintarPlantillas(el, params[1]); return; }
   if (params[0] === 'facturar') { await (await import('./facturar')).pintarFacturar(el, params[1]); return; }
