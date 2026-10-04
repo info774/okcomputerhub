@@ -39,7 +39,7 @@ jobs:
           #     HUB_SYNC_TOKEN) o un admin con su sesión (lo comprueba ella).
           # Quitar una de aquí NO da error al desplegar: la deja con JWT y su
           # llamador se come 401 en silencio.
-          SIN_JWT="sync-app mcp reloj zoho-lectura informes-enviar telegram-bot documentos-indexar desk-correo ticket-valorar portal firma firma-contrato"
+          SIN_JWT="sync-app mcp reloj zoho-lectura informes-enviar telegram-bot documentos-indexar desk-correo ticket-valorar portal firma firma-contrato stripe-webhook"
           todas=$(ls -d supabase/functions/*/ | xargs -n1 basename | grep -v '^_')
           lista="${FN:-$todas}"
           for f in $lista; do

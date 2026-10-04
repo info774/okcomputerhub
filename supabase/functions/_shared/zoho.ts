@@ -53,6 +53,9 @@ export async function conectar(db: Db, codigo: string): Promise<void> {
   _caduca = Date.now() + ((Number(j.expires_in) || 3600) - 120) * 1000
 }
 
+// El token de acceso, para el motor de cobro del mantenimiento (zoho-ctx.ts).
+export const zohoToken = (db: Db) => accessToken(db)
+
 async function accessToken(db: Db): Promise<string> {
   if (_token && Date.now() < _caduca) return _token
   const c = cliente()

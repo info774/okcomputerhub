@@ -4,8 +4,10 @@
 // del enlace. Lee y escribe hub.contratos con la service key.
 //   { accion: 'ver', token }    → el documento y su estado
 //   { accion: 'firmar', token, firmante_nombre, firma_img, acepta }
-//   { accion: 'pagar', token, metodo }  → primera cuota (Stripe: aún NO
-//     conectado en el hub; contesta 409 hasta el corte de mantenimiento)
+//   { accion: 'pagar', token, metodo }  → la primera cuota por Stripe, con el
+//     MISMO alta que «Domiciliar» (altaSede de _shared/stripe-cobros.ts).
+//     Solo con el corte del mantenimiento y STRIPE_SECRET_KEY en los secrets
+//     del hub; si no, 409 y la página no ofrece pagar.
 // Reglas de la app: solo se firma lo PENDIENTE (no se refirma ni se firma lo
 // anulado), con nombre (≥ 3), firma dibujada (PNG, ≤ 800 000 caracteres) y la
 // casilla aceptada; queda la evidencia (fecha, IP y navegador). Al firmar, las
@@ -15,6 +17,10 @@
 // enlaces que se mandan a los clientes son los de la app.
 import { makeCorsHeaders, json } from '../_shared/http.ts'
 import { hubDb, type Db, type Fila } from '../_shared/hub-db.ts'
+import { dbHub } from '../_shared/sb-hub.ts'
+import { stripeCtx, esMetodoPago, importeACobrar, importeNetoDeSede } from '../_shared/stripe.ts'
+import { mesesDeFrecuencia } from '../_shared/mant-importes.ts'
+import { cargarConfig, altaSede } from '../_shared/stripe-cobros.ts'
 
 const ZOHO_MUERTA = new Set(['cancelled', 'expired', 'cancelled_from_dunning', 'no_existe'])
 const sinAcentos = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
@@ -41,6 +47,53 @@ async function volcarCondiciones(db: Db, c: Fila): Promise<void> {
   await db.patch(`locales?id=eq.${c.local_id}`, cambios)
 }
 
+// ¿Se puede cobrar desde aquí? Con el corte del mantenimiento (si no, cobra
+// la app) y con Stripe configurado en el hub.
+const cobroActivo = async (db: Db) => !!Deno.env.get('STRIPE_SECRET_KEY') && await delHub(db, 'mant_facturas')
+
+// opcionesPago de la app: qué se le ofrece tras firmar (métodos y la primera
+// cuota con impuestos). null = nada que cobrar (sin cuota, sin sede, o el
+// cobro aún no es del hub); ya_domiciliada = la sede ya se está cobrando.
+async function opcionesPago(db: Db, c: Fila): Promise<Fila | null> {
+  if (!Number(c.precio_mensual) || !c.local_id || !(await cobroActivo(db))) return null
+  const [sede] = await db.get(`locales?select=id,nombre,plan,importe_mantenimiento,importe_incluye_impuesto,frecuencia_pago,stripe_subscription_id,stripe_mandato_estado,zoho_subscription_id,zoho_estado&id=eq.${c.local_id}`)
+  if (!sede) return null
+  if (zohoSigueCobrando(sede) || cobrandoStripe(sede)) return { ya_domiciliada: true }
+  const cfg = await cargarConfig(dbHub('firma-contrato'))
+  const neto = importeNetoDeSede(sede, cfg) || Number(c.precio_mensual)
+  const frecuencia = normalizaFrecuencia(sede.frecuencia_pago) ?? normalizaFrecuencia(c.frecuencia_pago) ?? 'Mensual'
+  const meses = mesesDeFrecuencia(frecuencia)
+  const bruto = importeACobrar(neto * meses, cfg.zoho_tax_percent, cfg.precio_incluye_impuesto)
+  return {
+    metodos: cfg.pago_metodos, importe: Math.round(bruto * 100) / 100, importe_neto: Math.round(neto * meses * 100) / 100,
+    importe_mes: neto, meses, impuesto_pct: cfg.precio_incluye_impuesto ? 0 : (Number(cfg.zoho_tax_percent) || 0),
+    frecuencia, plan: sede.plan || c.plan_nombre, sede: sede.nombre,
+  }
+}
+
+// pagarPrimeraCuota de la app: el MISMO importe que se le enseñó (el neto de
+// la sede si se corrigió después de generar el contrato).
+async function pagarPrimeraCuota(db: Db, c: Fila, metodo: string): Promise<Fila> {
+  if (c.estado !== 'firmado') throw new Error('El contrato tiene que estar firmado antes de pagar.')
+  if (!c.local_id) throw new Error('Este contrato no tiene sede asignada: no se puede cobrar todavía.')
+  if (!Number(c.precio_mensual)) throw new Error('Este contrato no lleva cuota.')
+  const [sede] = await db.get(`locales?select=id,stripe_subscription_id,stripe_mandato_estado,zoho_subscription_id,zoho_estado,importe_mantenimiento,importe_incluye_impuesto&id=eq.${c.local_id}`)
+  if (!sede) throw new Error('Sede no encontrada.')
+  if (zohoSigueCobrando(sede) || cobrandoStripe(sede)) return { ok: true, ya_domiciliada: true }
+  const sdb = dbHub('firma-contrato')
+  const cfg = await cargarConfig(sdb)
+  const r = await altaSede(sdb, stripeCtx(), {
+    local_id: String(c.local_id), plan: (c.plan_nombre as string) || undefined,
+    importe: importeNetoDeSede(sede, cfg) || Number(c.precio_mensual), frecuencia: (c.frecuencia_pago as string) || undefined,
+    metodo, contrato_id: String(c.id),
+  // deno-lint-ignore no-explicit-any
+  }) as any
+  if (r.pago_url) return { ok: true, url: r.pago_url }
+  if (r.ya_domiciliada) return { ok: true, ya_domiciliada: true }
+  await db.patch(`contratos?id=eq.${c.id}`, { mandato_estado: 'activo' })
+  return { ok: true, cobrado: true, mensaje: r.mensaje }
+}
+
 Deno.serve(async req => {
   const cors = makeCorsHeaders(req)
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -55,12 +108,18 @@ Deno.serve(async req => {
 
     if (b.accion === 'ver') {
       const { cuerpo_html, plan_nombre, cliente_nombre, estado, firmante_nombre, firmado_at } = c
-      // El pago tras firmar llega con el motor de Stripe (sin conectar todavía).
-      return json({ contrato: { cuerpo_html, plan_nombre, cliente_nombre, estado, firmante_nombre, firmado_at }, pago: null }, 200, cors)
+      // Firmado con la cuota sin pagar (cerró la página antes): se vuelve a ofrecer.
+      const pago = estado === 'firmado' && c.mandato_estado !== 'activo'
+        ? await opcionesPago(db, c).catch(e => { console.warn('[firma-contrato] opciones de pago:', (e as Error).message); return null })
+        : null
+      return json({ contrato: { cuerpo_html, plan_nombre, cliente_nombre, estado, firmante_nombre, firmado_at }, pago }, 200, cors)
     }
 
     if (b.accion === 'pagar') {
-      return json({ error: 'El pago en línea todavía no está disponible: te mandaremos el enlace para pagar la cuota.', no_activo: true }, 409, cors)
+      if (!(await cobroActivo(db))) return json({ error: 'El pago en línea todavía no está disponible: te mandaremos el enlace para pagar la cuota.', no_activo: true }, 409, cors)
+      if (!esMetodoPago(b.metodo)) return json({ error: 'Elige tarjeta o SEPA.' }, 400, cors)
+      try { return json(await pagarPrimeraCuota(db, c, b.metodo), 200, cors) }
+      catch (e) { return json({ error: (e as Error).message || 'No se pudo preparar el pago.' }, 400, cors) }
     }
 
     if (b.accion !== 'firmar') return json({ error: 'Acción desconocida (ver, firmar, pagar).' }, 400, cors)
@@ -80,7 +139,9 @@ Deno.serve(async req => {
     })
     if (!hechos.length) return json({ error: 'No se pudo registrar la firma.' }, 409, cors)
     await volcarCondiciones(db, c).catch(e => console.warn('[firma-contrato] no se pudieron volcar las condiciones:', (e as Error).message))
-    return json({ ok: true, pago: null }, 200, cors)
+    // La firma ya está guardada: si el pago no se puede preparar, acuse normal.
+    const pago = await opcionesPago(db, { ...c, estado: 'firmado' }).catch(e => { console.warn('[firma-contrato] pago:', (e as Error).message); return null })
+    return json({ ok: true, pago }, 200, cors)
   } catch (e) {
     console.error('[firma-contrato]', (e as Error).message)
     return json({ error: 'Error interno.' }, 500, cors)

@@ -197,7 +197,10 @@ presupuestos en PDF del portal de clientes, y lo que ve la gestoría.
    cuando se corten sus áreas, igual que la app: dar de alta y quitar
    contactos, mandar presupuestos y crear facturas de trabajos o añadirles
    trabajos a un borrador):
-   `ZohoBooks.invoices.READ,ZohoBooks.customerpayments.READ,ZohoBooks.contacts.READ,ZohoBooks.settings.READ,ZohoBooks.estimates.READ,ZohoBooks.contacts.CREATE,ZohoBooks.contacts.DELETE,ZohoBooks.estimates.CREATE,ZohoBooks.estimates.UPDATE,ZohoBooks.invoices.CREATE,ZohoBooks.invoices.UPDATE`
+   `ZohoBooks.invoices.READ,ZohoBooks.customerpayments.READ,ZohoBooks.contacts.READ,ZohoBooks.settings.READ,ZohoBooks.estimates.READ,ZohoBooks.contacts.CREATE,ZohoBooks.contacts.DELETE,ZohoBooks.estimates.CREATE,ZohoBooks.estimates.UPDATE,ZohoBooks.invoices.CREATE,ZohoBooks.invoices.UPDATE,ZohoBooks.creditnotes.CREATE,ZohoBooks.creditnotes.UPDATE,ZohoBooks.customerpayments.CREATE,ZohoBooks.accountants.READ`
+   (Las cuatro últimas, desde el 2026-10-04, son las del cobro del
+   mantenimiento: la factura MANT- con su cobro, los abonos ABONO- y la lista
+   de cuentas bancarias de los ajustes. Solo se usan después del cambio.)
    (Si ya lo conectaste con la lista de antes, genera otro código con esta y
    vuelve a pegarlo en el paso 4: el nuevo sustituye al viejo.)
    → **Time Duration** 10 minutes → descripción `Hub` → **CREATE** →
@@ -252,6 +255,32 @@ Hoy el hub vive en `okhub-tenerife.web.app` y el portal en
    aparte, con tu OK (docs/FASE11.md).
 6. **Registro de jornada**: revisa los días en rojo («más de 12 h: ¿se quedó
    un fichaje abierto?») en Personas → Jornada y corrígelos con su motivo.
+
+## 8 bis · Stripe del mantenimiento (SOLO el día del cambio del mantenimiento)
+
+**Desbloquea**: que el hub cobre las cuotas y emita sus facturas MANT- (hoy lo
+hace la app). Está todo preparado y apagado: NO lo hagas antes del cambio del
+área de mantenimiento, o cada cuota se facturaría dos veces (una la app y otra
+el hub).
+
+1. Variables de entorno del entorno cloud (menú del entorno en la barra de
+   título de la sesión → **Edit** → variables), las MISMAS que tiene la app:
+   ```
+   STRIPE_SECRET_KEY=sk_live_…
+   STRIPE_WEBHOOK_SECRET=whsec_…
+   ```
+   Las dos están en **https://dashboard.stripe.com** con la cuenta
+   **Ok Computer Zoho** (la que tiene SEPA): la primera en **Developers** →
+   **API keys** → **Secret key** → **Reveal**; la segunda, en **Developers** →
+   **Webhooks** → el endpoint que acaba en `/functions/v1/stripe-webhook` →
+   **Signing secret** → **Reveal**. Avisa a Claude: él las pasa a las
+   funciones del hub.
+2. Cuando Claude te diga que el hub ya tiene el área de mantenimiento: en esa
+   misma pantalla del webhook → **⋯** → **Update details** → en **Endpoint
+   URL** cambia la dirección de la app por
+   `https://adomalsxsymxzuozksmt.supabase.co/functions/v1/stripe-webhook` →
+   **Update endpoint**. Al editar el mismo endpoint, el «Signing secret» no
+   cambia.
 
 ## 9 · El cambio final (cuando tú digas)
 

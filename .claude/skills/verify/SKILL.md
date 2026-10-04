@@ -214,6 +214,13 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   eliminar solo admin, el mundo sin corte, y las páginas públicas
   `contrato.html` (firmar con nombre + firma + casilla, estados, primera cuota
   cuando la haya) y `mandato.html`; `firma-contrato` SIMULADA.
+- `verify-cobros.mjs`: Cobros del mantenimiento (solo admin): cifras, sedes
+  con sus botones según quién cobra (Stripe, Zoho viva, Zoho de baja, nadie),
+  filtros y buscador sobre sedes y libro, domiciliar con la cuota del periodo
+  + IGIC y el enlace de pago, pausar, baja, desvincular de Zoho, emitir en
+  Zoho, cuotas descuadradas, la página de la sede, cambiar plan, abonar y
+  ajustes con los desplegables de Zoho; sin corte, botones apagados;
+  `stripe-suscripcion` SIMULADA.
 - `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
   producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
   por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de

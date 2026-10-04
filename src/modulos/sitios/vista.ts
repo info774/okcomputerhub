@@ -138,7 +138,8 @@ async function tabResumen(l: Sitio & Record<string, any>): Promise<string> {
       ${esAdmin() && l.importe_mantenimiento ? dato('Cuota', `${eur(l.importe_mantenimiento, 2)}${l.importe_incluye_impuesto ? ' (con impuesto)' : ''}`) : ''}
       ${dato('Frecuencia', l.frecuencia_pago)}${dato('Forma de pago', l.forma_pago)}${dato('Próxima cuota', l.proxima_cuota)}${dato('Activo desde', l.fecha_activacion)}
       ${dato('Cobra', l.stripe_subscription_id ? 'Stripe' : l.zoho_subscription_id ? 'Zoho (cartera vieja)' : null)}</dl>
-      ${l.notas_mantenimiento ? `<p class="nota">${esc(l.notas_mantenimiento)}</p>` : ''}`}</section>
+      ${l.notas_mantenimiento ? `<p class="nota">${esc(l.notas_mantenimiento)}</p>` : ''}`}
+      ${esAdmin() ? `<p class="acciones"><a href="#/mantenimientos/cobros/sede/${esc(l.id)}">💳 Cobro de la cuota →</a> <a href="#/mantenimientos/ficha/${esc(l.id)}">Ficha de mantenimiento →</a></p>` : ''}</section>
     <section class="tarjeta"><h3>🖥 Equipos</h3>${e ? `<p><span class="chip ${TONO_RMM[e.estado]}">${esc(TEXTO_RMM[e.estado])}</span>
       ${e.conectados} de ${e.equipos} en línea${e.alertas ? ` · <b>${e.alertas}</b> alerta${e.alertas === 1 ? '' : 's'}` : ''}</p>
       ${e.visto_ultimo ? `<p class="nota">Último contacto ${esc(hace(e.visto_ultimo))}</p>` : ''}

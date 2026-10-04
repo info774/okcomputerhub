@@ -669,11 +669,13 @@ try {
   ok(!psql(como('authenticated', 'ana@ok.test', `select hub.presupuesto_guardar_lineas('${pres}', '[{"nombre":"Cámara","cantidad":2,"precio":100}]');`), { esperaError: true }).ok
     && !psql(como('authenticated', 'ana@ok.test', `insert into hub.presupuesto_plantillas (nombre) values ('x');`), { esperaError: true }).ok,
     'presupuestos (20261023): sin el corte, ni líneas ni plantillas');
-  ok(psql(`select dueno || '|' || array_length(tablas, 1) from hub.areas where area = 'mantenimiento'`) === 'app|5'
+  ok(psql(`select dueno || '|' || array_length(tablas, 1) from hub.areas where area = 'mantenimiento'`) === 'app|10'
+    && !psql(`set role service_role; select hub.siguiente_numero_mant(2026);`, { esperaError: true }).ok
+    && !psql(como('authenticated', 'ana@ok.test', `update hub.mant_config set zoho_notas = 'x' where id returning id;`)).split('\n').pop().startsWith('t')
     && !psql(como('authenticated', 'tito@ok.test', `insert into hub.contratos (token, plan_nombre, cuerpo_html) values ('t0', 'Basic', '<p>x</p>');`), { esperaError: true }).ok
     && !psql(como('authenticated', 'ana@ok.test', `insert into hub.planes_mantenimiento (nombre) values ('Basic');`), { esperaError: true }).ok
     && !psql(como('authenticated', 'tito@ok.test', `insert into hub.mant_seguimiento (estado) values ('contactado');`), { esperaError: true }).ok,
-    'mantenimiento (20261024, 20261025): área nueva de la app con los contratos, y sin el corte no se escribe');
+    'mantenimiento (20261024-26): área de la app con contratos y cobros; sin el corte no se escribe ni se gasta un número de serie');
   psql(`update hub.areas set dueno = 'hub' where area = 'presupuestos';`);
   const tot = psql(como('authenticated', 'tito@ok.test', `select hub.presupuesto_guardar_lineas('${pres}', '[{"nombre":"Cámara","cantidad":2,"precio":100,"descuento":10},{"nombre":"Instalación","precio":50},{"nombre":"  "}]');`)).split('\n').pop();
   ok(Number(tot) === 230 && psql(`select total from hub.presupuestos where id = '${pres}'`) === '230.00' && psql(`select count(*) from hub.documento_lineas where presupuesto_id = '${pres}'`) === '2',
@@ -795,6 +797,20 @@ commit;`);
     'contratos: al firmar, la fecha de inicio es el día de Canarias (renueva al año, sola)');
   psql(como('authenticated', 'tito@ok.test', `delete from hub.contratos where id = '${ctr}';`));
   ok(psql(`select count(*) from hub.contratos where id = '${ctr}'`) === '1', 'contratos: solo un admin los borra');
+  ok(psql(`set role service_role; select hub.siguiente_numero_mant(2026); select hub.siguiente_numero_mant(2026);`).split('\n').pop() === 'MANT-2026-0002'
+    && psql(`set role service_role; select hub.siguiente_numero_abono(2027);`).split('\n').pop() === 'ABONO-2027-0001',
+    'cobros (20261026): tras el corte, las series MANT- y ABONO- siguen su contador por año');
+  ok(!psql(como('authenticated', 'ana@ok.test', `insert into hub.mant_facturas (importe) values (10);`), { esperaError: true }).ok
+    && !psql(como('authenticated', 'ana@ok.test', `select hub.siguiente_numero_mant(2026);`), { esperaError: true }).ok,
+    'cobros: el libro de cuotas y la serie, solo las funciones (ni un admin a mano)');
+  psql(como('authenticated', 'tito@ok.test', `update hub.mant_config set zoho_notas = 'tito' where id;`));
+  psql(como('authenticated', 'ana@ok.test', `update hub.mant_config set pago_metodos = '{sepa}' where id;`));
+  ok(psql(`select coalesce(zoho_notas, '-') || '|' || array_to_string(pago_metodos, ',') from hub.mant_config`) === '-|sepa', 'cobros: los ajustes, solo un admin');
+  const mf = psql(`insert into hub.mant_facturas (local_id, importe, estado) values ('${nl}', 52.43, 'pagada') returning id;`).split('\n').pop();
+  psql(`insert into hub.mant_abonos (factura_id, motivo, importe) values ('${mf}', 'Cambio de plan', 5.92);`);
+  ok(psql(`select abonado || '|' || abonable from hub.mant_facturas_abonadas where factura_id = '${mf}'`) === '5.92|46.51'
+    && psql(`select ultima_factura_estado from hub.mant_cobros_estado where local_id = '${nl}'`) === 'pagada',
+    'cobros: lo abonado y lo que queda por abonar; la última cuota en el cuadro de cobros');
   const pres2 = psql(`insert into hub.presupuestos (titulo, cliente_id, local_id) values ('Alarma', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000c1') returning id;`).split('\n').pop();
   psql(como('authenticated', 'tito@ok.test', `select hub.presupuesto_guardar_lineas('${pres2}', '[{"nombre":"Hub alarma","precio":180}]');`));
   const nuevoT = psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_desde_presupuesto('${pres2}', '{"descripcion":"Instalar alarma","tipo":"Instalación","fecha":"2026-11-02","tecnicos":["Tito"]}');`)).split('\n').pop();

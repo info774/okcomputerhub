@@ -3,6 +3,7 @@
   "specifiers": {
     "npm:@anthropic-ai/sdk@0.128": "0.128.0",
     "npm:@eslint/js@^10.0.1": "10.0.1_eslint@10.11.0",
+    "npm:@supabase/supabase-js@2": "2.117.2",
     "npm:@supabase/supabase-js@^2.117.2": "2.117.2",
     "npm:@types/leaflet@^1.9.22": "1.9.22",
     "npm:eslint@^10.11.0": "10.11.0",
