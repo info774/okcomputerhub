@@ -2,6 +2,9 @@
 // derecha, shell/whatsapp.ts). Las conversaciones siguen siendo de la APP
 // ACTUAL: su webhook recibe lo que escriben los clientes en wa_conversaciones /
 // wa_mensajes, y esta función las LEE allí (service key de la app, del Vault).
+// Con el cambio de WhatsApp (área `whatsapp` del hub, paridad bloque 5) las
+// lee y las escribe en el hub, que es donde las deja `whatsapp-webhook`: lo
+// decide `fuente()` en cada petición, sin tocar el front.
 //
 // Contestar (acordado con Fran el 2026-10-02): se manda a Meta desde aquí con
 // los mismos secrets que la app (WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID) y se
@@ -82,10 +85,24 @@ async function appReq(method: string, ruta: string, cuerpo?: unknown) {
   return texto ? JSON.parse(texto) : null
 }
 
+// ¿Dónde viven las conversaciones? En la app hasta el cambio de WhatsApp; después, en el hub.
+interface Fuente { enHub: boolean; req(method: string, ruta: string, cuerpo?: unknown): Promise<any> }
+async function fuente(email: string): Promise<Fuente> {
+  const db = hubDb({ origen: 'whatsapp', email })
+  const [a] = await db.get('areas?select=dueno&tablas=cs.%7Bwa_conversaciones%7D')
+  const enHub = ((a?.dueno as string | undefined) ?? 'hub') === 'hub'
+  return {
+    enHub,
+    req: (method, ruta, cuerpo) => !enHub ? appReq(method, ruta, cuerpo)
+      : method === 'GET' ? db.get(ruta) : method === 'POST' ? db.post(ruta, cuerpo) : db.patch(ruta, cuerpo),
+  }
+}
+
 // Con el enlace indicado: wa_conversaciones tiene DOS claves hacia locales
 // (local_id y verificado_local_id) y sin indicarlo PostgREST contesta PGRST201.
 const CONV_COLS = 'id,telefono,nombre,cliente_id,local_id,contacto_id,ticket_id,ultimo_mensaje,ultimo_mensaje_at,ultimo_entrante_at,sin_leer,'
   + 'clientes!cliente_id(nombre),contactos!contacto_id(nombre),locales!local_id(nombre),tickets!ticket_id(numero,estado)'
+const CONV_BASE = 'id,telefono,nombre,cliente_id,local_id,contacto_id,ticket_id,ultimo_mensaje,ultimo_mensaje_at,ultimo_entrante_at,sin_leer'
 const MSG_COLS = 'id,created_at,direccion,tipo,texto,media_id,media_url,media_nombre,media_mime,media_descripcion,estado,error,usuario,automatico'
 
 // deno-lint-ignore no-explicit-any
@@ -117,9 +134,27 @@ async function comentarTicket(c: Fila, texto: string, ahora: string, yo: { id: s
   }).catch(e => console.error('[whatsapp] comentario del ticket', e))
 }
 
-async function conversacion(id: string): Promise<Fila> {
+// Las conversaciones con el nombre del cliente, contacto, sede y ticket. En la
+// app, por los «embeds»; en el hub (espejo sin claves foráneas), aparte.
+async function leerConvs(f: Fuente, filtro: string): Promise<Fila[]> {
+  if (!f.enHub) return await appReq('GET', `wa_conversaciones?select=${CONV_COLS}&${filtro}`)
+  const db = hubDb({ origen: 'whatsapp' })
+  const filas: Fila[] = await db.get(`wa_conversaciones?select=${CONV_BASE}&${filtro}`)
+  const mapa = async (tabla: string, k: string, cols: string) => {
+    const ids = [...new Set(filas.map(x => x[k]).filter(Boolean))]
+    if (!ids.length) return new Map<string, Fila>()
+    const rs: Fila[] = await db.get(`${tabla}?select=id,${cols}&id=in.(${ids.join(',')})`)
+    return new Map(rs.map(x => [x.id as string, x]))
+  }
+  const [cl, co, lo, ti] = await Promise.all([mapa('clientes', 'cliente_id', 'nombre'), mapa('contactos', 'contacto_id', 'nombre'),
+    mapa('locales', 'local_id', 'nombre'), mapa('tickets', 'ticket_id', 'numero,estado')])
+  return filas.map(x => ({ ...x, clientes: cl.get(x.cliente_id) ?? null, contactos: co.get(x.contacto_id) ?? null,
+    locales: lo.get(x.local_id) ?? null, tickets: ti.get(x.ticket_id) ?? null }))
+}
+
+async function conversacion(f: Fuente, id: string): Promise<Fila> {
   if (!UUID.test(id)) throw Object.assign(new Error('Conversación no válida'), { status: 400 })
-  const [c] = await appReq('GET', `wa_conversaciones?select=${CONV_COLS}&id=eq.${id}`)
+  const [c] = await leerConvs(f, `id=eq.${id}`)
   if (!c) throw Object.assign(new Error('Conversación no encontrada'), { status: 404 })
   return c
 }
@@ -150,16 +185,17 @@ Deno.serve(async req => {
   if (!yo) return forbidden(cors, 'No estás dado de alta en el hub.')
   const b = await req.json().catch(() => ({}))
   try {
+    const wa = await fuente(user.email)
     if (b.accion === 'estado') return json({ envio: waConfigurado(), claude: claudeConfigurado(), plantilla: !!plantillaTexto() }, 200, cors)
 
     if (b.accion === 'conversaciones') {
-      const filas: Fila[] = await appReq('GET', `wa_conversaciones?select=${CONV_COLS}&order=ultimo_mensaje_at.desc.nullslast&limit=40`)
+      const filas = await leerConvs(wa, 'order=ultimo_mensaje_at.desc.nullslast&limit=40')
       return json({ conversaciones: filas.map(convVista), envio: waConfigurado(), plantilla: !!plantillaTexto() }, 200, cors)
     }
 
     if (b.accion === 'mensajes') {
-      const c = await conversacion(String(b.conversacion_id ?? ''))
-      const msgs: Fila[] = await appReq('GET', `wa_mensajes?select=${MSG_COLS}&conversacion_id=eq.${c.id}&order=created_at.desc&limit=80`)
+      const c = await conversacion(wa, String(b.conversacion_id ?? ''))
+      const msgs: Fila[] = await wa.req('GET', `wa_mensajes?select=${MSG_COLS}&conversacion_id=eq.${c.id}&order=created_at.desc&limit=80`)
       // El contrato de la sede (chip del plan de la app), del espejo del hub.
       const [sede] = c.local_id ? await hubDb({ origen: 'whatsapp' }).get(`locales?select=plan,estado_pago&id=eq.${c.local_id}`) : []
       return json({ conversacion: { ...convVista(c), plan: sede?.plan ?? null, estado_pago: sede?.estado_pago ?? null }, mensajes: msgs.reverse() }, 200, cors)
@@ -167,10 +203,10 @@ Deno.serve(async req => {
 
     if (b.accion === 'media') {
       if (!waConfigurado()) return json({ error: 'Falta poner las claves de WhatsApp en el hub (ver docs/PENDIENTE_FRAN.md).' }, 503, cors)
-      const c = await conversacion(String(b.conversacion_id ?? ''))
+      const c = await conversacion(wa, String(b.conversacion_id ?? ''))
       const mid = String(b.mensaje_id ?? '')
       if (!UUID.test(mid)) return json({ error: 'Mensaje no válido' }, 400, cors)
-      const [m] = await appReq('GET', `wa_mensajes?select=media_id,media_mime&id=eq.${mid}&conversacion_id=eq.${c.id}`)
+      const [m] = await wa.req('GET', `wa_mensajes?select=media_id,media_mime&id=eq.${mid}&conversacion_id=eq.${c.id}`)
       if (!m?.media_id || !/^\d+$/.test(String(m.media_id))) return json({ error: 'Ese mensaje no lleva ningún fichero.' }, 404, cors)
       const f = await descargarMedia(String(m.media_id))
       if (!f.bytes) return json({ error: f.error }, 502, cors)
@@ -182,14 +218,14 @@ Deno.serve(async req => {
     }
 
     if (b.accion === 'documentos') {
-      const c = await conversacion(String(b.conversacion_id ?? ''))
+      const c = await conversacion(wa, String(b.conversacion_id ?? ''))
       if (!c.cliente_id) return json({ documentos: [], motivo: 'El teléfono no está en ninguna ficha: vincula antes el cliente (en la app).' }, 200, cors)
       return json({ documentos: await documentosDe(c.cliente_id), plantilla: !!plantillaDocumento() }, 200, cors)
     }
 
     if (b.accion === 'enviar_documento') {
       if (!waConfigurado()) return json({ error: 'Falta poner las claves de WhatsApp en el hub (ver docs/PENDIENTE_FRAN.md).' }, 503, cors)
-      const c = await conversacion(String(b.conversacion_id ?? ''))
+      const c = await conversacion(wa, String(b.conversacion_id ?? ''))
       const tipo = b.tipo === 'presupuesto' ? 'presupuesto' : b.tipo === 'factura' ? 'factura' : ''
       const zohoId = String(b.zoho_id ?? '')
       if (!tipo || !/^\d+$/.test(zohoId)) return json({ error: 'Falta el documento de Zoho.' }, 400, cors)
@@ -221,19 +257,19 @@ Deno.serve(async req => {
           subida.id, nombreFichero, [`${etiqueta.toLowerCase()} ${doc.numero || ''}`.trim()])
       const ahora = new Date().toISOString()
       const texto = `📎 ${pie}`
-      const [msg] = await appReq('POST', 'wa_mensajes', {
+      const [msg] = await wa.req('POST', 'wa_mensajes', {
         conversacion_id: c.id, direccion: 'saliente', usuario: yo.nombre, created_at: ahora, texto,
         wa_message_id: r.id ?? null, tipo: ventana ? 'document' : 'template', media_id: subida.id,
         media_mime: 'application/pdf', media_nombre: nombreFichero, estado: r.ok ? 'enviado' : 'fallido', error: r.error ?? null,
       })
-      await appReq('PATCH', `wa_conversaciones?id=eq.${c.id}`, { ultimo_mensaje: texto.slice(0, 200), ultimo_mensaje_at: ahora })
+      await wa.req('PATCH', `wa_conversaciones?id=eq.${c.id}`, { ultimo_mensaje: texto.slice(0, 200), ultimo_mensaje_at: ahora })
       if (r.ok) await comentarTicket(c, texto, ahora, yo, user.email)
       return r.ok ? json({ ok: true, mensaje: msg }, 200, cors) : json({ error: r.error, mensaje: msg }, 502, cors)
     }
 
     if (b.accion === 'leida') {
-      const c = await conversacion(String(b.conversacion_id ?? ''))
-      if ((c.sin_leer ?? 0) > 0) await appReq('PATCH', `wa_conversaciones?id=eq.${c.id}`, { sin_leer: 0 })
+      const c = await conversacion(wa, String(b.conversacion_id ?? ''))
+      if ((c.sin_leer ?? 0) > 0) await wa.req('PATCH', `wa_conversaciones?id=eq.${c.id}`, { sin_leer: 0 })
       return json({ ok: true }, 200, cors)
     }
 
@@ -241,18 +277,18 @@ Deno.serve(async req => {
       const texto = String(b.texto ?? '').trim()
       if (!texto) return json({ error: 'El mensaje está vacío.' }, 400, cors)
       if (!waConfigurado()) return json({ error: 'Falta poner las claves de WhatsApp en el hub (ver docs/PENDIENTE_FRAN.md).' }, 503, cors)
-      const c = await conversacion(String(b.conversacion_id ?? ''))
+      const c = await conversacion(wa, String(b.conversacion_id ?? ''))
       if (!dentroDeVentana(c.ultimo_entrante_at)) {
         return json({ error: 'Han pasado más de 24 h desde el último mensaje del cliente: WhatsApp no deja escribirle texto libre hasta que vuelva a escribir.' }, 409, cors)
       }
       const r = await enviarTexto(c.telefono, texto)
       const ahora = new Date().toISOString()
       // Como guardarSaliente de la app: el fallido también se apunta.
-      const [msg] = await appReq('POST', 'wa_mensajes', {
+      const [msg] = await wa.req('POST', 'wa_mensajes', {
         conversacion_id: c.id, direccion: 'saliente', usuario: yo.nombre, created_at: ahora, texto,
         wa_message_id: r.id ?? null, tipo: 'text', estado: r.ok ? 'enviado' : 'fallido', error: r.error ?? null,
       })
-      await appReq('PATCH', `wa_conversaciones?id=eq.${c.id}`, { ultimo_mensaje: texto.slice(0, 200), ultimo_mensaje_at: ahora, sin_leer: 0 })
+      await wa.req('PATCH', `wa_conversaciones?id=eq.${c.id}`, { ultimo_mensaje: texto.slice(0, 200), ultimo_mensaje_at: ahora, sin_leer: 0 })
       if (r.ok) await comentarTicket(c, texto, ahora, yo, user.email)
       return r.ok ? json({ ok: true, mensaje: msg }, 200, cors) : json({ error: r.error, mensaje: msg }, 502, cors)
     }
@@ -260,25 +296,25 @@ Deno.serve(async req => {
     if (b.accion === 'plantilla') {
       if (!waConfigurado()) return json({ error: 'Falta poner las claves de WhatsApp en el hub (ver docs/PENDIENTE_FRAN.md).' }, 503, cors)
       if (!plantillaTexto()) return json({ error: 'Falta la plantilla de Meta para retomar conversaciones (WHATSAPP_PLANTILLA_TEXTO, ver docs/PENDIENTE_FRAN.md).' }, 503, cors)
-      const c = await conversacion(String(b.conversacion_id ?? ''))
+      const c = await conversacion(wa, String(b.conversacion_id ?? ''))
       if (dentroDeVentana(c.ultimo_entrante_at)) return json({ error: 'Dentro de las 24 h se contesta con texto normal.' }, 409, cors)
       const v = convVista(c)
       const nombre = String(c.contactos?.nombre || c.nombre || v.nombre).split(/\s+/)[0]
       const r = await enviarPlantillaTexto(c.telefono, nombre)
       const ahora = new Date().toISOString()
       const texto = `📨 Plantilla «${plantillaTexto()}» para retomar la conversación`
-      const [msg] = await appReq('POST', 'wa_mensajes', {
+      const [msg] = await wa.req('POST', 'wa_mensajes', {
         conversacion_id: c.id, direccion: 'saliente', usuario: yo.nombre, created_at: ahora, texto,
         wa_message_id: r.id ?? null, tipo: 'template', estado: r.ok ? 'enviado' : 'fallido', error: r.error ?? null,
       })
-      await appReq('PATCH', `wa_conversaciones?id=eq.${c.id}`, { ultimo_mensaje: texto.slice(0, 200), ultimo_mensaje_at: ahora, sin_leer: 0 })
+      await wa.req('PATCH', `wa_conversaciones?id=eq.${c.id}`, { ultimo_mensaje: texto.slice(0, 200), ultimo_mensaje_at: ahora, sin_leer: 0 })
       return r.ok ? json({ ok: true, mensaje: msg }, 200, cors) : json({ error: r.error, mensaje: msg }, 502, cors)
     }
 
     if (b.accion === 'proponer') {
       if (!claudeConfigurado()) return json({ propuesta: null, motivo: 'Oki necesita la clave de Claude (ANTHROPIC_API_KEY) para proponer respuestas.' }, 200, cors)
-      const c = await conversacion(String(b.conversacion_id ?? ''))
-      const msgs: Fila[] = (await appReq('GET', `wa_mensajes?select=direccion,texto,media_descripcion,created_at,usuario&conversacion_id=eq.${c.id}&order=created_at.desc&limit=14`)).reverse()
+      const c = await conversacion(wa, String(b.conversacion_id ?? ''))
+      const msgs: Fila[] = (await wa.req('GET', `wa_mensajes?select=direccion,texto,media_descripcion,created_at,usuario&conversacion_id=eq.${c.id}&order=created_at.desc&limit=14`)).reverse()
       const v = convVista(c)
       const hilo = msgs.map(m => `${m.direccion === 'entrante' ? 'CLIENTE' : `NOSOTROS (${m.usuario ?? 'bot'})`}: ${m.texto ?? m.media_descripcion ?? '[adjunto]'}`).join('\n')
       const propuesta = await preguntarClaude({

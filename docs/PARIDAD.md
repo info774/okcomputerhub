@@ -82,7 +82,9 @@ Fran, 2026-10-03).
    cubre el permiso de escribir en `wa_*` de la app).
    Tanda 1 HECHA (2026-10-04): bandeja completa (documentos, medios, enlaces
    rápidos, chip del plan) y «Desde WhatsApp» (pegado o captura → ticket o
-   trabajo).
+   trabajo). Tanda 2 HECHA (2026-10-04): el webhook preparado y sin conectar
+   (espejos `wa_*`, adjuntos del ticket, órdenes del equipo, corte en
+   `supabase/cortes/corte_whatsapp.sql`).
 6. **Sistema**: usuarios y modo empleado, deshacer, cola offline, historial por
    ficha, configuración, push y APK, aviso de versión.
 7. **Resto**: inventario completo (albaranes, historial, Excel), VeriFactu,
@@ -149,7 +151,7 @@ Fran, 2026-10-03).
 |---|---|---|---|
 | Lista y kanban de tickets, Excel | Hecho | `#/tickets` | Kanban y Excel. |
 | Ficha del ticket, comentarios y estado | Hecho | `#/tickets` | — |
-| Adjuntos, también fotos y vídeos de WhatsApp descritos por IA (`ticket_adjuntos`; la app lo amplió el 2026-10-02, `73b8ff6`) | Falta | — | Espejo de `ticket_adjuntos` y subida. |
+| Adjuntos, también fotos y vídeos de WhatsApp descritos por IA (`ticket_adjuntos`; la app lo amplió el 2026-10-02, `73b8ff6`) | Hecho | `hub.ticket_adjuntos` (área `tickets`, las altas de la app entran por el sync) y la lista «Adjuntos» de la ficha del ticket, con la foto en miniatura | Subir un fichero desde la ficha. |
 | Tareas dentro del ticket | Falta | — | — |
 | Ticket a trabajo, duplicar ticket | Falta | — | — |
 | Resolución a Conocimiento | Falta | — | — |
@@ -234,7 +236,7 @@ Fran, 2026-10-03).
 | Push web y FCM (`push.js`, `send-*-push`) | Falta | — | El hub avisa por Telegram. |
 | Bandeja de notificaciones (`inbox.js`) | Falta | (campana de avisos) | — |
 | Bandeja de WhatsApp: leer y contestar (`wa-bandeja.js`) | Hecho | `shell/whatsapp.ts`, función `whatsapp`: plantilla fuera de 24 h, documentos de Zoho, fotos en la conversación y «Ver foto» pedida a Meta, enlaces rápidos (Cliente, Sede, Remoto, Ticket, Presupuesto) y chip del plan (2026-10-04) | Vincular un teléfono a una ficha (en la app). |
-| Webhook de WhatsApp: menú, horario, ticket u oportunidad, órdenes del equipo, adjuntos | Falta | — | Entra por la app. |
+| Webhook de WhatsApp: menú, horario, ticket u oportunidad, órdenes del equipo, adjuntos | Preparado | Función `whatsapp-webhook` (SIN_JWT, firma de Meta) + `equipo.ts`, espejos `hub.wa_*` y `ticket_adjuntos` (`20261028_whatsapp.sql`); la ventana fija cambia sola de fuente con el área `whatsapp` | El cambio de WhatsApp (`supabase/cortes/corte_whatsapp.sql` + la URL en Meta, PENDIENTE_FRAN §1 quinquies). Avisos por Telegram en vez de push. Las órdenes del equipo que tocan trabajos, tareas o fichajes esperan a su corte (lo dicen y no escriben). |
 | Agente de Meta por MCP (`meta-agente-mcp`) | Falta | — | — |
 | WhatsApp pegado o captura a ticket/trabajo (`parse-whatsapp`) | Hecho | `#/tickets/whatsapp` (`tickets/whatsapp.ts`, `wai-`) + función `parse-whatsapp` (Groq, el mismo prompt); abre el alta de ticket o trabajo rellena (`ui/borrador.ts`) | `GROQ_API_KEY` en el hub (PENDIENTE_FRAN §3). «Compartir» desde el móvil (share target) al hub. |
 | Asistente de voz (`voice.js`, `groq-proxy`) | Falta | (notas de voz → comandas) | — |

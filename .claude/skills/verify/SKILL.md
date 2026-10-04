@@ -234,8 +234,8 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   rellenos desde la conversación, mandar una factura de Zoho, y sin cliente
   solo el ticket; en `#/tickets/whatsapp`, texto → sede por teléfono → ticket
   relleno, trabajo con fecha y hora, IA caída → reserva y cliente por nombre,
-  y captura (la imagen viaja reescalada); `whatsapp` y `parse-whatsapp`
-  SIMULADAS.
+  y captura (la imagen viaja reescalada); los adjuntos en la ficha del ticket;
+  `whatsapp` y `parse-whatsapp` SIMULADAS.
 
 `npm run verify` pasa todos los de la lista.
 

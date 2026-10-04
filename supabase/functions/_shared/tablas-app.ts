@@ -16,7 +16,7 @@ export interface TablaApp { columnas: string[]; auditada: boolean; nocturna?: bo
 const c = (s: string) => s.split(/\s+/).filter(Boolean)
 
 export const TABLAS_APP: Record<string, TablaApp> = {
-  usuarios: { auditada: true, columnas: c('id created_at nombre email rol activo') },
+  usuarios: { auditada: true, columnas: c('id created_at nombre email rol activo telefono') },
   clientes: { auditada: true, columnas: c(`id created_at tipo nombre nif telefono email direccion notas plan estado
     activo zoho_id google_contact_id importe_mantenimiento forma_pago frecuencia_pago fecha_activacion
     programa_tpv estado_pago notas_mantenimiento proxima_cuota stripe_customer_id`) },
@@ -101,6 +101,15 @@ export const TABLAS_APP: Record<string, TablaApp> = {
   // Área del hub desde la fase 6 (con tickets): solo ALTAS. Los mensajes de
   // WhatsApp del cliente llegan a la app como comentario de su ticket.
   ticket_comentarios: { auditada: false, columnas: c('id ticket_id autor_id autor_nombre texto created_at') },
+  // WhatsApp (paridad bloque 5, tanda 2): las conversaciones de la app, fuera
+  // de su audit_log (en la pasada nocturna), y los adjuntos de sus tickets
+  // (área `tickets` del hub: entran como altas, sin pisar).
+  ticket_adjuntos: { auditada: false, columnas: c('id ticket_id nombre drive_file_id drive_url mime_type usuario created_at') },
+  wa_conversaciones: { auditada: false, columnas: c(`id created_at telefono nombre cliente_id local_id contacto_id ticket_id
+    ultimo_mensaje ultimo_mensaje_at ultimo_entrante_at sin_leer bot_estado bot_datos bot_estado_at verificado_local_id
+    verificado_at codigo_fallos codigo_bloqueado_hasta`) },
+  wa_mensajes: { auditada: false, columnas: c(`id created_at conversacion_id wa_message_id direccion tipo texto media_id
+    media_mime media_nombre estado error usuario automatico ticket_id media_url media_descripcion`) },
   // Fase 5: se leen y se indexan en el buscador (sin audit_log en la app: pasada nocturna).
   conocimiento: { auditada: false, columnas: c('id created_at titulo categoria tipo descripcion url palabras_clave') },
   tablero_notas: { auditada: false, columnas: c('id user_id titulo descripcion created_at updated_at') },

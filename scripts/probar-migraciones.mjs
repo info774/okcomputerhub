@@ -837,6 +837,15 @@ commit;`);
     'paridad: con dos días, cambiar la fecha desplaza los dos');
   ok(psql(`select fecha_programada::text from hub.trabajos where id = '${ta}'`) === '2026-11-06', 'paridad: y el trabajo queda con la fecha de su primer bloque');
 
+  // WhatsApp (paridad bloque 5): ¿de quién es el número?, por los últimos 9 dígitos; lo demás, solo la service key.
+  ok(psql(`select count(*) from hub.wa_buscar_por_telefono('0034 600-11-12-22')`) === '1' && psql(`select count(*) from hub.wa_buscar_por_telefono('123')`) === '0',
+    'whatsapp: el teléfono se reconoce por los últimos 9 dígitos (y uno corto no casa con nada)');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select * from hub.wa_locales_autorizados('600111222', null);`), { esperaError: true }).ok
+    && !psql(como('authenticated', 'ana@ok.test', `insert into hub.wa_mensajes (conversacion_id, direccion) values (gen_random_uuid(), 'saliente');`), { esperaError: true }).ok,
+    'whatsapp: los códigos de las sedes y los mensajes, solo las funciones');
+  ok(psql(`select array_to_string(tablas, ',') from hub.areas where area = 'whatsapp'`) === 'wa_conversaciones,wa_mensajes'
+    && psql(`select 'ticket_adjuntos' = any (tablas) from hub.areas where area = 'tickets'`) === 't', 'whatsapp: área propia y los adjuntos con los tickets');
+
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
   ok(!sinRls, `todas las tablas de hub con RLS${sinRls ? ' (faltan: ' + sinRls + ')' : ''}`);

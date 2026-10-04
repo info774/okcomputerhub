@@ -661,6 +661,24 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `_shared/whatsapp-clasificar.ts`, el mismo del webhook) → sede/cliente/contacto
   por teléfono o nombre (`buscarCandidatos` de la app sobre el espejo) → alta
   rellena; sin IA, `analisisDeReserva`. Arnés `verify-whatsapp.mjs`.
+  Tanda 2 (mismo día): el WEBHOOK, PREPARADO Y SIN CONECTAR (decisión de
+  Fran). `whatsapp-webhook` (SIN_JWT, firma `X-Hub-Signature-256`) + `equipo.ts`,
+  portados de la app sobre `dbHub`; con el área `whatsapp` de la app no hace
+  NADA (Meta sigue llamando a la app). Espejos `hub.wa_conversaciones` /
+  `hub.wa_mensajes` (área `whatsapp`, nocturna), `hub.ticket_adjuntos` (área
+  `tickets`, altas de la app por el sync; la ficha del ticket los lista),
+  `usuarios.telefono` (un WhatsApp del EQUIPO va a las órdenes internas),
+  `hub.wa_buscar_por_telefono` / `hub.wa_locales_autorizados` (últimos 9
+  dígitos) y cubos públicos `whatsapp-adjuntos` y `trabajo-fotos`
+  (`20261028_whatsapp.sql`). `_shared/whatsapp-app.ts` es la ÚNICA manera de
+  abrir la conversación de un teléfono, apuntar lo enviado o mandar un PDF de
+  Zoho; los avisos a admins van por Telegram. Las órdenes del equipo que
+  escriben en áreas aún de la app lo DICEN y no escriben (`delHub`); el fichaje
+  va por `hub.reloj_fichar` (la misma `hub.fichar`). La función `whatsapp`
+  cambia de fuente sola (`fuente()`: app o hub según el área; en el hub, sin
+  «embeds», `leerConvs` junta los nombres aparte). El corte:
+  `supabase/cortes/corte_whatsapp.sql` y la URL en Meta, en ese orden
+  (PENDIENTE_FRAN §1 quinquies).
 - **Trabajos: alta y edición** (`src/modulos/trabajos/formulario.ts`,
   2026-10-03, paridad bloque 1): UN formulario para crear y editar
   (`#/trabajos/nuevo`, `#/trabajos/<n>/editar`, prefijo `tf-`) con caras Simple

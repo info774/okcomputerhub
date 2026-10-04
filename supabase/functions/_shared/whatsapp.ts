@@ -1,7 +1,8 @@
 // WhatsApp Business Cloud API (Meta) — portado de okcomputerclaude
 // (supabase/functions/_shared/whatsapp.ts). Lo que hace falta para CONTESTAR
 // desde el hub (texto, plantillas, documentos de Zoho y ver lo que mandó el
-// cliente); lo que entra lo sigue recibiendo el webhook de la app.
+// cliente), y lo que usa el webhook del hub (`whatsapp-webhook`, preparado y
+// sin conectar: botones, listas, firma de Meta y texto de cada tipo de mensaje).
 //
 // Secrets del hub (panel de Supabase del hub → Edge Functions → Secrets), los
 // MISMOS valores que tiene la app:
@@ -137,3 +138,125 @@ export async function descargarMedia(mediaId: string): Promise<{ bytes?: Uint8Ar
   if (!bin.ok) return { error: `Meta no entregó el fichero (${bin.status}).` }
   return { bytes: new Uint8Array(await bin.arrayBuffer()), mime: info.mime_type || bin.headers.get('content-type') || '' }
 }
+
+// ── Para el webhook (portado literal de la app) ──────────────────────────
+const token = () => Deno.env.get('WHATSAPP_TOKEN') ?? ''
+const phoneId = () => Deno.env.get('WHATSAPP_PHONE_NUMBER_ID') ?? ''
+
+// Mensaje con hasta 3 botones de respuesta (título de botón ≤ 20 caracteres).
+export function enviarBotones(para: string, texto: string, botones: { id: string; titulo: string }[]): Promise<EnvioWa> {
+  return postMensaje({
+    to: normalizaTelefono(para),
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: texto.slice(0, 1024) },
+      action: {
+        buttons: botones.slice(0, 3).map(b => ({ type: 'reply', reply: { id: b.id.slice(0, 256), title: b.titulo.slice(0, 20) } })),
+      },
+    },
+  })
+}
+
+// Mensaje con una lista desplegable (hasta 10 filas; título de fila ≤ 24).
+export function enviarLista(
+  para: string, texto: string, boton: string, filas: { id: string; titulo: string; descripcion?: string }[],
+): Promise<EnvioWa> {
+  return postMensaje({
+    to: normalizaTelefono(para),
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      body: { text: texto.slice(0, 1024) },
+      action: {
+        button: boton.slice(0, 20),
+        sections: [{
+          title: 'Opciones',
+          rows: filas.slice(0, 10).map(f => ({
+            id: f.id.slice(0, 200), title: f.titulo.slice(0, 24),
+            ...(f.descripcion ? { description: f.descripcion.slice(0, 72) } : {}),
+          })),
+        }],
+      },
+    },
+  })
+}
+
+// Id del botón o fila que ha pulsado el cliente (null si escribió texto).
+export function respuestaInteractiva(m: any): string | null {
+  if (m?.type === 'interactive') return m.interactive?.button_reply?.id || m.interactive?.list_reply?.id || null
+  if (m?.type === 'button') return m.button?.payload || null
+  return null
+}
+
+export async function marcarLeido(waMessageId: string): Promise<void> {
+  await fetch(`${GRAPH()}/${phoneId()}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messaging_product: 'whatsapp', status: 'read', message_id: waMessageId }),
+  }).catch(() => {})
+}
+
+// Firma del webhook: X-Hub-Signature-256 = "sha256=" + HMAC-SHA256(cuerpo, app secret).
+// Sin comprobarla, cualquiera que conozca la URL podría abrir tickets y hacer
+// que la app mande autorrespuestas a números arbitrarios.
+export async function firmaValida(cuerpo: string, cabecera: string | null): Promise<boolean> {
+  // Sin espacios ni saltos: es un secret pegado a mano, y un salto de línea al
+  // final hace que NINGUNA firma cuadre sin que se note a simple vista.
+  const secreto = (Deno.env.get('WHATSAPP_APP_SECRET') ?? '').trim()
+  if (!secreto || !cabecera?.startsWith('sha256=')) return false
+  const clave = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secreto), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  )
+  const firma = new Uint8Array(await crypto.subtle.sign('HMAC', clave, new TextEncoder().encode(cuerpo)))
+  const hex = [...firma].map(b => b.toString(16).padStart(2, '0')).join('')
+  const recibida = cabecera.slice(7).toLowerCase()
+  if (recibida.length !== hex.length) return false
+  let dif = 0
+  for (let i = 0; i < hex.length; i++) dif |= hex.charCodeAt(i) ^ recibida.charCodeAt(i)
+  return dif === 0
+}
+
+// Texto legible de un mensaje entrante de cualquier tipo (para la bandeja, el
+// ticket y la IA).
+export function textoDeMensaje(m: any): string {
+  switch (m?.type) {
+    case 'text': return m.text?.body || ''
+    case 'image': return m.image?.caption || ''
+    case 'video': return m.video?.caption || ''
+    case 'document': return m.document?.caption || m.document?.filename || ''
+    case 'button': return m.button?.text || ''
+    case 'interactive':
+      return m.interactive?.button_reply?.title || m.interactive?.list_reply?.title || ''
+    case 'location': {
+      const l = m.location || {}
+      return [l.name, l.address, l.latitude && `https://maps.google.com/?q=${l.latitude},${l.longitude}`]
+        .filter(Boolean).join(' · ')
+    }
+    case 'contacts':
+      return (m.contacts || []).map((c: any) =>
+        `${c.name?.formatted_name || ''} ${(c.phones || []).map((p: any) => p.phone).join(', ')}`.trim()).join('\n')
+    default: return ''
+  }
+}
+
+export function mediaDeMensaje(m: any): { id?: string; mime?: string; nombre?: string } {
+  const bloque = m?.[m?.type]
+  if (!bloque?.id) return {}
+  return { id: bloque.id, mime: bloque.mime_type, nombre: bloque.filename }
+}
+
+// Por qué se rechaza una firma, para el log (sin revelar el secret): no es lo
+// mismo que falte, que tenga una forma rara o que sea de otra app.
+export function motivoFirma(cabecera: string | null): string {
+  const bruto = Deno.env.get('WHATSAPP_APP_SECRET') ?? ''
+  const secreto = bruto.trim()
+  if (!secreto) return 'falta el secret WHATSAPP_APP_SECRET'
+  if (!cabecera) return 'la petición no trae X-Hub-Signature-256'
+  if (!cabecera.startsWith('sha256=')) return 'X-Hub-Signature-256 sin el prefijo sha256='
+  const forma = /^[0-9a-f]{32}$/i.test(secreto)
+    ? '32 hex, forma correcta'
+    : `${secreto.length} caracteres, no parece una clave secreta de app (32 hex)`
+  return `no coincide: ¿WHATSAPP_APP_SECRET es de otra app? (secret: ${forma}${bruto !== secreto ? ', tenía espacios' : ''})`
+}
+

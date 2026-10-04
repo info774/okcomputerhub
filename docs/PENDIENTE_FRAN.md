@@ -99,6 +99,41 @@ hub su nombre.
    WHATSAPP_PLANTILLA_DOCUMENTO=factura_documento
    ```
 
+### 1 quinquies · El día del cambio de WhatsApp (NO antes; ~10 min, con Claude)
+
+**Desbloquea**: que los WhatsApp de los clientes entren en el hub (menú
+Soporte · Facturación · Ventas, horario contratado, ticket u oportunidad,
+fotos al ticket, órdenes del equipo). Hasta ese día entran por la app y el hub
+los ve igual en su ventana. El webhook del hub ya está listo, sin conectar.
+**Hazlo solo cuando decidas dejar de usar la bandeja de la app**: a partir de
+ahí los mensajes nuevos se ven en el hub y no en la app.
+
+1. **Dos claves**, las mismas que tiene la app (variables de entorno, ver
+   arriba cómo):
+   - El secreto de la app de Meta: **https://developers.facebook.com** → **Mis
+     apps** → la app de WhatsApp de la empresa → menú de la izquierda
+     **Configuración de la app** → **Básica** → **Clave secreta de la app** →
+     **Mostrar** → cópiala.
+   - Un texto inventado para verificar el webhook (por ejemplo
+     `okhub-whatsapp-2026`): lo vas a pegar también en Meta en el paso 3.
+   ```
+   WHATSAPP_APP_SECRET=0123456789abcdef0123456789abcdef
+   WHATSAPP_VERIFY_TOKEN=okhub-whatsapp-2026
+   ```
+2. **Dile a Claude «haz el cambio de WhatsApp»**: hace una última copia de las
+   conversaciones y aplica `supabase/cortes/corte_whatsapp.sql`. Espera a que
+   te diga que está.
+3. **En Meta**: la misma app → menú **WhatsApp** → **Configuración** → bloque
+   **Webhook** → botón **Editar**:
+   - **URL de devolución de llamada**:
+     `https://adomalsxsymxzuozksmt.supabase.co/functions/v1/whatsapp-webhook`
+   - **Token de verificación**: el texto del paso 1 (`okhub-whatsapp-2026`).
+   - **Verificar y guardar**. Debajo, en **Campos del webhook**, deja
+     suscritos los mismos que tenía la app (como mínimo `messages`).
+4. Los avisos («💬 WhatsApp de…», «🎫 Ticket #… por WhatsApp») llegan por
+   Telegram a los administradores que lo tengan vinculado (Informes →
+   **Vincular mi Telegram**).
+
 ## 2 · Google: correo, Drive (una vez, ~10 minutos)
 
 **Desbloquea**: los correos a info@ se convierten en tickets y las respuestas
