@@ -80,7 +80,7 @@ async function pintar(el: HTMLElement) {
       const col = tareas.filter(t => t.estado === k);
       return `<section class="pr-columna" data-estado="${k}" data-on-dragover="coSobre" data-prevent="1" data-on-drop="coSoltar:${k}">
         <header><h3>${n}</h3><span class="chip">${col.length}</span></header>
-        <div class="pr-col-cuerpo">${col.map(tarjeta).join('') || '<p class="vacio">—</p>'}</div></section>`;
+        <div class="pr-col-cuerpo">${col.map(tarjeta).join('') || '<p class="vacio col-vacia">—</p>'}</div></section>`;
     }).join('')}</div>
     ${(cs.data ?? []).length ? `<details class="tarjeta"><summary>Últimas comandas</summary><ul class="di-ultimo">${(cs.data ?? []).map(c => `<li><small class="nota">${esc(hace(c.created_at))}</small>
       <span><strong>${esc(nombreDe(c.creada_por))}</strong> · ${esc(ORIGEN[c.origen === 'app' ? 'voz' : c.origen] ?? c.origen)} · ${c.n_tareas} tarea(s)${c.con_claude ? '' : ' (por líneas)'}<br><em>«${esc(c.transcripcion)}»</em></span></li>`).join('')}</ul></details>` : ''}`;

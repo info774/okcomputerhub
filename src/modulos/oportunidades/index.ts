@@ -83,7 +83,7 @@ function vistaEmbudo(p: Pipeline): string {
       <header><h3>${esc(e.nombre)}</h3><span class="chip">${col.length}</span></header>
       <p class="nota">${eur(suma)} · ${e.probabilidad} %${sin ? ` · <span class="atento">${sin} sin próximo paso</span>` : ''}</p>
       ${e.tipo === 'abierta' ? altaRapida(e) : ''}
-      <div class="pr-col-cuerpo">${col.map(tarjeta).join('') || '<p class="vacio">—</p>'}</div></section>`;
+      <div class="pr-col-cuerpo">${col.map(tarjeta).join('') || '<p class="vacio col-vacia">—</p>'}</div></section>`;
   }).join('')}</div>${zonas}`;
 }
 

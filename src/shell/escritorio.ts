@@ -26,11 +26,12 @@ import { registrarAcciones } from '../core/dispatcher';
 import { API } from '../core/api';
 import { esc, hace, toast } from '../ui/dom';
 import { visibles, hrefDe } from '../modulos/inicio';
-import { avisos as cargarAvisos, GRUPOS, esMio, type Aviso } from '../modulos/direccion';
+import { avisos as cargarAvisos, GRUPOS, AVISO_PANTALLA, esMio, type Aviso } from '../modulos/direccion';
 import { urgentesDe, diceHTML, pintarEstadisticas, vozHTML, ordenesHTML } from '../modulos/inicio/piezas';
 import { pintarPantalla } from './pantalla';
 import { abrirBuscador } from './buscador';
 import { iconoHex } from './iconos';
+import { svgLinea as svgBarra } from './linea';
 import { instalarDock, trasPintar, cargarFijas, fijas, fijar, quitar, rebotar } from './dock';
 
 const CLAVE_ACTIVO = 'hub_escritorio';
@@ -67,22 +68,6 @@ const ICONO_WIN = {
   restaurar: '<rect x="2.8" y="5.2" width="8" height="8" rx="1.8"/><path d="M5.6 5.2V4.6a1.8 1.8 0 0 1 1.8-1.8h4a1.8 1.8 0 0 1 1.8 1.8v4a1.8 1.8 0 0 1-1.8 1.8h-.6"/>',
   cerrar: '<path d="M4 4l8 8M12 4l-8 8"/>',
 };
-// Iconos de la barra (línea de 16 px, trazo del texto), los mismos de las ventanas.
-const ICONO_BARRA: Record<string, string> = {
-  buscar: '<circle cx="7" cy="7" r="4.3"/><path d="M10.2 10.2 13.5 13.5"/>',
-  campana: '<path d="M4 11.5V7.2a4 4 0 0 1 8 0v4.3l1.2 1.3H2.8z"/><path d="M6.6 14.2a1.5 1.5 0 0 0 2.8 0"/>',
-  luna: '<path d="M13 9.6A5.3 5.3 0 0 1 6.4 3a5.3 5.3 0 1 0 6.6 6.6z"/>',
-  sol: '<circle cx="8" cy="8" r="2.8"/><path d="M8 1.8v1.4M8 12.8v1.4M1.8 8h1.4M12.8 8h1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/>',
-  mas: '<path d="M8 3.5v9M3.5 8h9"/>',
-  renombrar: '<path d="M10.5 3 13 5.5 6 12.5H3.5V10z"/>',
-  eliminar: '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5"/>',
-  widgets: '<rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1"/><rect x="9" y="9" width="4.5" height="4.5" rx="1"/>',
-  clasica: '<rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M5.5 3v10"/>',
-  salir: '<path d="M9.5 3H13v10H9.5M7 5.2 4.2 8 7 10.8M4.2 8H10"/>',
-  actualizar: '<path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.8v2.8h-2.8"/>',
-  externo: '<path d="M9 3h4v4M13 3 7.5 8.5M11.5 9.5V13H3V4.5h3.5"/>',
-};
-const svgBarra = (n: string, clase = '') => `<svg class="os-bico ${clase}" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${ICONO_BARRA[n]}</svg>`;
 const svgWin = (d: string, clase = '') => `<svg class="os-wico ${clase}" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${d}</svg>`;
 const sinMovimiento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -940,16 +925,6 @@ async function widgetAgenda() {
 }
 
 // ── Centro de avisos ────────────────────────────────────────────────────────
-// Cada tipo de aviso con el icono de SU pantalla (los mismos del dock) y el
-// verbo de su acción. Un tipo nuevo del motor sin entrada aquí sale con su
-// inicial y «Abrir».
-const AVISO_PANTALLA: Record<string, { ico: string; accion: string }> = {
-  alerta_rmm: { ico: 'monitorizacion', accion: 'Ver el equipo' }, sede_sin_conexion: { ico: 'sitios', accion: 'Ver la sede' },
-  factura_vencida: { ico: 'facturacion', accion: 'Reclamar' }, cobro_mantenimiento: { ico: 'mantenimientos', accion: 'Ver el cobro' },
-  ticket_sin_asignar: { ico: 'tickets', accion: 'Asignar' }, presupuesto_sin_respuesta: { ico: 'presupuestos', accion: 'Seguir' },
-  trabajo_sin_facturar: { ico: 'trabajos', accion: 'Facturar' }, hito_vencido: { ico: 'proyectos', accion: 'Ver el hito' },
-  cliente_sin_comprar: { ico: 'clientes', accion: 'Ver el cliente' }, cierre_mes: { ico: 'calendario', accion: 'Ver el cierre' },
-};
 const SECCION_AV = { mal: 'Urgente', aviso: 'Atento', info: 'Para saber' } as const;
 const claveVistos = () => `hub_os_avisos_vistos_${usuario()?.id ?? 'anon'}`;
 
