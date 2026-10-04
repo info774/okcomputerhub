@@ -62,7 +62,10 @@ Fran, 2026-10-03).
    sin dinero (HECHA 2026-10-04: Resumen, tabla maestra y ficha de cada sede,
    Checklist, Seguimiento, Plantillas, «+ Contrato» y checklist de la visita en
    el trabajo; `20261024_mantenimiento.sql`, área `mantenimiento`), 2 contratos
-   y firma, 3 motor de Stripe sin conectar, 4 cartera vieja de Zoho Billing.
+   y firma (HECHA 2026-10-04: Documentos con renovaciones, generar/editar con el
+   documento literal de la app, enlace, firmado, página pública `contrato.html`
+   y función `firma-contrato`; `20261025_contratos.sql`), 3 motor de Stripe sin
+   conectar, 4 cartera vieja de Zoho Billing.
 5. **WhatsApp completo**: webhook con menú y horario, medios, plantilla fuera de
    24 h, mandar documentos, enlaces rápidos, de WhatsApp a ticket.
 6. **Sistema**: usuarios y modo empleado, deshacer, cola offline, historial por
@@ -157,7 +160,7 @@ Fran, 2026-10-03).
 
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
-| Resumen (garantías, visitas, cuotas a 90 días, renovaciones) | Preparado | `#/mantenimientos` (cifras, por plan, requieren atención, próximas visitas, garantías ≤ 30 d) | Renovaciones (tanda 2). |
+| Resumen (garantías, visitas, cuotas a 90 días, renovaciones) | Preparado | `#/mantenimientos` (cifras, por plan, requieren atención, próximas visitas, renovaciones a 2 meses, garantías ≤ 30 d) | Corte. |
 | Locales: tabla maestra (`mant-ficha.js`) y ficha `fm-` | Preparado | `#/mantenimientos/locales` (certificado, copia y control horario editables en la fila; filtros de ficha) y `#/mantenimientos/ficha/<id>` (teléfonos con rol, código); disparadores del código y del certificado en `20261024_mantenimiento.sql` | Corte del área `clientes`. |
 | «+ Contrato» (`openNewMant`, `saveMantenimiento`) | Preparado | `#/mantenimientos/alta[/<id>]` (`alta.ts`): plan, cuota neta, frecuencia y próxima revisión; a una sede en Stripe no se le toca la cuota | Corte de `mantenimiento` y `clientes`. |
 | Cobros con Stripe (`mant-cobros.js`, `stripe-suscripcion`) | Falta | (`#/cobros` avisa del cobro torcido) | Portar `stripe-*` y `stripe-cobros.ts`. |
@@ -166,8 +169,8 @@ Fran, 2026-10-03).
 | Cartera vieja de Zoho Billing | Falta | — | Solo se pinta (`sedeEnZoho`). |
 | Checklist, Seguimiento (kanban), Plantillas de planes | Preparado | `#/mantenimientos/checklist` (tareas del plan por periodo), `/seguimiento` (kanban con arrastre y formulario), `/plantillas` (planes solo admin, sus tareas y checklists de visita) | Corte de `mantenimiento` (y `clientes` para marcar tareas). |
 | Checklist de la visita en el trabajo (`loadChecklistForTrabajo`) | Preparado | Ficha del trabajo (`trabajos/checklist-visita.ts`, espejo `checklist_respuestas` en el área `trabajos`) | Corte de `trabajos`. |
-| Contratos: generar, editar, firmar, renovaciones | Falta | `#/firmas` es firma genérica | Contratos con cuota. |
-| Firma pública con pago (`firma.html`, `firma-contrato`), `mandato.html` | Falta | — | — |
+| Contratos: generar, editar, firmar, renovaciones | Preparado | `#/mantenimientos/documentos` (contratos, renovaciones con preaviso, avisado, no renovar; insignia), `#/mantenimientos/contrato/…` (generar/editar UN formulario, borrador, enlace, firmado imprimible, anular y eliminar solo admin); el contrato de cada sede en la tabla maestra | Corte de `mantenimiento`. «Domiciliar», «Cambiar forma de pago» y «Cambiar plan» desde el contrato: con Cobros (tanda 3). |
+| Firma pública con pago (`firma.html`, `firma-contrato`), `mandato.html` | Preparado | `contrato.html?token=` y `mandato.html` (entradas de Vite), función `firma-contrato` (SIN_JWT): ver y firmar (vuelca plan, cuota y frecuencia a la sede si no se cobra ya); sin el corte no firma (409) | El pago tras firmar (`pagar` contesta 409 hasta conectar Stripe, tanda 3). |
 | Trabajo desde un mantenimiento (`generarTrabajoDesdeMant`) | No aplica | — | En la app no lo llama ningún botón (código muerto); las visitas se crean como trabajo de tipo Mantenimiento. |
 | Ficha del sitio, pestaña «Mant.» con cobro | Solo lectura | `#/sitios` | Botones de Stripe. |
 | Ajustes de cobro (`mant_config`) | Falta | — | — |

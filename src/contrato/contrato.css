@@ -1,0 +1,20 @@
+/* Firma del contrato de mantenimiento (contrato.html) y vuelta del pago (mandato.html). */
+.ct-estado { display: flex; flex-wrap: wrap; gap: .4rem .75rem; align-items: baseline; margin: 0 0 .75rem; }
+.ct-doc { max-height: 55vh; overflow-y: auto; padding-right: .5rem; border-top: 1px solid var(--borde); padding-top: .75rem; }
+.ct-doc h1 { font-size: 1.2rem; line-height: 1.3; text-wrap: balance; }
+.ct-doc h2 { font-size: 1rem; margin: 1.1rem 0 .35rem; }
+.ct-doc p { margin: .4rem 0; }
+.ct-doc ul { margin: .4rem 0 .4rem 1.25rem; padding: 0; }
+.ct-doc .c-strong { font-weight: 700; margin-top: .6rem; }
+.ct-doc .c-serv-no li { color: var(--suave); }
+.ct-centro { text-align: center; padding: 2rem 1.25rem; }
+.ct-centro h1 { font-size: 1.3rem; text-wrap: balance; }
+.ct-centro > p { max-width: 42ch; margin: .5rem auto; }
+.ct-ico { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 1.8rem; font-weight: 700; }
+.ct-ico.bien { background: var(--bien-f); color: var(--bien); } .ct-ico.mal { background: var(--mal-f); color: var(--mal); } .ct-ico.aviso { background: var(--aviso-f); color: var(--aviso); }
+.ct-metodos { display: grid; gap: .6rem; max-width: 24rem; margin: 1.25rem auto .5rem; }
+.ct-metodo { display: flex; gap: .75rem; align-items: center; text-align: left; padding: .75rem 1rem; height: auto; }
+.ct-metodo span:first-child { font-size: 1.4rem; }
+.ct-metodo small { display: block; font-weight: 400; opacity: .9; }
+.ct-pie { text-align: center; }
+#ct-firmar { margin-top: 1rem; width: 100%; }

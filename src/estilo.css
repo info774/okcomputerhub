@@ -802,3 +802,23 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 /* Una cifra que lleva a otra pestaña: entera clicable, sin subrayado */
 .di-cifra > a { display: block; color: inherit; text-decoration: none; }
 .di-cifra > a:hover h3 { text-decoration: underline; }
+
+/* Contratos de mantenimiento (documentos.ts mdo-, contrato.ts mco-) */
+.pestanas .insignia { display: inline-flex; align-items: center; justify-content: center; min-width: 1.3rem; height: 1.3rem; padding: 0 .35rem; margin-left: .3rem;
+  border-radius: 999px; background: var(--aviso, #b26a00); color: #fff; font-size: .75rem; font-weight: 700; }
+.mdo-lista { list-style: none; margin: 0; padding: 0; }
+.mdo-lista > li { padding: .75rem 0; border-bottom: 1px solid var(--linea); }
+.mdo-lista > li:last-child { border-bottom: 0; }
+.mdo-lista .mdo-cab { display: flex; flex-wrap: wrap; gap: .35rem .5rem; align-items: baseline; }
+.mdo-lista .nota, .mdo-lista p { margin: .3rem 0; }
+.mdo-lista li.mdo-mal { border-left: 3px solid var(--mal, #b3261e); padding-left: .6rem; }
+.mdo-lista li.mdo-aviso { border-left: 3px solid var(--aviso, #b26a00); padding-left: .6rem; }
+.mco-pasos { display: flex; flex-wrap: wrap; gap: .25rem 1.5rem; padding-left: 1.25rem; color: var(--texto-suave); }
+.mco-caracs { margin: 1rem 0; }
+.mco-caracs summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.mco-doc h1 { font-size: 1.2rem; line-height: 1.3; text-wrap: balance; }
+.mco-doc h2 { font-size: 1rem; margin: 1.1rem 0 .35rem; }
+.mco-doc .c-strong { font-weight: 700; }
+.mco-doc .c-serv-no li { color: var(--texto-suave); }
+.mt-crear { font-size: .85rem; white-space: nowrap; }
+@media print { .mco-imprimible, .mco-imprimible * { visibility: visible; } .mco-imprimible { position: absolute; top: 0; left: 0; right: 0; } .mco-imprimible .tarjeta { border: 0; } }
