@@ -11,6 +11,7 @@ import { API } from '../../core/api';
 import { esAdmin, usuario } from '../../core/estado';
 import { equipo, nombreDe } from '../../core/equipo';
 import { registrarAcciones } from '../../core/dispatcher';
+import { bloqueZohoBilling } from '../mantenimientos/zoho-billing';
 import { ir, resolver } from '../../core/router';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
@@ -170,6 +171,8 @@ async function tabSedes(c: Cliente): Promise<string> {
   const { data } = await API.get<any[]>('locales', { select: 'id,nombre,direccion,plan,estado_pago,importe_mantenimiento,programa_tpv,lat,lng,maps_url,activo', cliente_id: `eq.${c.id}`, order: 'nombre' });
   const ls = data ?? [];
   const nueva = await esDelHub('locales') ? `<p class="acciones"><a class="btn" href="#/sitios/nuevo/${esc(c.id)}">+ Nueva sede</a></p>` : '';
+  // Cartera vieja de Zoho Billing: buscar sus suscripciones y vincularlas a una sede (admin).
+  const zb = esAdmin() && c.zoho_id ? bloqueZohoBilling(c.zoho_id, ls.filter(l => l.activo !== false).map(l => ({ id: l.id, nombre: l.nombre }))) : '';
   if (!ls.length) return `${nueva}<p class="vacio">Este cliente no tiene sedes todavía.</p>`;
   const { data: est } = await API.get<any[]>('rmm_estado_local', { select: 'local_id,estado,equipos,conectados', local_id: `in.(${ls.map(l => l.id).join(',')})` });
   const rmm = new Map((est ?? []).map(e => [e.local_id, e]));
@@ -183,7 +186,7 @@ async function tabSedes(c: Cliente): Promise<string> {
         <td>${l.plan ? `${esc(l.plan)}${esAdmin() && l.importe_mantenimiento ? ` · ${eur(l.importe_mantenimiento, 2)}/mes` : ''}<br>` : '—'}${l.estado_pago && l.estado_pago !== 'Al corriente' ? `<span class="chip aviso">${esc(l.estado_pago)}</span>` : ''}</td>
         <td>${esc(l.programa_tpv ?? '—')}</td>
         <td>${e ? `<a class="chip ${tonoRmm[e.estado]}" href="#/monitorizacion/sede/${esc(l.id)}">${e.conectados}/${e.equipos} conectados</a>` : '<span class="nota">sin agente</span>'}</td></tr>`;
-    }).join('')}</tbody></table></div>`;
+    }).join('')}</tbody></table></div>${zb}`;
 }
 
 async function tabContactos(c: Cliente): Promise<string> {

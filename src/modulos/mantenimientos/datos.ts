@@ -155,3 +155,8 @@ export const cuotaPeriodo = (netoMes: number, frecuencia: string | null | undefi
   const meses = mesesDe(frecuencia);
   return { meses, neto: netoMes * meses, bruto: Math.round(netoMes * meses * (1 + IGIC / 100) * 100) / 100 };
 };
+
+// La suscripción en el panel de Zoho Billing. La cuenta de Billing es la
+// misma organización que Zoho Books (en la app iba escrita a mano en cada enlace).
+export const ZOHO_BILLING_CUENTA = '20107733530';
+export const urlZohoBilling = (id: string | null | undefined) => `https://billing.zoho.eu/app/${ZOHO_BILLING_CUENTA}#/subscriptions/${encodeURIComponent(id ?? '')}`;

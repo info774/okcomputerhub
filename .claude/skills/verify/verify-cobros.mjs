@@ -28,7 +28,10 @@ const FIX = {
     { id: 'u-mat', nombre: 'Matteo Monastero', email: 'tec@ok.test', rol: 'tecnico', activo: true },
   ],
   sync_estado: [], config: [], areas: [],
-  locales: [{ id: 'l5', nombre: 'Bar del Puerto', zoho_subscription_id: 'z5', zoho_estado: 'cancelled' }],
+  locales: [{ id: 'l5', nombre: 'Bar del Puerto', zoho_subscription_id: 'z5', zoho_estado: 'cancelled' },
+    { id: 'l2', nombre: 'Bananas Cafetería', cliente_id: 'c-l2', activo: true, plan: 'Silver' }, { id: 'l2b', nombre: 'Bananas Puerto', cliente_id: 'c-l2', activo: true }],
+  clientes: [{ id: 'c-l2', nombre: 'Bananas', zoho_id: '4600002', activo: true }],
+  clientes_crm: [], actividades: [], oportunidades: [], contactos: [], rmm_estado_local: [],
   planes_mantenimiento: [
     { id: 'p1', nombre: 'Premium', orden: 1, precio_mensual: 49, activo: true }, { id: 'p2', nombre: 'Silver', orden: 2, precio_mensual: 79, activo: true },
     { id: 'p0', nombre: 'Sin mantenimiento', orden: 0, activo: true },
@@ -77,17 +80,30 @@ async function contexto(email, fix) {
     }[b.accion] ?? { ok: true, mensaje: 'Hecho' };
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(r) });
   });
+  const zc = [];
+  const guarda = !(fix.areas ?? []).length;
+  await ctx.route(`${SB}/functions/v1/zoho-cartera`, async route => {
+    const b = route.request().postDataJSON();
+    zc.push(b);
+    const r = {
+      comprobar: { ok: true, guardado: guarda, status: 'live', estado_pago: 'Pendiente de pago', deuda: 85.6, facturas_impagadas: 2, importe: 42.8, proxima_cuota: dia(9).slice(0, 10), url: 'https://billing.zoho.eu/app/1#/subscriptions/z2' },
+      listar: { ok: true, puede_vincular: guarda, subscriptions: [{ subscription_id: 'z2', plan_name: 'Silver mensual', status: 'live', status_label: 'Activa', amount: 42.8, next_billing_at: dia(9).slice(0, 10), url: 'https://billing.zoho.eu/app/1#/subscriptions/z2' },
+        { subscription_id: 'z9', plan_name: 'Basic', status: 'cancelled', status_label: 'Cancelada', amount: 25, next_billing_at: null, url: 'https://billing.zoho.eu/app/1#/subscriptions/z9' }] },
+      vincular: { ok: true, guardado: true, estado_pago: 'Al corriente', mensaje: 'Vinculada' },
+    }[b.accion] ?? { error: 'acción' };
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(r) });
+  });
   const page = await ctx.newPage();
   const errores = [];
   page.on('pageerror', e => errores.push(String(e)));
   page.on('dialog', d => { page._dialogos = [...(page._dialogos ?? []), d.message()]; d.accept(); });
-  return { ctx, base, page, llamadas, errores };
+  return { ctx, base, page, llamadas, errores, zc };
 }
 const espera = (fn, ms = 4000) => new Promise((res, rej) => { const t0 = Date.now(); const i = setInterval(() => { if (fn()) { clearInterval(i); res(); } else if (Date.now() - t0 > ms) { clearInterval(i); rej(new Error('no llegó')); } }, 50); });
 const sedes = page => page.$$eval('#mcb-sedes > li', l => l.map(x => x.dataset.sede));
 
 try {
-  let { ctx, base, page, llamadas, errores } = await contexto('admin@ok.test', FIX);
+  let { ctx, base, page, llamadas, errores, zc } = await contexto('admin@ok.test', FIX);
   await page.goto(`${srv.base}/#/mantenimientos/cobros`);
   await page.waitForSelector('#mcb-sedes');
   ok(!(await page.$('.aviso.area-app')) && (await page.$$eval('nav.pestanas a', a => a.map(x => x.textContent))).includes('Cobros'), 'admin con el corte: la pestaña Cobros, sin aviso');
@@ -193,17 +209,48 @@ try {
   await page.waitForFunction(() => location.hash === '#/mantenimientos/cobros');
   const pc = base.reg.escrituras.find(e => e.metodo === 'PATCH' && e.tabla === 'mant_config').cuerpo;
   ok(pc.serie_prefijo === 'MNT' && pc.zoho_tax_id === 'tx7' && pc.zoho_tax_percent === 7 && pc.pago_metodos.join() === 'sepa', 'guardar ajustes (el % del impuesto se conserva si no cambia)');
+  // Cartera vieja de Zoho Billing: comprobar una sede y vincular desde el cliente.
+  await page.waitForSelector('#mcb-sedes li[data-sede="l2"] [data-action="mcbComprobarZoho"]');
+  await page.click('#mcb-sedes li[data-sede="l2"] [data-action="mcbComprobarZoho"]');
+  await page.waitForSelector('#mcb-zoho');
+  const zt = (await page.textContent('#mcb-zoho')).replace(/\u00a0/g, ' ');
+  ok(zc.at(-1).accion === 'comprobar' && zc.at(-1).local_id === 'l2' && zt.includes('85,60 € (2 facturas)') && zt.includes('Pendiente de pago') && zt.includes('Guardado en la sede'),
+    '«Comprobar en Zoho»: estado, deuda real y, con el corte, guardado');
+  ok(!!(await page.$('#mcb-sedes li[data-sede="l5"] [data-action="mcbComprobarZoho"]')), 'también en una sede con la suscripción de Zoho de baja');
+  await page.click('[data-action="mcbCerrarZoho"]');
+  await page.goto(`${srv.base}/#/clientes/c-l2/sedes`);
+  await page.waitForSelector('#czb [data-action="czbBuscar"]');
+  await page.click('#czb [data-action="czbBuscar"]');
+  await page.waitForSelector('#czb-subs');
+  ok(zc.at(-1).accion === 'listar' && zc.at(-1).zoho_customer_id === '4600002' && await page.$$eval('#czb-subs > li', l => l.length) === 2
+    && await page.$$eval('#czb-sede-z2 option', o => o.map(x => x.value).join()) === ',l2,l2b', 'ficha del cliente: sus suscripciones de Zoho Billing y sus sedes para vincular');
+  await page.click('[data-action="czbVincular"][data-p0="z2"]');
+  await page.waitForTimeout(200);
+  ok(zc.at(-1).accion === 'listar', 'sin elegir sede no se vincula');
+  await page.selectOption('#czb-sede-z2', 'l2b');
+  await page.click('[data-action="czbVincular"][data-p0="z2"]');
+  await espera(() => zc.at(-1)?.accion === 'vincular');
+  ok(zc.at(-1).local_id === 'l2b' && zc.at(-1).subscription_id === 'z2', 'vincular la suscripción a la sede elegida');
   ok(errores.length === 0, `sin errores JS${errores.length ? ': ' + errores.join(' | ') : ''}`);
   await ctx.close();
 
   // ── Sin el corte: se ve y no se toca ───────────────────────────────────
-  ({ ctx, base, page, llamadas } = await contexto('admin@ok.test', { ...FIX, areas: [{ area: 'mantenimiento', tablas: ['mant_facturas', 'mant_config'], dueno: 'app' }] }));
+  ({ ctx, base, page, llamadas, zc } = await contexto('admin@ok.test', { ...FIX, areas: [{ area: 'mantenimiento', tablas: ['mant_facturas', 'mant_config'], dueno: 'app' }] }));
   await page.goto(`${srv.base}/#/mantenimientos/cobros`);
   await page.waitForSelector('#mcb-sedes');
-  ok(!!(await page.$('.aviso.area-app')) && await page.$$eval('#mcb-sedes button[data-action]', b => b.every(x => x.disabled)), 'sin el corte: el cuadro se ve con los botones apagados');
+  ok(!!(await page.$('.aviso.area-app')) && await page.$$eval('#mcb-sedes button[data-action]:not([data-action="mcbComprobarZoho"])', b => b.every(x => x.disabled)), 'sin el corte: el cuadro se ve con los botones apagados (salvo comprobar en Zoho)');
   await page.goto(`${srv.base}/#/mantenimientos/cobros/ajustes`);
   await page.waitForSelector('#mcfg-form');
   ok(await page.$eval('#mcfg-form button[type=submit]', b => b.disabled) && llamadas.length === 0 && base.reg.escrituras.filter(e => e.metodo !== 'RPC').length === 0, 'ni ajustes ni llamadas a Stripe');
+  await page.goto(`${srv.base}/#/mantenimientos/cobros`);
+  await page.waitForSelector('#mcb-sedes li[data-sede="l2"] [data-action="mcbComprobarZoho"]:not([disabled])');
+  await page.click('#mcb-sedes li[data-sede="l2"] [data-action="mcbComprobarZoho"]');
+  await page.waitForSelector('#mcb-zoho');
+  ok((await page.textContent('#mcb-zoho')).includes('Solo consultado'), 'sin el corte, «Comprobar en Zoho» consulta y no guarda');
+  await page.goto(`${srv.base}/#/clientes/c-l2/sedes`);
+  await page.click('#czb [data-action="czbBuscar"]');
+  await page.waitForSelector('#czb-subs');
+  ok(!(await page.$('[data-action="czbVincular"]')) && (await page.textContent('#czb')).includes('se sigue haciendo en la app'), 'sin el corte, se ven las suscripciones pero se vinculan en la app');
   await ctx.close();
 
   // ── Técnico: ni la pestaña ─────────────────────────────────────────────

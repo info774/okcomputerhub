@@ -219,8 +219,10 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   filtros y buscador sobre sedes y libro, domiciliar con la cuota del periodo
   + IGIC y el enlace de pago, pausar, baja, desvincular de Zoho, emitir en
   Zoho, cuotas descuadradas, la página de la sede, cambiar plan, abonar y
-  ajustes con los desplegables de Zoho; sin corte, botones apagados;
-  `stripe-suscripcion` SIMULADA.
+  ajustes con los desplegables de Zoho; la cartera vieja de Zoho Billing
+  («Comprobar en Zoho», que sin corte consulta y no guarda, y vincular una
+  suscripción desde la ficha del cliente); sin corte, botones apagados;
+  `stripe-suscripcion` y `zoho-cartera` SIMULADAS.
 - `verify-inventario.mjs`: stock por ubicación y «Todas» sumando el mismo
   producto (por catálogo o por nombre), bajo mínimo/agotados y medidor, barras
   por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de
