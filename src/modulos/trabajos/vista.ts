@@ -17,6 +17,7 @@ import { pintarFormulario, ofrecerFacturar } from './formulario';
 import { APP_ACTUAL_URL } from '../../core/config';
 import { descargarCsv } from '../../ui/csv';
 import { botonChatFicha } from '../../ui/chat-ficha';
+import { seccionChecklist } from './checklist-visita';
 
 interface Trabajo { id: string; numero: number; created_at: string; titulo: string | null; tipo?: string | null; chain_root_id?: string | null; descripcion: string | null; estado: string; tecnicos: string[] | null;
   cliente_id: string | null; local_id: string | null; contacto_id: string | null; fecha_programada: string | null; hora_llegada: string | null; prioridad: string | null;
@@ -127,7 +128,7 @@ async function vistaFicha(numero: string): Promise<string> {
   _t = t;
   const [cli, loc, con, bloques, ses, lin, coms, fotos, tks, personas, escribe] = await Promise.all([
     t.cliente_id ? API.single<any>('clientes', { select: 'id,nombre,telefono', id: `eq.${t.cliente_id}` }) : Promise.resolve({ data: null }),
-    t.local_id ? API.single<any>('locales', { select: 'id,nombre,direccion,lat,lng,maps_url', id: `eq.${t.local_id}` }) : Promise.resolve({ data: null }),
+    t.local_id ? API.single<any>('locales', { select: 'id,nombre,direccion,lat,lng,maps_url,plan', id: `eq.${t.local_id}` }) : Promise.resolve({ data: null }),
     t.contacto_id ? API.single<any>('contactos', { select: 'nombre,telefono', id: `eq.${t.contacto_id}` }) : Promise.resolve({ data: null }),
     API.get<any[]>('agenda', { select: 'id,inicio,fin,tecnicos,estado,notas', trabajo_id: `eq.${t.id}`, order: 'inicio' }),
     API.get<any[]>('sesiones', { select: 'id,traslado,inicio,fin,duracion_min,tecnico_nombre', entidad_tipo: 'eq.trabajo', entidad_id: `eq.${t.id}`, order: 'inicio' }),
@@ -135,7 +136,7 @@ async function vistaFicha(numero: string): Promise<string> {
     API.get<any[]>('trabajo_comentarios', { select: '*', trabajo_id: `eq.${t.id}`, order: 'created_at' }),
     API.get<any[]>('trabajo_fotos', { select: 'id,created_at,descripcion,drive_url,archivo_path,tecnico_id', trabajo_id: `eq.${t.id}`, order: 'created_at' }),
     API.get<any[]>('tickets', { select: 'numero,titulo,estado', trabajo_id: `eq.${t.id}` }), equipo(), esDelHub('trabajos', 'documento_lineas', 'furgoneta_inventario')]);
-  const escribeAgenda = await esDelHub('agenda');
+  const [escribeAgenda, checklist] = await Promise.all([esDelHub('agenda'), esDelHub('checklist_respuestas').then(e => seccionChecklist(t.id, loc.data?.plan ?? null, e))]);
   _lineas = (lin.data ?? []).map(l => ({ ...l, cantidad: Number(l.cantidad), precio: Number(l.precio), descuento: Number(l.descuento ?? 0) }));
   const tel = con.data?.telefono ?? cli.data?.telefono, wa = telWhatsApp(tel);
   const mapa = loc.data?.lat && loc.data?.lng ? `https://www.google.com/maps/dir/?api=1&destination=${loc.data.lat},${loc.data.lng}` : loc.data?.direccion ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc.data.direccion)}` : null;
@@ -158,6 +159,7 @@ async function vistaFicha(numero: string): Promise<string> {
       <section class="tarjeta"><h3>Qué hay que hacer</h3><div class="md">${markdown(t.descripcion) || '<p class="nota">Sin descripción.</p>'}</div>
         ${t.observaciones ? `<h4>Lo que se hizo</h4><div class="md">${markdown(t.observaciones)}</div>` : ''}</section>
       <section class="tarjeta mo-scroll"><h3>Material · ${eur(total, 2)}</h3>${escribe ? editorLineas() : `<table class="tabla"><tbody>${_lineas.map(l => `<tr><td>${esc(l.nombre)}</td><td>${l.cantidad}</td><td>${eur(l.precio, 2)}</td></tr>`).join('') || '<tr><td class="vacio">Sin material.</td></tr>'}</tbody></table>`}</section>
+      ${checklist}
       <section class="tarjeta"><h3>Comentarios</h3><ul class="di-ultimo">${(coms.data ?? []).map(c => `<li><small class="nota" title="${esc(fechaHora(c.created_at))}">${esc(hace(c.created_at))}</small><span><strong>${esc(c.autor_nombre ?? '')}</strong> ${esc(c.texto)}</span></li>`).join('') || '<li class="nota">Ninguno.</li>'}</ul>
         ${escribe ? '<form class="acciones" data-on-submit="trComentar" data-prevent="1"><input id="tr-com" required placeholder="Escribe un comentario…" aria-label="Comentario"><button class="btn secundario" type="submit">Añadir</button></form>' : ''}</section>
     </div><div>

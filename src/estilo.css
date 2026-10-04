@@ -273,9 +273,10 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .segmentado button { min-height: 40px; padding: 0 .9rem; border: 0; background: var(--superficie); color: var(--texto); font: inherit; cursor: pointer; }
 .segmentado button.activo { background: var(--primario-suave); color: var(--primario); font-weight: 600; }
 .pestanas { display: flex; gap: .25rem; overflow-x: auto; border-bottom: 1px solid var(--borde); margin-bottom: 1rem; }
-.pestanas button { min-height: 44px; padding: 0 1rem; border: 0; border-bottom: 3px solid transparent; background: none;
+.pestanas button, .pestanas a { min-height: 44px; padding: 0 1rem; border: 0; border-bottom: 3px solid transparent; background: none;
   color: var(--texto-suave); font: inherit; cursor: pointer; white-space: nowrap; }
-.pestanas button.activo { color: var(--texto); border-bottom-color: var(--primario); font-weight: 600; }
+.pestanas a { display: inline-flex; align-items: center; text-decoration: none; }
+.pestanas button.activo, .pestanas a.activo { color: var(--texto); border-bottom-color: var(--primario); font-weight: 600; }
 
 /* ── Proyectos ───────────────────────────────────────────────────────── */
 .pr-idea .acciones input { flex: 1 1 260px; }
@@ -779,3 +780,25 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 #ft-form [hidden] { display: none; }
 .pl-tabla td.num { vertical-align: top; padding-top: .9rem; }
 .tr-sel { position: sticky; top: 0; z-index: 2; background: var(--fondo); padding: .4rem 0; }
+
+/* Mantenimientos: tabla maestra, planes y kanban comercial. */
+.mt-maestra td { vertical-align: top; }
+.mt-maestra input[type="date"] { max-width: 9.5rem; }
+.mpl-planes { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.mpl-plan ul { margin: .4rem 0; padding-left: 1.1rem; }
+.mpl-inactivo { opacity: .6; }
+.fm-tels { border: 1px solid var(--borde); border-radius: 9px; padding: .5rem .75rem; margin: .75rem 0; }
+.fm-tels legend { padding: 0 .3rem; font-size: .85rem; color: var(--texto-suave); }
+.fm-tel { align-items: end; }
+.fm-codigo code { font-size: 1.4rem; letter-spacing: .15em; margin-right: .5rem; }
+
+/* Checklist de la visita (ficha del trabajo, tcv-) */
+.tcv-items { display: grid; gap: .5rem; }
+.tcv-items label.check { display: flex; align-items: flex-start; gap: .5rem; padding: .3rem 0; border-bottom: 1px solid var(--linea); }
+.tcv-items label.campo { display: grid; gap: .25rem; padding: .3rem 0; border-bottom: 1px solid var(--linea); }
+.tcv-items .fuerte { font-weight: 600; }
+.tcv-items input[type=number] { width: 8rem; }
+
+/* Una cifra que lleva a otra pestaña: entera clicable, sin subrayado */
+.di-cifra > a { display: block; color: inherit; text-decoration: none; }
+.di-cifra > a:hover h3 { text-decoration: underline; }

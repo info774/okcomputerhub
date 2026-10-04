@@ -661,6 +661,10 @@ try {
   ok(!psql(como('authenticated', 'ana@ok.test', `select hub.presupuesto_guardar_lineas('${pres}', '[{"nombre":"Cámara","cantidad":2,"precio":100}]');`), { esperaError: true }).ok
     && !psql(como('authenticated', 'ana@ok.test', `insert into hub.presupuesto_plantillas (nombre) values ('x');`), { esperaError: true }).ok,
     'presupuestos (20261023): sin el corte, ni líneas ni plantillas');
+  ok(psql(`select dueno || '|' || array_length(tablas, 1) from hub.areas where area = 'mantenimiento'`) === 'app|4'
+    && !psql(como('authenticated', 'ana@ok.test', `insert into hub.planes_mantenimiento (nombre) values ('Basic');`), { esperaError: true }).ok
+    && !psql(como('authenticated', 'tito@ok.test', `insert into hub.mant_seguimiento (estado) values ('contactado');`), { esperaError: true }).ok,
+    'mantenimiento (20261024): área nueva de la app, y sin el corte no se escribe');
   psql(`update hub.areas set dueno = 'hub' where area = 'presupuestos';`);
   const tot = psql(como('authenticated', 'tito@ok.test', `select hub.presupuesto_guardar_lineas('${pres}', '[{"nombre":"Cámara","cantidad":2,"precio":100,"descuento":10},{"nombre":"Instalación","precio":50},{"nombre":"  "}]');`)).split('\n').pop();
   ok(Number(tot) === 230 && psql(`select total from hub.presupuestos where id = '${pres}'`) === '230.00' && psql(`select count(*) from hub.documento_lineas where presupuesto_id = '${pres}'`) === '2',
@@ -766,6 +770,16 @@ commit;`);
   psql(como('authenticated', 'tito@ok.test', `insert into hub.sitio_tarea_seguimiento (local_id, tarea_id, periodo) values ('00000000-0000-0000-0000-0000000000c1', '${pt}', '2026-10');`));
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.sitio_tarea_seguimiento (local_id, tarea_id, periodo) values ('00000000-0000-0000-0000-0000000000c1', '${pt}', '2026-10');`), { esperaError: true }).ok,
     'seguimiento: una marca por sede, tarea y periodo');
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.planes_mantenimiento (nombre, precio_mensual) values ('Basic', 35);`), { esperaError: true }).ok
+    && psql(como('authenticated', 'ana@ok.test', `insert into hub.planes_mantenimiento (nombre, precio_mensual) values ('Basic', 35) returning nombre;`)).split('\n').pop() === 'Basic',
+    'planes de mantenimiento: tras el corte solo un admin los cambia');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.mant_seguimiento (estado, notas) values ('interesado', 'Llamar el lunes');`));
+  ok(psql(`select count(*) from hub.mant_seguimiento where estado = 'interesado'`) === '1', 'seguimiento comercial: tras el corte, cualquiera del equipo');
+  const nl = psql(como('authenticated', 'tito@ok.test', `insert into hub.locales (nombre) values ('Sede con código') returning id;`)).split('\n').pop();
+  ok(/^\d{6}$/.test(psql(`select codigo_verificacion from hub.locales where id = '${nl}'`)), 'código de verificación: una sede nueva del hub nace con sus 6 cifras');
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.local_software (local_id, nombre, fecha_caducidad_certificado) values ('${nl}', 'Glop', '2027-05-01');
+    insert into hub.local_software (local_id, nombre, fecha_caducidad_certificado) values ('${nl}', 'Viejo', '2026-01-01');`));
+  ok(psql(`select cert_caducidad from hub.locales where id = '${nl}'`) === '2027-05-01', 'certificado: la caducidad del software sube a la sede (la más tardía)');
   const pres2 = psql(`insert into hub.presupuestos (titulo, cliente_id, local_id) values ('Alarma', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000c1') returning id;`).split('\n').pop();
   psql(como('authenticated', 'tito@ok.test', `select hub.presupuesto_guardar_lineas('${pres2}', '[{"nombre":"Hub alarma","precio":180}]');`));
   const nuevoT = psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_desde_presupuesto('${pres2}', '{"descripcion":"Instalar alarma","tipo":"Instalación","fecha":"2026-11-02","tecnicos":["Tito"]}');`)).split('\n').pop();
