@@ -378,6 +378,8 @@ try {
     'embudo: cada cambio de etapa queda en la línea de tiempo, a nombre de quien lo hizo');
   psql(como('authenticated', 'tito@ok.test', `update hub.oportunidades set estado = 'Negociando', fecha_seguimiento = '2030-01-01' where id = '${op}';`));
   ok(psql(`select fecha_seguimiento from hub.oportunidades where id = '${op}'`) === '2030-01-01', 'embudo: una fecha puesta en el mismo cambio manda sobre la regla');
+  ok(psql(`select (e->>'proponer') || coalesce(e->>'comanda_texto', '-') from hub.pipelines p, jsonb_array_elements(p.etapas) e where p.por_defecto and e->>'clave' = 'Ganado'`) === 'trabajo-',
+    'embudo: al ganar se propone el trabajo');
   psql(como('authenticated', 'tito@ok.test', `delete from hub.oportunidades where id = '${op}';`));
   ok(psql(`select count(*) from hub.oportunidades where id = '${op}'`) === '1', 'ventas: un técnico no borra oportunidades');
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.pipelines (nombre, etapas) values ('x', '[]');`), { esperaError: true }).ok, 'ventas: un técnico no crea embudos');
