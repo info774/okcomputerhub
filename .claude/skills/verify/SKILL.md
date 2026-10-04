@@ -241,7 +241,8 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   área de la app; alta, rol, teléfono y activar con el corte; nunca a uno
   mismo), registro de cambios (global, filtros, «Cargar más», historial de
   una ficha y su enlace, solo admin; `historial` SIMULADA) y modo empleado
-  (menú del técnico y entrada a «Hoy» en el móvil).
+  (menú del técnico y entrada a «Hoy» en el móvil); aviso de versión, F5
+  guarda, tamaño del texto, privacidad y configuración.
 
 `npm run verify` pasa todos los de la lista.
 

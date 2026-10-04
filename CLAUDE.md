@@ -754,6 +754,14 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   (LEÍDO con su service key, `_shared/app-lectura.ts`: consultas pequeñas, nunca
   tablas enteras); en las fichas, `enlaceHistorial(tabla, id)` de
   `src/ui/historial.ts`. Arnés `verify-sistema.mjs`.
+  Tanda 2: aviso de versión (`shell/version.ts`, lee `version.json` del build;
+  `buildActual()`), F5 guarda (`shell/atajos.ts`: el formulario con el foco o el
+  ÚNICO visible de la pantalla de delante; si no, recarga), tamaño del texto en
+  el móvil (`shell/texto.ts`, `html[data-fs]` agranda la letra raíz: lo nuevo,
+  en rem), `public/privacidad.html` (copia LITERAL de la app) y `#/configuracion`
+  (`cfg-`, admin; en `hub.config`: la empresa es la MISMA `facturacion_emisor`
+  de Facturación, `igic_pct`, `tarifa_sin_mantenimiento`). En el móvil, con el
+  menú abierto se esconde la barra de WhatsApp (tapaba su pie).
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

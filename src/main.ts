@@ -15,6 +15,9 @@ import { pintarLogin, avisoLogin } from './shell/login';
 import { abrirBuscador, cerrarBuscador, filtrarBuscador, buscadorEnter, buscadorTecla, busModo, instalarAtajoBuscador } from './shell/buscador';
 import { leerParametroOs, instalarAtajosEscritorio } from './shell/escritorio';
 import { empezarTour, tourSiguiente, tourCerrar, tourSiEsNuevo } from './shell/tour';
+import { iniciarVersion, recargarVersion } from './shell/version';
+import { aplicarTexto } from './shell/texto';
+import './shell/atajos';
 
 const raiz = document.getElementById('app')!;
 let arrancado = false;
@@ -26,10 +29,12 @@ instalarAtajoBuscador();
 instalarAtajosEscritorio();
 leerParametroOs();
 aplicarTema();
+aplicarTexto();
+void iniciarVersion();
 
 registrarAcciones({
   alternarTema, alternarMenu, abrirBuscador: () => abrirBuscador(), cerrarBuscador, filtrarBuscador, buscadorEnter, buscadorTecla, busModo,
-  empezarTour, tourSiguiente, tourCerrar,
+  empezarTour, tourSiguiente, tourCerrar, recargarVersion, tamTexto: (v: string) => aplicarTexto(v),
   async entrar() {
     const email = (document.getElementById('lg-email') as HTMLInputElement).value.trim();
     const pass = (document.getElementById('lg-pass') as HTMLInputElement).value;
