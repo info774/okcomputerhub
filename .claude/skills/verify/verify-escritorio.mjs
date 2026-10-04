@@ -263,9 +263,25 @@ try {
     await page.click('#os-bell');
     await page.waitForSelector('#os-avisos:not([hidden])');
     ok((await page.$$('#os-avisos .os-av')).length === 3, 'centro de avisos con los 3');
+    ok(await page.$$eval('#os-avisos .os-av', es => es.every(e => e.querySelector('svg.os-ico.os-av-hex'))), 'cada aviso lleva el icono hexagonal de su pantalla');
+    ok(!(await page.$eval('#os-avisos', e => /\p{Extended_Pictographic}/u.test(e.textContent))), 'el centro de avisos no lleva emojis');
+    ok((await page.textContent('#os-avisos .os-av-sec.g-mal h3')).includes('Urgente'), 'los avisos van por gravedad (Urgente arriba)');
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${CAPTURAS}/escritorio-avisos.png` });
+    const tipos = await page.$$('#os-avisos .os-av-tipo');
+    if (tipos.length) {
+      await tipos[0].click();
+      const t = await page.$eval('#os-avisos .os-av-tipo.activo span', e => Number(e.textContent));
+      ok((await page.$$('#os-avisos .os-av')).length === t, `el chip de tipo filtra (${t})`);
+      await page.click('#os-avisos .os-av-tipo.activo');
+    }
     await page.click('[data-action="osAvisosMios"][data-p0="1"]');
     ok((await page.$$('#os-avisos .os-av')).length === 0, '«Los míos» filtra por persona (Fran no tiene ninguno)');
-    await page.screenshot({ path: `${CAPTURAS}/escritorio-avisos.png` });
+    ok(await page.isVisible('#os-avisos .os-av-vacio'), 'sin avisos sale el estado vacío');
+    await page.keyboard.press('Escape');
+    ok(await page.$eval('#os-avisos', e => e.hidden) && await page.$eval('#os-bell', e => e.getAttribute('aria-expanded') === 'false'), 'Esc cierra el centro de avisos');
+    await page.click('#os-bell');
+    await page.waitForSelector('#os-avisos:not([hidden])');
     await page.click('#os-avisos [data-action="osAvisos"]');
     await page.click('.os-ditem[data-p0="1"][data-action="osLanzador"]');
     await page.waitForSelector('#os-lanzador:not([hidden])');

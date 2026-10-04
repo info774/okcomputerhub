@@ -79,6 +79,8 @@ const ICONO_BARRA: Record<string, string> = {
   widgets: '<rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1"/><rect x="9" y="9" width="4.5" height="4.5" rx="1"/>',
   clasica: '<rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M5.5 3v10"/>',
   salir: '<path d="M9.5 3H13v10H9.5M7 5.2 4.2 8 7 10.8M4.2 8H10"/>',
+  actualizar: '<path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.8v2.8h-2.8"/>',
+  externo: '<path d="M9 3h4v4M13 3 7.5 8.5M11.5 9.5V13H3V4.5h3.5"/>',
 };
 const svgBarra = (n: string, clase = '') => `<svg class="os-bico ${clase}" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${ICONO_BARRA[n]}</svg>`;
 const svgWin = (d: string, clase = '') => `<svg class="os-wico ${clase}" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${d}</svg>`;
@@ -90,6 +92,9 @@ let _z = 1;
 let _timer: number | undefined;
 let _avisos: Aviso[] = [];
 let _soloMios = false;
+let _grupoAv: string | null = null;     // filtro por tipo del centro de avisos
+let _avisosAt = 0;                      // última lectura buena de los avisos
+let _nuevosAv = new Set<string>();      // lo que no estaba la última vez que se abrió el centro
 
 const leer = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 const guardar = (k: string, v: string | null) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } };
@@ -636,7 +641,9 @@ export function instalarAtajosEscritorio() {
   });
   // Esc cierra el asistente de ajuste; un clic fuera de él, también.
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && _asistente) { e.preventDefault(); cerrarAsistente(); }
+    if (e.key !== 'Escape') return;
+    if (_asistente) { e.preventDefault(); cerrarAsistente(); return; }
+    if (!document.getElementById('os-avisos')?.hidden && !document.querySelector('dialog[open]')) { e.preventDefault(); cerrarCentroAvisos(); }
   });
   document.addEventListener('pointerdown', e => {
     if (_asistente && !(e.target as Element).closest?.('#os-asistente')) cerrarAsistente();
@@ -854,6 +861,7 @@ async function widgetHoy() {
 async function widgetAvisos() {
   const { data, error } = await cargarAvisos();
   _avisos = error ? _avisos : (data ?? []);
+  if (!error) _avisosAt = Date.now();
   const el = document.getElementById('os-avisos-lista');
   if (!el) return;
   const lista = [..._avisos].sort((a, b) => PESO[a.gravedad] - PESO[b.gravedad]);
@@ -932,22 +940,70 @@ async function widgetAgenda() {
 }
 
 // ── Centro de avisos ────────────────────────────────────────────────────────
+// Cada tipo de aviso con el icono de SU pantalla (los mismos del dock) y el
+// verbo de su acción. Un tipo nuevo del motor sin entrada aquí sale con su
+// inicial y «Abrir».
+const AVISO_PANTALLA: Record<string, { ico: string; accion: string }> = {
+  alerta_rmm: { ico: 'monitorizacion', accion: 'Ver el equipo' }, sede_sin_conexion: { ico: 'sitios', accion: 'Ver la sede' },
+  factura_vencida: { ico: 'facturacion', accion: 'Reclamar' }, cobro_mantenimiento: { ico: 'mantenimientos', accion: 'Ver el cobro' },
+  ticket_sin_asignar: { ico: 'tickets', accion: 'Asignar' }, presupuesto_sin_respuesta: { ico: 'presupuestos', accion: 'Seguir' },
+  trabajo_sin_facturar: { ico: 'trabajos', accion: 'Facturar' }, hito_vencido: { ico: 'proyectos', accion: 'Ver el hito' },
+  cliente_sin_comprar: { ico: 'clientes', accion: 'Ver el cliente' }, cierre_mes: { ico: 'calendario', accion: 'Ver el cierre' },
+};
+const SECCION_AV = { mal: 'Urgente', aviso: 'Atento', info: 'Para saber' } as const;
+const claveVistos = () => `hub_os_avisos_vistos_${usuario()?.id ?? 'anon'}`;
+
+// Al abrir: lo que no estaba la vez anterior es «nuevo» (mientras siga abierto).
+function marcarNuevosAvisos() {
+  let vistos: string[] = [];
+  try { vistos = JSON.parse(leer(claveVistos()) ?? '[]'); } catch { /* sin copia */ }
+  const antes = new Set(vistos);
+  _nuevosAv = new Set(vistos.length ? _avisos.map(a => a.clave).filter(c => !antes.has(c)) : []);
+  guardar(claveVistos(), JSON.stringify(_avisos.map(a => a.clave)));
+}
+
+function cerrarCentroAvisos() {
+  const a = document.getElementById('os-avisos');
+  if (!a || a.hidden) return;
+  a.hidden = true;
+  document.getElementById('os-bell')?.setAttribute('aria-expanded', 'false');
+}
+
 function pintarCentroAvisos() {
   const aside = document.getElementById('os-avisos')!;
-  const lista = (_soloMios ? _avisos.filter(a => esMio(a.persona)) : _avisos).slice().sort((a, b) => PESO[a.gravedad] - PESO[b.gravedad]);
-  aside.innerHTML = `<div class="os-av-cab"><b>Avisos</b><span class="chip">${lista.length}</span><span class="hueco"></span><button class="os-wbtn" data-action="osAvisos" aria-label="Cerrar avisos">✕</button></div>
-    <div class="os-av-filtros"><button class="chip-boton ${_soloMios ? '' : 'activo'}" data-action="osAvisosMios" data-p0="0">Todos (${_avisos.length})</button>
-      <button class="chip-boton ${_soloMios ? 'activo' : ''}" data-action="osAvisosMios" data-p0="1">Los míos (${_avisos.filter(a => esMio(a.persona)).length})</button></div>
-    <div class="os-av-lista">${lista.map(a => {
-      const g = GRUPOS[a.tipo] ?? { nombre: a.tipo, icono: '•' };
-      const interno = a.enlace?.startsWith('#');
-      return `<div class="os-av g-${esc(a.gravedad)}"><span class="hex os-av-ic" aria-hidden="true">${g.icono}</span><div class="os-av-cuerpo">
-        <div class="os-av-f1"><b>${esc(g.nombre)}</b>${a.persona ? `<span>${esc(a.persona)}</span>` : ''}${a.fecha ? `<span class="os-av-cuando">${esc(hace(a.fecha))}</span>` : ''}</div>
-        <div class="os-av-t">${esc(a.titulo.replace(/^[^:]+: /, ''))}</div>${a.detalle ? `<div class="os-av-s">${esc(a.detalle)}</div>` : ''}
-        ${a.enlace ? `<a class="os-av-acc" href="${esc(a.enlace)}"${interno ? '' : ' target="_blank" rel="noopener"'}>${a.enlace.includes('zoho.eu') ? 'Zoho ↗' : interno ? 'Abrir' : 'App ↗'}</a>` : ''}
-      </div></div>`;
-    }).join('') || '<p class="nota os-av-vacio">✅ Nada pendiente.</p>'}</div>
-    <div class="os-av-pie"><span>El mismo motor que el puesto de mando y el bot.</span><a href="#/direccion">Puesto de mando →</a></div>`;
+  const mios = _avisos.filter(a => esMio(a.persona));
+  const base = (_soloMios ? mios : _avisos);
+  const lista = base.filter(a => !_grupoAv || a.tipo === _grupoAv).slice().sort((a, b) => PESO[a.gravedad] - PESO[b.gravedad]);
+  const tipos = [...new Set(base.map(a => a.tipo))];
+  const nuevos = _avisos.filter(a => _nuevosAv.has(a.clave)).length;
+  const fila = (a: Aviso) => {
+    const g = GRUPOS[a.tipo] ?? { nombre: a.tipo, icono: '' };
+    const p = AVISO_PANTALLA[a.tipo];
+    const interno = a.enlace?.startsWith('#');
+    const accion = !a.enlace ? '' : a.enlace.includes('zoho.eu') ? 'Abrir en Zoho' : interno ? (p?.accion ?? 'Abrir') : 'Abrir en la app';
+    return `<article class="os-av g-${esc(a.gravedad)}${_nuevosAv.has(a.clave) ? ' nuevo' : ''}">
+      ${iconoHex(p?.ico ?? a.tipo, g.nombre, 'os-av-hex')}
+      <div class="os-av-cuerpo">
+        <div class="os-av-f1"><b>${esc(g.nombre)}</b>${_nuevosAv.has(a.clave) ? '<span class="os-av-nuevo">Nuevo</span>' : ''}${a.fecha ? `<span class="os-av-cuando">${esc(hace(a.fecha))}</span>` : ''}</div>
+        <div class="os-av-t"><span>${esc(a.titulo.replace(/^[^:]+: /, ''))}</span>${a.importe ? `<b class="os-av-eur">${eur(a.importe)}</b>` : ''}</div>
+        ${a.detalle ? `<div class="os-av-s">${esc(a.detalle)}</div>` : ''}
+        ${a.persona || accion ? `<div class="os-av-pie-f">${a.persona ? `<span class="os-av-quien"><i class="hex-punto"></i>${esc(a.persona)}</span>` : '<span></span>'}${accion ? `<a class="os-av-acc" href="${esc(a.enlace!)}"${interno ? '' : ' target="_blank" rel="noopener"'}>${esc(accion)}${interno ? '' : svgBarra('externo')}</a>` : ''}</div>` : ''}
+      </div></article>`;
+  };
+  const secciones = (['mal', 'aviso', 'info'] as const).map(gv => {
+    const de = lista.filter(a => a.gravedad === gv);
+    return de.length ? `<section class="os-av-sec g-${gv}"><h3><i class="hex-punto"></i>${SECCION_AV[gv]}<span>${de.length}</span></h3>${de.map(fila).join('')}</section>` : '';
+  }).join('');
+  const vacio = `<div class="os-av-vacio"><span class="hex os-av-vacio-hex" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4 8.5 6.8 11 12 5.5"/></svg></span>
+    <b>${_avisos.length ? 'Nada con este filtro' : 'Todo en orden'}</b><span>${_avisos.length ? 'Prueba con «Todos».' : 'No hay nada que necesite a una persona.'}</span></div>`;
+  aside.innerHTML = `<div class="os-av-cab"><b>Avisos</b><span class="chip">${lista.length}</span>${nuevos ? `<span class="os-av-nuevos">${nuevos} nuevo${nuevos === 1 ? '' : 's'}</span>` : ''}<span class="hueco"></span>
+      <button class="os-wbtn" data-action="osAvisosRefrescar" aria-label="Actualizar" title="Actualizar">${svgBarra('actualizar')}</button>
+      <button class="os-wbtn" data-action="osAvisos" aria-label="Cerrar avisos" title="Cerrar (Esc)">${svgWin(ICONO_WIN.cerrar)}</button></div>
+    <div class="os-av-filtros"><div class="os-av-seg"><button class="${_soloMios ? '' : 'activo'}" data-action="osAvisosMios" data-p0="0">Todos <span>${_avisos.length}</span></button>
+      <button class="${_soloMios ? 'activo' : ''}" data-action="osAvisosMios" data-p0="1">Los míos <span>${mios.length}</span></button></div></div>
+    ${tipos.length > 1 ? `<div class="os-av-tipos">${tipos.map(t => `<button class="os-av-tipo ${_grupoAv === t ? 'activo' : ''}" data-action="osAvisosTipo" data-p0="${esc(t)}">${esc(GRUPOS[t]?.nombre ?? t)} <span>${base.filter(a => a.tipo === t).length}</span></button>`).join('')}</div>` : ''}
+    <div class="os-av-lista">${secciones || vacio}</div>
+    <div class="os-av-pie"><span>${_avisosAt ? `Actualizado ${esc(hace(new Date(_avisosAt).toISOString()))}` : 'Sin leer todavía'} · el mismo motor que el puesto de mando y el bot</span><a href="#/direccion">Puesto de mando →</a></div>`;
 }
 
 // ── Acciones ────────────────────────────────────────────────────────────────
@@ -1033,11 +1089,15 @@ registrarAcciones({
   osMenu() { const m = document.getElementById('os-menu')!; m.hidden = !m.hidden; },
   osAvisos() {
     const a = document.getElementById('os-avisos')!;
-    a.hidden = !a.hidden;
-    document.getElementById('os-bell')?.setAttribute('aria-expanded', String(!a.hidden));
-    if (!a.hidden) pintarCentroAvisos();
+    if (!a.hidden) { cerrarCentroAvisos(); return; }
+    a.hidden = false;
+    document.getElementById('os-bell')?.setAttribute('aria-expanded', 'true');
+    marcarNuevosAvisos();
+    pintarCentroAvisos();
   },
-  osAvisosMios(v: string) { _soloMios = v === '1'; pintarCentroAvisos(); },
+  osAvisosMios(v: string) { _soloMios = v === '1'; _grupoAv = null; pintarCentroAvisos(); },
+  osAvisosTipo(t: string) { _grupoAv = _grupoAv === t ? null : t; pintarCentroAvisos(); },
+  async osAvisosRefrescar() { await widgetAvisos(); pintarCentroAvisos(); },
   osLanzador(abrir: string) {
     const l = document.getElementById('os-lanzador')!;
     l.hidden = abrir !== '1';
