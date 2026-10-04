@@ -68,7 +68,7 @@ try {
   await page.waitForSelector('#mt-barras');
   ok(!!(await page.$('.aviso.area-app')), 'aviso de solo lectura');
   const pest = await page.$$eval('nav.pestanas a', as => as.map(a => a.textContent));
-  ok(pest.join(',') === 'Resumen,Locales,Checklist,Seguimiento,Plantillas', `pestañas de la app (${pest.join(',')})`);
+  ok(pest.join(',') === 'Resumen,Locales,Checklist,Seguimiento,Plantillas,Documentos', `pestañas de la app (${pest.join(',')})`);
   const cifras = await page.$$eval('.pp-cifras .di-cifra', cs => cs.map(c => c.textContent.replace(/\s+/g, ' ').replace(/\./g, '').trim()));
   ok(cifras[0].includes('5') && cifras[0].includes('3 planes'), `contratos y planes (${cifras[0]})`);
   ok(cifras[1].includes('262 €'), `al mes neto: 79+40+39+25+79 (${cifras[1]})`);
