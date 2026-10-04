@@ -592,6 +592,13 @@ const eur = (n: number) => `${Number(n || 0).toLocaleString('es-ES', { maximumFr
 const hora = (v: string) => new Date(v).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 const PESO = { mal: 0, aviso: 1, info: 2 } as const;
 
+// Cabecera de un widget: el icono hexagonal de su pantalla (el mismo del dock),
+// el rótulo y, a la derecha, lo que el widget quiera (contador, fuente…).
+function cabWidget(icono: string, titulo: string, extra = '') {
+  const oki = icono === 'oki';
+  return `<div class="os-wtit">${iconoHex(icono, titulo, `os-wico-hex ${oki ? 'os-ico-oki' : ''}`)}<span class="os-wtit-t">${esc(titulo)}</span>${extra}</div>`;
+}
+
 function pintarWidgets() {
   const admin = esAdmin();
   // El orden es el de las columnas (se rellenan de arriba abajo).
@@ -599,20 +606,67 @@ function pintarWidgets() {
     <article class="os-widget os-w-hoy" id="os-w-hoy"><div class="os-wtit"><i class="hex-punto"></i>Hoy · ${esc(new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric' }))}</div>
       <p class="os-saludo">Hola, ${esc(usuario()?.nombre?.split(' ')[0] ?? '')}.<br><span id="os-hoy-frase">Cargando…</span></p>
       <div class="os-cifras" id="os-hoy-cifras"></div></article>
-    <article class="os-widget" id="os-w-avisos"><div class="os-wtit"><i class="hex-punto mal"></i>Avisos<span id="os-w-avisos-n"></span></div><div class="os-wcuerpo" id="os-avisos-lista"><p class="cargando">Cargando…</p></div>
-      <a class="os-wenlace" href="#/direccion">Abrir el puesto de mando →</a></article>
-    <article class="os-widget" id="os-w-equipos"><div class="os-wtit"><i class="hex-punto"></i>Equipos<span id="os-equipos-cuando">Breeze</span></div><div class="os-wcuerpo" id="os-equipos"><p class="cargando">Cargando…</p></div>
-      <a class="os-wenlace" href="#/monitorizacion">Monitorización →</a></article>
-    <article class="os-widget os-w-voz ok-voz" id="os-w-voz" data-voz="escritorio">${vozHTML('escritorio', '<div class="os-wtit"><i class="hex-punto"></i>Voz de Oki</div>')}</article>
-    <article class="os-widget os-w-agenda" id="os-w-agenda"><div class="os-wtit"><i class="hex-punto"></i>Agenda de hoy<span id="os-agenda-n"></span></div><div class="os-wcuerpo" id="os-agenda"><p class="cargando">Cargando…</p></div>
-      <a class="os-wenlace" href="#/calendario">Calendario en la app ↗</a></article>
-    ${admin ? `<article class="os-widget" id="os-w-cobros"><div class="os-wtit"><i class="hex-punto"></i>Cobros<span>mantenimiento</span></div><div class="os-wcuerpo" id="os-cobros"><p class="cargando">Cargando…</p></div>
-      <a class="os-wenlace" href="#/cobros">Recordatorios de cobro →</a></article>` : ''}
-    <article class="os-widget os-w-dice" id="os-w-dice"><div class="os-wtit"><i class="hex-punto"></i>Oki dice</div><div class="ok-dice os-dice" id="os-dice"><p class="cargando">Cargando…</p></div></article>
-    <article class="os-widget os-w-stats ok-stats" id="os-w-stats"><div class="os-wtit"><i class="hex-punto"></i>Estadísticas<span>esta semana</span></div><p class="cargando">Cargando…</p></article>
-    <article class="os-widget os-w-ordenes" id="os-w-ordenes"><div class="os-wtit"><i class="hex-punto"></i>Órdenes rápidas</div><div class="os-ordenes">${ordenesHTML()}</div></article>`;
+    <article class="os-widget" id="os-w-avisos">${cabWidget('direccion', 'Avisos', '<span id="os-w-avisos-n"></span>')}<div class="os-wcuerpo" id="os-avisos-lista"><p class="cargando">Cargando…</p></div>
+      <a class="os-wenlace" href="#/direccion">Abrir el puesto de mando</a></article>
+    <article class="os-widget" id="os-w-equipos">${cabWidget('monitorizacion', 'Equipos', '<span id="os-equipos-cuando">Breeze</span>')}<div class="os-wcuerpo" id="os-equipos"><p class="cargando">Cargando…</p></div>
+      <a class="os-wenlace" href="#/monitorizacion">Monitorización</a></article>
+    <article class="os-widget os-w-voz ok-voz" id="os-w-voz" data-voz="escritorio">${vozHTML('escritorio', cabWidget('oki', 'Voz de Oki'))}</article>
+    <article class="os-widget os-w-agenda" id="os-w-agenda">${cabWidget('calendario', 'Agenda de hoy', '<span id="os-agenda-n"></span>')}<div class="os-wcuerpo" id="os-agenda"><p class="cargando">Cargando…</p></div>
+      <a class="os-wenlace" href="#/calendario">Abrir el calendario</a></article>
+    ${admin ? `<article class="os-widget" id="os-w-cobros">${cabWidget('cobros', 'Cobros', '<span>mantenimiento</span>')}<div class="os-wcuerpo" id="os-cobros"><p class="cargando">Cargando…</p></div>
+      <a class="os-wenlace" href="#/cobros">Recordatorios de cobro</a></article>` : ''}
+    <article class="os-widget os-w-dice" id="os-w-dice">${cabWidget('oki', 'Oki dice')}<div class="ok-dice os-dice" id="os-dice"><p class="cargando">Cargando…</p></div></article>
+    <article class="os-widget os-w-stats ok-stats" id="os-w-stats">${cabWidget('tickets', 'Estadísticas', '<span>esta semana</span>')}<p class="cargando">Cargando…</p></article>
+    <article class="os-widget os-w-ordenes" id="os-w-ordenes">${cabWidget('comandas', 'Órdenes rápidas')}<div class="os-ordenes">${ordenesHTML()}</div></article>`;
   colocarWidgets();
-  for (const w of document.querySelectorAll<HTMLElement>('#os-widgets > .os-widget')) instalarArrastreWidget(w);
+  const cont = document.getElementById('os-widgets')!;
+  // Los widgets cambian de alto al llegar sus datos: se vuelve a repartir.
+  let pendiente = 0;
+  const ro = new ResizeObserver(() => {
+    if (pendiente || cont.classList.contains('libre')) return;
+    pendiente = requestAnimationFrame(() => { pendiente = 0; if (cont.isConnected && !cont.classList.contains('libre')) colocarWidgets(); });
+  });
+  for (const w of cont.querySelectorAll<HTMLElement>(':scope > .os-widget')) { instalarArrastreWidget(w); ro.observe(w); }
+}
+
+// Rejilla de widgets: columnas de 260 px o más (hasta cuatro) que se rellenan
+// de arriba abajo en el orden de pintarWidgets.
+const W_MARGEN = 24, W_HUECO = 20, W_COLUMNA = 260;
+function rejillaWidgets(cont: HTMLElement, ws: HTMLElement[]) {
+  const ancho = cont.clientWidth - W_MARGEN * 2;
+  const n = Math.max(1, Math.min(4, Math.floor((ancho + W_HUECO) / (W_COLUMNA + W_HUECO))));
+  const cw = Math.floor((ancho - W_HUECO * (n - 1)) / n);
+  ws.forEach(w => { w.style.width = `${cw}px`; });
+  const altos = ws.map(w => w.offsetHeight);
+  let i = 0, alto = 0;
+  partirEnColumnas(altos, n, W_HUECO).forEach((cuantos, c) => {
+    let y = W_MARGEN;
+    for (let k = 0; k < cuantos; k++, i++) {
+      ws[i].style.left = `${W_MARGEN + c * (cw + W_HUECO)}px`;
+      ws[i].style.top = `${y}px`;
+      y += altos[i] + W_HUECO;
+    }
+    alto = Math.max(alto, y - W_HUECO + W_MARGEN);
+  });
+  cont.style.height = `${alto}px`;
+}
+
+// Corta la lista (en orden) en n columnas seguidas de forma que la más alta
+// quede lo más baja posible; a igualdad, las primeras columnas van más llenas.
+function partirEnColumnas(altos: number[], n: number, hueco: number): number[] {
+  const alto = (i: number, j: number) => { let s = 0; for (let x = i; x < j; x++) s += altos[x]; return s + Math.max(0, j - i - 1) * hueco; };
+  let mejor = altos.map((_, j) => ({ max: alto(0, j), cuenta: [j] })).concat({ max: alto(0, altos.length), cuenta: [altos.length] });
+  for (let c = 2; c <= n; c++) {
+    mejor = mejor.map((_, j) => {
+      let b = { max: Infinity, cuenta: [] as number[] };
+      for (let i = 0; i <= j; i++) {
+        const m = Math.max(mejor[i].max, alto(i, j));
+        if (m <= b.max) b = { max: m, cuenta: [...mejor[i].cuenta, j - i] };
+      }
+      return b;
+    });
+  }
+  return mejor[altos.length].cuenta;
 }
 
 // Widgets movibles. Mientras nadie mueve ninguno van en la rejilla de siempre;
@@ -625,14 +679,14 @@ function colocarWidgets() {
   const ws = [...cont.querySelectorAll<HTMLElement>(':scope > .os-widget')];
   if (!pos || !Object.keys(pos).length) {
     cont.classList.remove('libre');
-    ws.forEach(w => { w.style.left = w.style.top = w.style.width = ''; });
+    rejillaWidgets(cont, ws);
     return;
   }
   // Un widget sin sitio guardado (p. ej. uno nuevo) toma el de la rejilla.
   const sinSitio = ws.filter(w => !pos[w.id]);
   if (sinSitio.length) {
     cont.classList.remove('libre');
-    ws.forEach(w => { w.style.width = ''; });
+    rejillaWidgets(cont, ws);
     for (const w of sinSitio) pos[w.id] = { x: cont.offsetLeft + w.offsetLeft, y: cont.offsetTop + w.offsetTop };
   }
   if (!cont.classList.contains('libre')) ws.forEach(w => { w.style.width = `${w.offsetWidth}px`; });
@@ -763,7 +817,7 @@ async function widgetCobros() {
   const ok = ls.length - mal - av;
   const total = ls.reduce((s, l) => s + Number(l.importe_mantenimiento || 0), 0);
   el.innerHTML = `<div class="os-cifra">${eur(total)}<small>/mes en ${ls.length} sedes</small></div>
-    <div class="os-tramos"><span style="flex:${ok || 0.01};background:var(--verde)"></span><span style="flex:${av || 0.01};background:#d9a441"></span><span style="flex:${mal || 0.01};background:#d64545"></span></div>
+    <div class="os-tramos" role="img" aria-label="${ok} al corriente, ${av} pendientes, ${mal} impagadas"><span class="os-tramo-ok" style="flex:${ok || 0.01}"></span><span class="os-tramo-aviso" style="flex:${av || 0.01}"></span><span class="os-tramo-mal" style="flex:${mal || 0.01}"></span></div>
     <div class="os-cifras"><span><b>${ok}</b> al corriente</span><span><b class="g-aviso">${av}</b> pendientes</span><span><b class="g-mal">${mal}</b> impagadas</span>${pend ? `<span><b>${pend}</b> recordatorios por mandar</span>` : ''}</div>`;
 }
 

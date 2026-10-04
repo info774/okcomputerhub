@@ -90,19 +90,45 @@ body.os-modo { overflow: hidden; }
 
 /* ── Escritorio, widgets y ventanas ────────────────────────────────────── */
 #os-escritorio { position: relative; z-index: 1; flex: 1; min-height: 0; margin-bottom: var(--os-dock); }
-/* En columnas que se rellenan de arriba abajo (caben los nueve widgets sin
-   salirse por debajo); al mover uno, pasan a ir sueltos (.libre). */
-#os-widgets {
-  position: absolute; left: 24px; top: 24px; width: min(1180px, calc(100% - 48px)); z-index: 0;
-  columns: 4 260px; column-gap: 20px;
-}
-#os-widgets > .os-widget { break-inside: avoid; margin-bottom: 20px; }
-@media (max-width: 1279px) { #os-widgets { columns: 2 260px; width: 560px; } }
+/* En columnas que se rellenan de arriba abajo, en orden: las coloca
+   escritorio.ts (rejillaWidgets), que corta la lista donde la columna más alta
+   queda más baja; si aun así no caben, el panel hace scroll (nunca se esconde
+   uno). Al mover uno, pasan a ir sueltos (.libre). El margen de 24 px va
+   DENTRO del panel para que las sombras no se corten con su scroll. */
+#os-widgets { position: absolute; left: 0; top: 0; width: min(1228px, 100%); z-index: 0; }
+#os-widgets:not(.libre) > .os-widget { position: absolute; margin: 0; }
+@media (max-width: 1279px) { #os-widgets:not(.libre) { width: 608px; } }
 .os-widget {
-  display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; min-height: 120px;
-  background: color-mix(in srgb, var(--superficie) 88%, transparent); backdrop-filter: blur(18px);
+  position: relative; display: flex; flex-direction: column; gap: 8px; padding: 13px 16px 15px; min-height: 0;
+  background: color-mix(in srgb, var(--superficie) 92%, transparent); backdrop-filter: blur(18px);
   border: 1px solid var(--borde); border-radius: 20px; font-size: 12.5px;
+  box-shadow: var(--os-widget-sombra);
+  transition: box-shadow .2s, border-color .2s;
 }
+#os-root { --os-widget-sombra: 0 1px 2px rgb(11 31 20 / .05), 0 8px 24px rgb(11 31 20 / .06); --os-widget-sombra-alta: 0 2px 6px rgb(11 31 20 / .06), 0 18px 40px rgb(11 31 20 / .14); }
+:root[data-theme="dark"] #os-root { --os-widget-sombra: 0 10px 28px rgb(0 0 0 / .28); --os-widget-sombra-alta: 0 22px 48px rgb(0 0 0 / .45); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #os-root { --os-widget-sombra: 0 10px 28px rgb(0 0 0 / .28); --os-widget-sombra-alta: 0 22px 48px rgb(0 0 0 / .45); } }
+/* Al pasar se levanta un poco y enseña el asa (tres hexágonos) para moverlo. */
+.os-widget:hover { box-shadow: var(--os-widget-sombra-alta); border-color: color-mix(in srgb, var(--verde) 30%, var(--borde)); }
+.os-widget::before {
+  content: ''; position: absolute; top: 5px; left: 50%; width: 26px; height: 6px; margin-left: -13px; opacity: 0; transition: opacity .2s;
+  background: var(--texto-suave);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 6'><path d='M3 0l2.6 1.5v3L3 6 .4 4.5v-3zM13 0l2.6 1.5v3L13 6l-2.6-1.5v-3zM23 0l2.6 1.5v3L23 6l-2.6-1.5v-3z'/></svg>") center / contain no-repeat;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 6'><path d='M3 0l2.6 1.5v3L3 6 .4 4.5v-3zM13 0l2.6 1.5v3L13 6l-2.6-1.5v-3zM23 0l2.6 1.5v3L23 6l-2.6-1.5v-3z'/></svg>") center / contain no-repeat;
+}
+.os-widget:hover::before { opacity: .45; }
+.os-w-hoy::before { background: currentColor; }
+/* Entrada: aparecen uno tras otro (solo opacidad: no mueve la caja, que otros miden). */
+@keyframes os-widget-entra { from { opacity: 0; } }
+#os-widgets > .os-widget { animation: os-widget-entra .25s ease-out backwards; }
+#os-widgets > .os-widget:nth-child(2) { animation-delay: 0.03s; }
+#os-widgets > .os-widget:nth-child(3) { animation-delay: 0.06s; }
+#os-widgets > .os-widget:nth-child(4) { animation-delay: 0.09s; }
+#os-widgets > .os-widget:nth-child(5) { animation-delay: 0.12s; }
+#os-widgets > .os-widget:nth-child(6) { animation-delay: 0.15s; }
+#os-widgets > .os-widget:nth-child(7) { animation-delay: 0.18s; }
+#os-widgets > .os-widget:nth-child(8) { animation-delay: 0.21s; }
+#os-widgets > .os-widget:nth-child(n+9) { animation-delay: .24s; }
 .os-w-hoy { background: var(--noche); color: #fff; border-color: var(--noche); }
 :root[data-theme="dark"] .os-w-hoy { background: var(--lima); color: var(--tinta); border-color: var(--lima); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .os-w-hoy { background: var(--lima); color: var(--tinta); border-color: var(--lima); } }
@@ -110,8 +136,11 @@ body.os-modo { overflow: hidden; }
 :root[data-theme="dark"] .os-w-hoy .os-wtit { color: var(--tinta); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .os-w-hoy .os-wtit { color: var(--tinta); } }
 .os-w-hoy .hex-punto { background: currentColor; }
-.os-wtit { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--texto-suave); }
-.os-wtit > span:last-child { margin-left: auto; letter-spacing: 0; text-transform: none; font-weight: 600; }
+.os-wtit { display: flex; align-items: center; gap: 8px; min-height: 22px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--texto-suave); }
+.os-wtit > span:last-child:not(.os-wtit-t) { margin-left: auto; letter-spacing: 0; text-transform: none; font-weight: 600; }
+.os-wtit-t { color: var(--texto); }
+.os-wico-hex { width: 24px; height: auto; flex: none; }
+.os-widget:hover .os-wico-hex .os-ico-hex { stroke: var(--verde); }
 .hex-punto.mal { background: #d64545; }
 .os-saludo { margin: 4px 0 0; font-size: 21px; font-weight: 500; letter-spacing: -.03em; line-height: 1.15; }
 .os-saludo b { color: var(--lima); font-weight: 500; }
@@ -122,21 +151,34 @@ body.os-modo { overflow: hidden; }
 .os-cifras b.g-mal { color: var(--mal); }
 .os-cifras b.g-aviso { color: var(--aviso); }
 .os-wcuerpo { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
-.os-wenlace { margin-top: auto; font-size: 12px; font-weight: 700; text-decoration: none; }
+.os-wenlace {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: auto -16px -15px; padding: 9px 16px 10px;
+  border-top: 1px solid var(--borde); border-radius: 0 0 20px 20px; font-size: 12px; font-weight: 700; text-decoration: none; transition: background .15s;
+}
+.os-wenlace:hover { background: var(--primario-suave); }
+.os-wenlace::after { content: '→'; transition: transform .2s; }
+.os-wenlace:hover::after { transform: translateX(3px); }
 .os-cifra { font-size: 30px; font-weight: 500; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; }
 .os-cifra small { display: block; margin-top: 4px; font-size: 11px; color: var(--texto-suave); letter-spacing: 0; }
-.os-tramos { display: flex; gap: 3px; height: 8px; border-radius: 999px; overflow: hidden; }
-.os-fila { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--borde); font-size: 12px; }
+.os-tramos { display: flex; gap: 3px; height: 10px; border-radius: 999px; overflow: hidden; }
+.os-tramos > span { min-width: 4px; }
+.os-tramo-ok { background: var(--verde); }
+.os-tramo-aviso { background: #d9a441; }
+.os-tramo-mal { background: #d64545; }
+.os-fila { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--borde); font-size: 12px; }
 .os-fila:first-child { border-top: none; }
-.os-fila.os-sin { background: var(--aviso-fondo); margin: 0 -16px; padding: 6px 16px; }
+.os-fila.os-sin { background: var(--aviso-fondo); margin: 0 -16px; padding: 8px 16px; border-top-color: transparent; box-shadow: inset 3px 0 0 #d9a441; }
+.os-fila.os-sin + .os-fila { border-top-color: transparent; }
 .os-n { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .os-n small { color: var(--texto-suave); font-size: 10.5px; }
 .os-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.os-hora { width: 38px; color: var(--texto-suave); font-variant-numeric: tabular-nums; flex: none; }
-.os-punto { width: 7px; height: 7px; border-radius: 50%; background: var(--texto-suave); flex: none; }
+.os-hora { width: 40px; color: var(--texto); font-weight: 700; font-variant-numeric: tabular-nums; flex: none; }
+.os-num { font-weight: 700; }
+/* Marca de gravedad: un hexágono pequeño (el único motivo de la marca). */
+.os-punto { width: 8px; height: 9px; clip-path: var(--hex); background: var(--texto-suave); flex: none; }
 .os-punto.g-mal { background: #d64545; }
 .os-punto.g-aviso { background: #d9a441; }
-.os-anillo { width: 104px; height: 104px; align-self: center; }
+.os-anillo { width: 88px; height: 88px; align-self: center; }
 .os-anillo-n { font-size: 26px; font-weight: 500; fill: var(--texto); letter-spacing: -1px; }
 .os-anillo-s { font-size: 10px; fill: var(--texto-suave); }
 
@@ -435,20 +477,25 @@ body.os-modo .os-win-cuerpo .ma-mapa { height: 60vh; }
    punto que no sea un enlace o un botón). */
 .os-widget { cursor: grab; touch-action: none; user-select: none; }
 .os-widget a, .os-widget button { cursor: pointer; }
-#os-widgets.libre { inset: 0; width: auto; display: block; columns: auto; pointer-events: none; }
+#os-widgets.libre { inset: 0; width: auto; height: auto !important; display: block; pointer-events: none; }
 #os-widgets.libre > .os-widget { margin-bottom: 0; }
 #os-widgets.libre > .os-widget { position: absolute; pointer-events: auto; }
 #os-widgets.libre > .os-w-agenda { max-height: calc(100% - 24px); overflow: auto; }
-.os-widget.arrastrando { cursor: grabbing; user-select: none; box-shadow: 0 18px 40px rgb(0 0 0 / .22); }
+.os-widget.arrastrando { cursor: grabbing; user-select: none; box-shadow: 0 26px 56px rgb(11 31 20 / .28); transform: scale(1.02) rotate(-.5deg); transition: box-shadow .2s, transform .2s; }
+.os-widget.arrastrando::before { opacity: .7; }
+@media (prefers-reduced-motion: reduce) {
+  #os-widgets > .os-widget { animation: none; }
+  .os-widget, .os-widget.arrastrando { transition: none; transform: none; }
+}
 
 /* ── Piezas de Oki como widgets (2026-10-03) ───────────────────────────── */
 /* Las mismas de la portada (oki.css), en tamaño de widget. */
 .os-widget.ok-voz { align-items: center; gap: 6px; background: color-mix(in srgb, var(--superficie) 88%, transparent); }
 .os-widget.ok-voz .os-wtit { align-self: stretch; }
-.os-widget.ok-voz .ok-ola { height: 28px; }
+.os-widget.ok-voz .ok-ola { height: 22px; }
 .os-widget.ok-voz .ok-voz-estado { font-size: 12px; }
-.os-widget.ok-voz .ok-voz-hex { width: 72px; height: 83px; }
-.os-widget.ok-voz .ok-voz-btn { width: 66px; height: 76px; }
+.os-widget.ok-voz .ok-voz-hex { width: 62px; height: 71px; }
+.os-widget.ok-voz .ok-voz-btn { width: 56px; height: 64px; }
 .os-widget.ok-voz .ok-voz-btn svg { width: 22px; height: 22px; }
 .os-widget.ok-voz .ok-voz-res .acciones { flex-wrap: wrap; }
 .os-dice.ok-dice { padding: 0; gap: 10px; background: transparent; border: 0; border-radius: 0; flex-wrap: nowrap; align-items: flex-start; }
@@ -457,21 +504,44 @@ body.os-modo .os-win-cuerpo .ma-mapa { height: 60vh; }
 .os-dice .ok-dice-et { display: none; }
 .os-dice .ok-dice-txt { flex: 1; min-width: 0; }
 .os-dice .ok-dice-txt p { font-size: 13px; color: var(--texto); }
-.os-dice .acciones { gap: 6px; }
-.os-dice .btn { min-height: 34px; padding: 0 .7rem; font-size: 12px; }
-.os-widget.ok-stats { gap: 8px; }
-.os-widget.ok-stats .ok-titular b { font-size: 1.8rem; }
-.os-widget.ok-stats .ok-medidor { width: 112px; }
-.os-widget.ok-stats .ok-dato-cerrados { display: none; }
-.os-widget.ok-stats .ok-barras-tit { display: none; }
-.os-widget.ok-stats .ok-barras { padding-bottom: 1.2rem; }
-.os-widget.ok-stats .ok-med-txt b { font-size: 1.4rem; }
-.os-widget.ok-stats .ok-med-txt span { font-size: 10px; }
+.os-dice .acciones { display: flex; flex-flow: row wrap; gap: 6px; margin-top: 8px; }
+.os-dice .btn { min-height: 32px; padding: 0 .75rem; font-size: 12px; border-radius: 999px; }
+/* Estadísticas, en tamaño de widget: el medidor del SLA a la izquierda con
+   las dos cifras al lado, y las barras de la semana compactas debajo. */
+.os-widget.ok-stats { display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 12px; row-gap: 8px; align-items: center; }
+.os-widget.ok-stats > .os-wtit, .os-widget.ok-stats > .ok-titular, .os-widget.ok-stats > .ok-barras,
+.os-widget.ok-stats > .cargando, .os-widget.ok-stats > .aviso { grid-column: 1 / -1; }
+.os-widget.ok-stats .ok-titular { font-size: 12px; }
+.os-widget.ok-stats .ok-titular b { font-size: 1.9rem; }
+.os-widget.ok-stats .ok-medidor { grid-column: 1; grid-row: span 2; width: 92px; }
+.os-widget.ok-stats .ok-med-txt { padding: 0 16%; }
+.os-widget.ok-stats .ok-med-txt b { font-size: 1.25rem; }
+.os-widget.ok-stats .ok-med-txt span { font-size: 8.5px; line-height: 1.15; margin-top: 2px; color: var(--texto-suave); }
 .os-widget.ok-stats .ok-med-txt small { display: none; }
-.os-widget.ok-stats .ok-fila-dato { padding: .35rem .6rem; }
-.os-widget.ok-stats .ok-fila-dato b { font-size: 1rem; }
-.os-widget.ok-stats .ok-barras-fila { height: 64px; }
-.os-ordenes { display: flex; flex-direction: column; gap: 6px; }
-.os-ordenes .ok-orden { min-height: 36px; font-size: 12.5px; }
+.os-widget.ok-stats .ok-fila-dato {
+  grid-column: 2; display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 0; padding: 6px 10px;
+  border: none; border-radius: 12px; background: var(--fondo); color: var(--texto); text-decoration: none;
+}
+.os-widget.ok-stats .ok-fila-dato.ok-dato-cerrados { display: none; }
+.os-widget.ok-stats .ok-fila-dato span { font-size: 10.5px; font-weight: 600; color: var(--texto-suave); }
+.os-widget.ok-stats .ok-fila-dato b { font-size: 1.35rem; line-height: 1.1; }
+.os-widget.ok-stats a.ok-fila-dato:hover { background: var(--primario-suave); transform: none; }
+.os-widget.ok-stats .ok-barras-tit { display: none; }
+.os-widget.ok-stats .ok-barras { padding-bottom: 1.1rem; }
+.os-widget.ok-stats .ok-barras-fila { height: 40px; gap: 4px; }
+.os-widget.ok-stats .ok-barra small { font-size: 10px; }
+.os-widget.ok-stats .ok-barra em { bottom: -1.15rem; font-size: 10px; }
+/* Órdenes rápidas: baldosas en dos columnas, con la flecha en un hexágono. */
+.os-ordenes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.os-ordenes .ok-orden {
+  flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 6px; min-height: 56px; padding: 8px 10px;
+  border-radius: 14px; background: var(--fondo); border-color: transparent; font-size: 12px; line-height: 1.2;
+}
+.os-ordenes .ok-orden span {
+  width: 22px; height: 25px; display: flex; align-items: center; justify-content: center; clip-path: var(--hex);
+  background: var(--primario-suave); color: var(--primario); font-size: 15px; font-weight: 700;
+}
+.os-ordenes .ok-orden:hover { transform: translateY(-2px); border-color: var(--verde); background: var(--superficie); }
+.os-ordenes .ok-orden:hover span { transform: none; background: var(--verde); color: #102516; }
 /* El panel de widgets, mientras va en rejilla, no se sale por debajo. */
-#os-widgets:not(.libre) { max-height: calc(100% - 48px); overflow-y: auto; scrollbar-width: thin; }
+#os-widgets:not(.libre) { max-height: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }

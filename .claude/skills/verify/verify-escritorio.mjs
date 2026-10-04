@@ -133,6 +133,13 @@ try {
     ok(sin.length === 1 && sin[0].includes('#412') && sin[0].includes('Asignar'), 'agenda: el bloque sin técnico va marcado con «Asignar»');
     ok((await page.textContent('#os-agenda')).includes('Bananas Cafetería'), 'agenda: el cliente del trabajo sale por su nombre');
     ok((await page.textContent('#os-sync')).includes('Sync hace'), 'chip de sync en la barra');
+    await page.waitForTimeout(500); // que acabe la entrada escalonada de los widgets
+    const fuera = await page.$$eval('#os-widgets > .os-widget', ws => {
+      const c = document.getElementById('os-widgets').getBoundingClientRect();
+      return ws.map(w => { const r = w.getBoundingClientRect(); return { id: w.id, x: Math.round(r.x), y: Math.round(r.y), b: Math.round(r.bottom), d: Math.round(r.right) }; })
+        .filter(r => r.b > c.bottom + 1 || r.d > c.right + 1).concat([{ id: 'panel', b: Math.round(c.bottom), d: Math.round(c.right) }]);
+    });
+    ok(fuera.length === 1, `a 1440 × 900 caben todos los widgets en el panel sin salirse (${JSON.stringify(fuera)})`);
     await page.screenshot({ path: `${CAPTURAS}/escritorio-dia.png` });
 
     // Widgets movibles: se arrastran, los demás no se mueven, se recuerdan y se recolocan
@@ -338,6 +345,7 @@ try {
     // WhatsApp plegado: solo el botón
     const wa = await page.locator('#wa.cerrado').boundingBox();
     ok(wa && wa.width <= 64 && wa.height <= 64, `chat de WhatsApp plegado como botón (${Math.round(wa?.width)}×${Math.round(wa?.height)})`);
+    await page.waitForTimeout(400); // que acabe de abrirse la ventana
     await page.screenshot({ path: `${CAPTURAS}/escritorio-oki.png` });
     // Volver al clásico se recuerda al recargar
     await page.click('[data-action="osMenu"]');

@@ -508,7 +508,12 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   que no sea un enlace o botón; al mover el primero se congela el sitio de
   todos (`Escritorio.widgets`, por escritorio, en la misma disposición de
   `localStorage`) y «Recolocar los widgets» (menú del avatar) vuelve a la
-  rejilla.
+  rejilla. La rejilla NO son columnas CSS (mandaban el sobrante a una columna
+  invisible): la reparte `rejillaWidgets` en JS (columnas seguidas en orden,
+  cortadas donde la más alta queda más baja, de nuevo al cambiar de alto un
+  widget) y si no cabe el panel hace scroll. Aspecto (2026-10-04): cabecera con
+  el icono hexagonal de su pantalla (`cabWidget`), pie con flecha, asa al
+  pasar y entrada escalonada SOLO en opacidad (los arneses miden las cajas).
 - **Portada de Oki** (`src/modulos/inicio/vista.ts`, `src/oki.css`,
   2026-10-02): Inicio es el centro de mando de Oki (diseño del lienzo «Oki ·
   Centro de mando», tablero «Flujo de Oki en blanco»): Oki en el centro unido
