@@ -742,6 +742,18 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `reloj-<n>`; aquí no hay SDK de Android (dl.google.com bloqueado). El
   `resumen` es un contrato con relojes ya instalados: se añaden campos, no se
   quitan. Detalle e instalación en `docs/RELOJ.md`.
+- **Usuarios, modo empleado y registro de cambios** (paridad bloque 6, tanda
+  1, 2026-10-04): `#/usuarios` (`usuarios/`, `us-`, admin; PREPARADO para el
+  corte del área `usuarios`: alta, rol, teléfono y activar, nunca a uno mismo).
+  Modo empleado = `core/empleado.ts` (`MENU_EMPLEADO`): quien NO es admin ve el
+  menú del técnico (lo filtra `visibles()`; es solo interfaz, la URL sigue
+  abriendo, como la app) y en el móvil entra a `#/hoy`. Pantalla nueva que deba
+  ver un técnico: añadir su id a `MENU_EMPLEADO`. Registro de cambios:
+  `#/registro` y `#/registro/<tabla>/<id>` (`registro/`, `rg-`, admin) sobre la
+  función `historial`, que junta `hub.auditoria` y el `audit_log` de la app
+  (LEÍDO con su service key, `_shared/app-lectura.ts`: consultas pequeñas, nunca
+  tablas enteras); en las fichas, `enlaceHistorial(tabla, id)` de
+  `src/ui/historial.ts`. Arnés `verify-sistema.mjs`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

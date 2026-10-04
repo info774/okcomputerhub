@@ -90,6 +90,9 @@ Fran, 2026-10-03).
    quater y §1 quinquies, y `GROQ_API_KEY` §3).
 6. **Sistema**: usuarios y modo empleado, deshacer, cola offline, historial por
    ficha, configuración, push y APK, aviso de versión.
+   Decisiones de Fran (2026-10-04): push web además de Telegram; las pestañas
+   no hacen falta (las cubre el modo escritorio); la APK, para el corte final.
+   Tanda 1 HECHA (2026-10-04): usuarios, modo empleado y registro de cambios.
 7. **Resto**: inventario completo (albaranes, historial, Excel), VeriFactu,
    facturas de compra, gastos y cobros de la app, control de equipos, Google
    (Calendar, Contactos, Drive).
@@ -227,8 +230,8 @@ Fran, 2026-10-03).
 | Mis horas | Hecho | `#/personas` (Jornada) | — |
 | Informe de horas del mes | Hecho | `#/personas` | — |
 | Gastos y cobros en efectivo con foto (`gastos.js`) | Falta | `#/personas` (Gastos por OCR, flujo propio) | Gasto y cobro de la app. |
-| Usuarios: alta y activar (`configuracion.js`) | Falta | — | Pantalla de usuarios. |
-| Modo empleado (menú reducido) | Falta | — | Más que `soloAdmin`. |
+| Usuarios: alta y activar (`configuracion.js`) | Preparado | `#/usuarios` (admin): alta, rol, teléfono del WhatsApp del equipo y activar/desactivar (nunca a uno mismo) | Corte del área `usuarios` (hasta entonces, solo lectura: se dan de alta en la app). |
+| Modo empleado (menú reducido) | Hecho | `core/empleado.ts`: quien no es admin ve el menú del técnico (el de la app + comandas, tablero, wiki, buscador, reloj y monitorización); en el móvil entra a `#/hoy` | — |
 
 ### 9. Comunicación
 
@@ -269,7 +272,7 @@ Fran, 2026-10-03).
 |---|---|---|---|
 | Dashboard / Mi jornada | Hecho | `#/inicio` (Oki), `#/direccion`, `#/hoy`; «Mi lista de hoy» es la baldosa de `#/lista-dia` | — |
 | Búsqueda global | Hecho | Ctrl+K | Los trabajos se abren en la app. |
-| Auditoría por ficha y registro de cambios | Falta | (`#/direccion`, lo último) | Historial por ficha. |
+| Auditoría por ficha y registro de cambios | Hecho | `#/registro` y «🕘 Historial» en cliente, sitio, trabajo, ticket y presupuesto (admin); función `historial`: junta `hub.auditoria` y el `audit_log` de la app (leído) | — |
 | Deshacer (Ctrl+Z) | Falta | — | — |
 | Cola offline | Falta | — | — |
 | Caché de arranque | Falta | — | — |
@@ -278,7 +281,7 @@ Fran, 2026-10-03).
 | Modo escritorio | Hecho | `shell/escritorio.ts` | — |
 | Paleta Ctrl+K con acciones | Hecho | `shell/buscador.ts` | Acciones sobre lo encontrado. |
 | Centro de avisos | Hecho | campana del escritorio | — |
-| Pestañas tipo navegador (`tabs.js`) | Falta | — | — |
+| Pestañas tipo navegador (`tabs.js`) | No aplica | — | Decisión de Fran (2026-10-04): lo cubre el modo escritorio (ventanas). |
 | Atajos ESC y F5 | Falta | (solo ESC) | F5 guarda. |
 | Tema oscuro | Hecho | `shell/tema.ts` | — |
 | Tamaño del texto en el móvil | Falta | — | — |
@@ -286,7 +289,7 @@ Fran, 2026-10-03).
 | Aviso de versión nueva | Falta | — | — |
 | Configuración (empresa, IGIC, tarifas, colores, Google) | Falta | (`#/facturacion`, `#/datos`) | — |
 | Política de privacidad | Falta | — | — |
-| APK Android | Falta | — | Paso 7 del corte. |
+| APK Android | Falta | — | Decisión de Fran (2026-10-04): se deja para el corte final (cambiar la URL de la APK de la app al hub, paso 7); hasta entonces el hub es PWA instalable. |
 
 ### 13. Integraciones y programados
 

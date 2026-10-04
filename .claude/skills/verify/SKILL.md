@@ -237,6 +237,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   y captura (la imagen viaja reescalada); los adjuntos en la ficha del ticket;
   el panel «Agente de Meta» (estado y, sin el cambio, repuntar rechazado);
   `whatsapp` y `parse-whatsapp` SIMULADAS.
+- `verify-sistema.mjs`: bloque 6 (Sistema): usuarios (solo lectura con el
+  área de la app; alta, rol, teléfono y activar con el corte; nunca a uno
+  mismo), registro de cambios (global, filtros, «Cargar más», historial de
+  una ficha y su enlace, solo admin; `historial` SIMULADA) y modo empleado
+  (menú del técnico y entrada a «Hoy» en el móvil).
 
 `npm run verify` pasa todos los de la lista.
 

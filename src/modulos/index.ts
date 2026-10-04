@@ -35,6 +35,8 @@ import { moduloChat } from './chat';
 import { moduloTablero } from './tablero';
 import { moduloHoy } from './hoy';
 import { modulosAppActual } from './app-actual';
+import { moduloUsuarios } from './usuarios';
+import { moduloRegistro } from './registro';
 
 export const MODULOS: Modulo[] = [
   moduloInicio,
@@ -69,6 +71,8 @@ export const MODULOS: Modulo[] = [
   moduloInventario,
   ...modulosAppActual,
   moduloDatos,
+  moduloUsuarios,
+  moduloRegistro,
   moduloConector,
   moduloReloj,
 ];
