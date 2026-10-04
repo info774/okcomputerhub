@@ -59,7 +59,11 @@ const EVENTOS = new Set([
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('Método no permitido', { status: 405 })
 
-  const sctx = stripeCtx()
+  // Sin claves de Stripe en el hub (lo normal hasta el corte): se dice, sin tocar nada.
+  let sctx: ReturnType<typeof stripeCtx>
+  try { sctx = stripeCtx() } catch (e) {
+    return new Response(JSON.stringify({ error: (e as Error).message }), { status: 503 })
+  }
   // El cuerpo CRUDO, tal cual llegó. Un JSON.parse + stringify por el camino
   // cambiaría los espacios y la firma dejaría de cuadrar.
   const raw = await req.text()
