@@ -105,6 +105,10 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   borrador de prueba (cliente, línea, IGIC), emitir por RPC, emitida (marca
   PRUEBA, huella, no editable, cobro, rectificar), desde trabajos, emisor.
 
+- `verify-galeria.mjs`: una captura de CADA pantalla del menú con datos de
+  prueba (`verify-capturas/galeria-<ruta>.png`) y comprueba que ninguna falla
+  al cargar, lanza errores JS o desborda a lo ancho. `GALERIA_NOCHE=1` (tema
+  noche), `GALERIA_MOVIL=1` (390 px) y `GALERIA=clientes,tickets` (unas pocas).
 - `verify-escritorio.mjs`: modo escritorio (entrar desde el menú y por
   `?os=1`, widgets con datos del espejo y del motor de avisos, ventanas por
   el dock y por la URL, ajuste a zonas al arrastrar y con Alt+Mayús,

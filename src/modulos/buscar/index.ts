@@ -34,12 +34,12 @@ async function pintarEstado(): Promise<string> {
   const r = await llamarFuncion<any>('documentos-indexar', { accion: 'estado' });
   if (r.error || !r.data) return `<p class="nota">No se pudo leer el estado del índice: ${esc(r.error ?? '')}</p>`;
   const e = r.data;
-  const filas = Object.entries(e.resumen as Record<string, Record<string, number>>).map(([f, est]) =>
+  const filas = Object.entries((e.resumen ?? {}) as Record<string, Record<string, number>>).map(([f, est]) =>
     `<tr><td>${esc(ORIGEN[f] ?? f)}</td><td>${est.indexado ?? 0}</td><td>${est.pendiente ?? 0}</td><td>${(est.error ?? 0) + (est.omitido ?? 0)}</td></tr>`).join('');
   const drive = e.drive ?? {};
   return `<section class="tarjeta"><h3>Qué hay en el índice</h3>
     <table class="tabla"><thead><tr><th>Fuente</th><th>Indexados</th><th>Pendientes</th><th>Error / no legibles</th></tr></thead><tbody>${filas || '<tr><td colspan="4" class="vacio">Vacío.</td></tr>'}</tbody></table>
-    <p class="nota">${e.fragmentos} trozos. Se actualiza cada 10 minutos; Drive, cada 6 horas.</p>
+    <p class="nota">${e.fragmentos ?? 0} trozos. Se actualiza cada 10 minutos; Drive, cada 6 horas.</p>
     ${(e.errores ?? []).length ? `<details><summary>Documentos con error</summary><ul>${e.errores.map((x: any) => `<li>${esc(x.titulo)}: <small>${esc(x.error)}</small></li>`).join('')}</ul></details>` : ''}
     ${esAdmin() ? `<h3>Carpeta de Google Drive</h3>
       <p class="nota">Comparte la carpeta (solo lectura, «Lector») con <code>${CUENTA}</code> y pega aquí su enlace.

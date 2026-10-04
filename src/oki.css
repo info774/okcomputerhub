@@ -20,9 +20,9 @@
 .menu-grupo:nth-child(4) { animation-delay: 180ms; } .menu-grupo:nth-child(5) { animation-delay: 240ms; }
 .menu-grupo:nth-child(n+6) { animation-delay: 300ms; }
 .menu-item { position: relative; transition: background .2s, color .2s, padding .3s cubic-bezier(.2,.85,.2,1); }
-.menu-item > span:first-child { display: inline-block; transition: transform .45s cubic-bezier(.2,.85,.2,1); }
+.menu-item > .menu-ico { display: inline-block; transition: transform .45s cubic-bezier(.2,.85,.2,1); }
 .menu-item:hover { padding-left: 1rem; }
-.menu-item:hover > span:first-child { transform: scale(1.18) rotate(-8deg); }
+.menu-item:hover > .menu-ico { transform: scale(1.12) rotate(-8deg); }
 .menu-item.activo::after {
   content: ""; position: absolute; right: .7rem; top: 50%; width: 7px; height: 8px; margin-top: -4px;
   background: var(--verde); clip-path: var(--hex); animation: ok-pop .45s cubic-bezier(.2,.85,.2,1) both;
@@ -503,7 +503,7 @@ body.os-modo .wa.cerrado .wa-num { position: absolute; top: 4px; right: 4px; }
   .ok-med-ticks, .ok-med-valor, .ok-barra span, .pulso, .wa-num, .wa-msg, .wa-oki, .ok-aviso .hex-punto, .ok-agente .hex-punto,
   .ok-hito-raya i, .menu-item.activo::after, .ok-ola span, .ok-anillo, .ok-campana-menu { animation: none !important; }
   .ok-flujo path { display: none; }
-  .wa, .menu-item, .menu-item > span:first-child, .ok-area, .ok-panel, .ok-panel::before, .ok-panel::after, .ok-orden, .ok-hablar, .ok-voz-btn { transition: none !important; }
+  .wa, .menu-item, .menu-item > .menu-ico, .ok-area, .ok-panel, .ok-panel::before, .ok-panel::after, .ok-orden, .ok-hablar, .ok-voz-btn { transition: none !important; }
 }
 .wa-agente-b { display: block; margin: .4rem auto .8rem; min-height: 34px; padding: 0 .8rem; border: 1px dashed var(--borde); border-radius: 999px; background: transparent; color: var(--texto-suave); font: inherit; font-size: .8rem; cursor: pointer; }
 .wa-agente-b:hover { border-color: var(--verde); color: var(--primario); }

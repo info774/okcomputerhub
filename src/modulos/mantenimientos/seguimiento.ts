@@ -52,7 +52,7 @@ export async function pintarSeguimiento(el: HTMLElement, id?: string) {
             ${s.notas ? `<small>${esc(s.notas.slice(0, 60))}${s.notas.length > 60 ? '…' : ''}</small>` : ''}
             ${s.tipo_respuesta ? `<small class="nota">${esc(s.tipo_respuesta)}</small>` : ''}
             ${s.recordatorio_fecha ? `<small class="${d != null && d < 0 ? 'g-mal' : 'nota'}">⏰ ${esc(fechaCorta(s.recordatorio_fecha))}</small>` : ''}</article>`;
-        }).join('') || '<p class="vacio">—</p>'}</div></section>`;
+        }).join('') || '<p class="vacio col-vacia">—</p>'}</div></section>`;
     }).join('')}</div>`;
 }
 

@@ -9,6 +9,7 @@ import { esAdmin, usuario } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { esc, hace, fechaHora } from '../../ui/dom';
+import { iconoHex } from '../../shell/iconos';
 
 export interface Aviso {
   clave: string; tipo: string; gravedad: 'mal' | 'aviso' | 'info'; titulo: string; detalle: string | null;
@@ -22,6 +23,16 @@ interface Resumen {
   zoho: { ultima_ok: string | null; ultimo_error: string | null } | null;
 }
 
+// Cada tipo de aviso con el icono de SU pantalla (los mismos del dock) y el
+// verbo de su acción (centro de avisos y puesto de mando). Un tipo nuevo del motor sin entrada aquí sale con su
+// inicial y «Abrir».
+export const AVISO_PANTALLA: Record<string, { ico: string; accion: string }> = {
+  alerta_rmm: { ico: 'monitorizacion', accion: 'Ver el equipo' }, sede_sin_conexion: { ico: 'sitios', accion: 'Ver la sede' },
+  factura_vencida: { ico: 'facturacion', accion: 'Reclamar' }, cobro_mantenimiento: { ico: 'mantenimientos', accion: 'Ver el cobro' },
+  ticket_sin_asignar: { ico: 'tickets', accion: 'Asignar' }, presupuesto_sin_respuesta: { ico: 'presupuestos', accion: 'Seguir' },
+  trabajo_sin_facturar: { ico: 'trabajos', accion: 'Facturar' }, hito_vencido: { ico: 'proyectos', accion: 'Ver el hito' },
+  cliente_sin_comprar: { ico: 'clientes', accion: 'Ver el cliente' }, cierre_mes: { ico: 'calendario', accion: 'Ver el cierre' },
+};
 export const GRUPOS: Record<string, { nombre: string; icono: string }> = {
   alerta_rmm: { nombre: 'Alertas de equipos', icono: '🚨' }, sede_sin_conexion: { nombre: 'Sedes sin conexión', icono: '📡' },
   factura_vencida: { nombre: 'Facturas vencidas', icono: '💶' }, cobro_mantenimiento: { nombre: 'Cobros de mantenimiento', icono: '🔁' },
@@ -73,7 +84,7 @@ function pintarAvisos(lista: Aviso[], soloMios: boolean): string {
     const peor = fs.some(a => a.gravedad === 'mal') ? 'mal' : fs.some(a => a.gravedad === 'aviso') ? 'aviso' : 'neutro';
     fs.sort((a, b) => PESO[a.gravedad] - PESO[b.gravedad] || Number(b.importe ?? 0) - Number(a.importe ?? 0));
     return `<details class="tarjeta di-grupo di-g-${peor}" ${i < 4 ? 'open' : ''} data-tipo="${esc(tipo)}">
-      <summary><span>${g.icono} <strong>${esc(g.nombre)}</strong></span>
+      <summary><span class="di-grupo-tit">${AVISO_PANTALLA[tipo] ? iconoHex(AVISO_PANTALLA[tipo].ico, g.nombre, 'di-grupo-ico') : esc(g.icono)} <strong>${esc(g.nombre)}</strong></span>
         <span class="chip ${peor}">${fs.length}</span>${suma ? `<span class="di-suma">${eur(suma)}</span>` : ''}</summary>
       <ul class="di-lista">${fs.map(a => `<li class="di-aviso">
         <span class="di-punto g-${esc(a.gravedad)}" aria-label="${a.gravedad === 'mal' ? 'Urgente' : a.gravedad === 'aviso' ? 'Pendiente' : 'Información'}"></span>
