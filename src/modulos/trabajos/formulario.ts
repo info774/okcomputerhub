@@ -15,6 +15,7 @@ import { esc, toast } from '../../ui/dom';
 import { buscarClientes } from '../ventas/datos';
 import type { Plantilla } from './plantillas';
 import { buscadorMaps, alElegirLugar } from '../../ui/maps';
+import { tomarBorrador } from '../../ui/borrador';
 
 export const TIPOS = ['Instalación', 'Asistencia', 'Mantenimiento', 'Visita comercial'];
 export const ESTADOS = ['Pendiente', 'En progreso', 'Completado', 'Para facturar', 'Facturado', 'No facturar', 'Cancelado'];
@@ -53,8 +54,12 @@ export async function pintarFormulario(el: HTMLElement, numero?: string, desdeOp
   if (!t && desdeOportunidad) {
     op = (await API.single<any>('oportunidades', { select: 'id,titulo,descripcion,cliente_id,local_id,contacto_id', id: `eq.${desdeOportunidad}` })).data;
   }
-  // Valores de partida: los del trabajo que se edita o los de la oportunidad.
-  const v: any = t ?? (op ? { cliente_id: op.cliente_id, local_id: op.local_id, contacto_id: op.contacto_id, titulo: op.titulo, descripcion: op.descripcion } : null);
+  // Desde WhatsApp (ventana fija o «Desde WhatsApp»): el aviso ya resumido.
+  const b = !t && !op ? tomarBorrador('trabajo') : null;
+  // Valores de partida: los del trabajo que se edita, los de la oportunidad o los del borrador.
+  const v: any = t ?? (op ? { cliente_id: op.cliente_id, local_id: op.local_id, contacto_id: op.contacto_id, titulo: op.titulo, descripcion: op.descripcion }
+    : b ? { cliente_id: b.cliente_id, local_id: b.local_id, contacto_id: b.contacto_id, titulo: b.titulo, descripcion: b.descripcion,
+      prioridad: b.prioridad, tipo: b.tipo ?? 'Asistencia', fecha_programada: b.fecha || null, hora_llegada: horaIso(b.fecha ?? '', b.hora ?? '') } : null);
   const [cli, locs, cons, pres] = await Promise.all([
     v?.cliente_id ? API.single<any>('clientes', { select: 'id,nombre', id: `eq.${v.cliente_id}` }) : Promise.resolve({ data: null }),
     v?.cliente_id ? API.get<any[]>('locales', { select: 'id,nombre', cliente_id: `eq.${v.cliente_id}`, activo: 'eq.true', order: 'nombre' }) : Promise.resolve({ data: [] }),

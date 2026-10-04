@@ -228,6 +228,14 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   por ubicación que la eligen (y quedan marcadas), valor solo admin; libro de
   movimientos (tipos, trasvase con destino, trabajo) y lo más gastado en 90
   días; ficha con dónde más lo hay; técnico en el móvil sin euros.
+- `verify-whatsapp.mjs`: WhatsApp completo (bloque 5): en la ventana fija,
+  chip del plan y pago torcido, enlaces a la ficha, foto en la conversación y
+  «Ver foto» pedida a Meta, Remoto con varios equipos, Ticket y Presupuesto
+  rellenos desde la conversación, mandar una factura de Zoho, y sin cliente
+  solo el ticket; en `#/tickets/whatsapp`, texto → sede por teléfono → ticket
+  relleno, trabajo con fecha y hora, IA caída → reserva y cliente por nombre,
+  y captura (la imagen viaja reescalada); `whatsapp` y `parse-whatsapp`
+  SIMULADAS.
 
 `npm run verify` pasa todos los de la lista.
 

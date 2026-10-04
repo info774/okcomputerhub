@@ -15,6 +15,7 @@ import { esc, toast, hace, fechaHora } from '../../ui/dom';
 import { markdown } from '../../ui/markdown';
 import { buscarClientes, nombresClientes, telWhatsApp } from '../ventas/datos';
 import { botonChatFicha } from '../../ui/chat-ficha';
+import { tomarBorrador } from '../../ui/borrador';
 import {
   type Ticket, type Comentario, type Plantilla,
   ESTADOS, ABIERTOS, PRIORIDADES, CATEGORIAS, CANALES, TONO_PRIORIDAD, prioridadNorm, sla, limiteSla, esMio, rellenar, enlaceValoracion,
@@ -75,6 +76,7 @@ async function pintarLista(el: HTMLElement) {
       <a class="btn secundario" href="#/tickets/bandeja">✉️ Bandeja${nBandeja ? ` <span class="chip aviso">${nBandeja}</span>` : ''}</a>
       <a class="btn secundario" href="#/tickets/ajustes">Plantillas y SLA</a>
       <a class="btn" href="#/tickets/nuevo">+ Nuevo ticket</a>
+      <a class="btn secundario" href="#/tickets/whatsapp" title="Pega o captura un chat de WhatsApp y sale el ticket o el trabajo relleno">💬 Desde WhatsApp</a>
     </div>
     <div id="tk-lista">${tabla(lista)}</div>`;
 }
@@ -92,23 +94,51 @@ function tabla(lista: Ticket[]): string {
 
 // ── Nuevo ──────────────────────────────────────────────────────────────────
 async function pintarNuevo(el: HTMLElement) {
+  // Desde WhatsApp (ventana fija o «Desde WhatsApp») llega relleno: se repasa y se guarda.
+  const b = tomarBorrador('ticket');
   const personas = await equipo();
   el.innerHTML = `<p><a href="#/tickets">← Tickets</a></p><h2>Nuevo ticket</h2>
     <form class="tarjeta" data-on-submit="tkCrear" data-prevent="1">
-      <label>Qué pasa <input id="tk-titulo" required maxlength="200" placeholder="p. ej. No imprime la impresora de cocina"></label>
+      <label>Qué pasa <input id="tk-titulo" required maxlength="200" placeholder="p. ej. No imprime la impresora de cocina" value="${esc(b?.titulo ?? '')}"></label>
       <div class="in-campos">
         <label>Cliente <input id="tk-cliente-q" autocomplete="off" placeholder="Buscar…" data-on-input="tkBuscarCliente:$value"></label>
         <label>Sede <select id="tk-local"><option value="">—</option></select></label>
         <label>Contacto <select id="tk-contacto" data-on-change="tkElegirContacto:$value"><option value="">—</option></select></label>
-        <label>Prioridad <select id="tk-prioridad">${PRIORIDADES.map(p => `<option ${p === 'Media' ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
+        <label>Prioridad <select id="tk-prioridad">${PRIORIDADES.map(p => `<option ${p === (PRIORIDADES.includes(b?.prioridad ?? '') ? b!.prioridad : 'Media') ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
         <label>Técnico <select id="tk-tecnico"><option value="">Sin asignar</option>${personas.map(p => `<option>${esc(p.nombre)}</option>`).join('')}</select></label>
-        <label>Entró por <select id="tk-canal">${Object.entries(CANALES).filter(([k]) => !['app', 'rmm', 'portal'].includes(k)).map(([k, v]) => `<option value="${k}" ${k === 'telefono' ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+        <label>Entró por <select id="tk-canal">${Object.entries(CANALES).filter(([k]) => !['app', 'rmm', 'portal'].includes(k)).map(([k, v]) => `<option value="${k}" ${k === (b?.canal ?? 'telefono') ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
         <label>Correo del cliente <input id="tk-email" type="email" placeholder="para contestarle por correo"></label>
       </div>
       <input type="hidden" id="tk-cliente"><ul id="tk-cliente-res" class="resultados"></ul>
-      <label>Detalle <textarea id="tk-descripcion" rows="5"></textarea></label>
+      <label>Detalle <textarea id="tk-descripcion" rows="5">${esc(b?.descripcion ?? '')}</textarea></label>
       <div class="acciones"><button class="btn" type="submit">Crear ticket</button></div>
     </form>`;
+  if (b?.cliente_id) {
+    const { data: c } = await API.single<{ id: string; nombre: string }>('clientes', { select: 'id,nombre', id: `eq.${b.cliente_id}` });
+    if (c) await elegirCliente(c.id, c.nombre, b.local_id, b.contacto_id);
+  }
+}
+
+// Cliente elegido: sus sedes y contactos (y, si vienen de un borrador, los ya elegidos).
+async function elegirCliente(id: string, nombre: string, local?: string | null, contacto?: string | null) {
+  const ci = document.getElementById('tk-cliente') as HTMLInputElement | null;
+  if (!ci) return;
+  ci.value = id;
+  (document.getElementById('tk-cliente-q') as HTMLInputElement).value = nombre;
+  const ul = document.getElementById('tk-cliente-res'); if (ul) ul.innerHTML = '';
+  const [ls, ks] = await Promise.all([
+    API.get<any[]>('locales', { select: 'id,nombre', cliente_id: `eq.${id}`, activo: 'eq.true', order: 'nombre' }),
+    API.get<any[]>('contactos', { select: 'id,nombre,email', cliente_id: `eq.${id}`, activo: 'eq.true', order: 'favorito.desc,nombre' }),
+  ]);
+  const sl = document.getElementById('tk-local'), sc = document.getElementById('tk-contacto');
+  const selLocal = (l: any) => local ? l.id === local : ls.data?.length === 1;
+  if (sl) sl.innerHTML = `<option value="">—</option>${(ls.data ?? []).map(l => `<option value="${esc(l.id)}" ${selLocal(l) ? 'selected' : ''}>${esc(l.nombre)}</option>`).join('')}`;
+  if (sc) sc.innerHTML = `<option value="">—</option>${(ks.data ?? []).map(k => `<option value="${esc(k.id)}" data-email="${esc(k.email ?? '')}" ${k.id === contacto ? 'selected' : ''}>${esc(k.nombre)}</option>`).join('')}`;
+  if (contacto) {
+    const e = document.getElementById('tk-email') as HTMLInputElement | null;
+    const k = (ks.data ?? []).find(x => x.id === contacto);
+    if (e && k?.email && !e.value) e.value = k.email;
+  }
 }
 
 // ── Ficha ──────────────────────────────────────────────────────────────────
@@ -286,6 +316,7 @@ async function pintar(el: HTMLElement, params: string[]) {
   const [a] = params;
   if (!a) return pintarLista(el);
   if (a === 'nuevo') return pintarNuevo(el);
+  if (a === 'whatsapp') return (await import('./whatsapp')).pintarDesdeWhatsapp(el);
   if (a === 'bandeja') return pintarBandeja(el);
   if (a === 'ajustes') return pintarAjustes(el);
   await pintarFicha(el, a);
@@ -348,18 +379,7 @@ registrarAcciones({
         <small class="nota">${esc(c.nif ?? '')}</small></button></li>`).join('');
     }, 250);
   },
-  async tkElegirCliente(id: string, nombre: string) {
-    (document.getElementById('tk-cliente') as HTMLInputElement).value = id;
-    (document.getElementById('tk-cliente-q') as HTMLInputElement).value = nombre;
-    const ul = document.getElementById('tk-cliente-res'); if (ul) ul.innerHTML = '';
-    const [ls, ks] = await Promise.all([
-      API.get<any[]>('locales', { select: 'id,nombre', cliente_id: `eq.${id}`, activo: 'eq.true', order: 'nombre' }),
-      API.get<any[]>('contactos', { select: 'id,nombre,email', cliente_id: `eq.${id}`, activo: 'eq.true', order: 'favorito.desc,nombre' }),
-    ]);
-    const sl = document.getElementById('tk-local'), sc = document.getElementById('tk-contacto');
-    if (sl) sl.innerHTML = `<option value="">—</option>${(ls.data ?? []).map(l => `<option value="${esc(l.id)}" ${ls.data?.length === 1 ? 'selected' : ''}>${esc(l.nombre)}</option>`).join('')}`;
-    if (sc) sc.innerHTML = `<option value="">—</option>${(ks.data ?? []).map(k => `<option value="${esc(k.id)}" data-email="${esc(k.email ?? '')}">${esc(k.nombre)}</option>`).join('')}`;
-  },
+  tkElegirCliente: (id: string, nombre: string) => elegirCliente(id, nombre),
   tkElegirContacto(id: string) {
     const o = document.querySelector<HTMLOptionElement>(`#tk-contacto option[value="${CSS.escape(id)}"]`);
     const e = document.getElementById('tk-email') as HTMLInputElement | null;

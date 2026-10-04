@@ -82,6 +82,23 @@ mandar facturas con un PDF; esta es de texto, para volver a hablar con él.
    WHATSAPP_PLANTILLA_TEXTO=retomar_conversacion
    ```
 
+### 1 quater · La plantilla para mandar facturas fuera de las 24 h (opcional, ~2 min)
+
+**Desbloquea**: el botón **📎 Factura / presupuesto** del chat de WhatsApp del
+hub cuando el cliente lleva más de 24 h sin escribir (dentro de las 24 h va sin
+plantilla). Es la MISMA plantilla que ya usa la app; solo hay que decirle al
+hub su nombre.
+
+1. Entra en **https://business.facebook.com/wa/manage/message-templates/** (el
+   Administrador de WhatsApp de la empresa).
+2. En la lista, busca la plantilla **Activa** que lleva un **documento** en la
+   cabecera (la de mandar facturas; su nombre es el de la columna **Nombre**,
+   en minúsculas y con guiones bajos). Cópialo tal cual.
+3. Variable de entorno (ver arriba cómo), con ese nombre en vez del ejemplo:
+   ```
+   WHATSAPP_PLANTILLA_DOCUMENTO=factura_documento
+   ```
+
 ## 2 · Google: correo, Drive (una vez, ~10 minutos)
 
 **Desbloquea**: los correos a info@ se convierten en tickets y las respuestas
@@ -153,9 +170,12 @@ usarla. No hay que copiar ni pegar ninguna clave.
 > Ojo: el botón de crear sedes en el hub está preparado pero apagado hasta el
 > cambio de clientes; la búsqueda en Maps ya se puede probar en el formulario.
 
-## 3 · Clave de Groq (notas de voz → comandas)
+## 3 · Clave de Groq (notas de voz → comandas, WhatsApp → ticket)
 
-**Desbloquea**: dictar comandas en #/comandas y mandarle notas de voz al bot.
+**Desbloquea**: dictar comandas en #/comandas y mandarle notas de voz al bot, y
+que **Tickets → 💬 Desde WhatsApp** resuma el chat pegado o la captura (sin la
+clave también funciona, pero con un resumen básico y sin leer capturas). Puede
+ser la misma clave que usa la app.
 
 1. Entra en **https://console.groq.com** → **API Keys** → **Create API Key**
    → nombre `Ok Computer Hub` → copia la clave (`gsk_...`).

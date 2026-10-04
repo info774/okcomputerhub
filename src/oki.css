@@ -283,6 +283,16 @@
 .wa-ventana.cerrada { color: var(--mal); border: 1px solid var(--mal); }
 .wa-ventana.cerrada .hex-punto { background: var(--mal); }
 .wa-ticket { font-size: .8rem; font-weight: 600; white-space: nowrap; }
+.wa-atajos { flex: none; display: flex; align-items: center; gap: .35rem; padding: .4rem .75rem; overflow-x: auto; border-bottom: 1px solid var(--borde); scrollbar-width: thin; }
+.wa-atajos .chip-boton { min-height: 30px; padding: 0 .6rem; font-size: .78rem; white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; }
+.wa-atajos .chip { white-space: nowrap; font-size: .72rem; }
+.wa-panel { position: relative; flex: none; max-height: 45%; overflow-y: auto; display: flex; flex-direction: column; gap: .35rem; padding: .6rem 2.4rem .6rem .75rem; border-bottom: 1px solid var(--borde); background: var(--superficie); animation: ok-entra .25s cubic-bezier(.2,.8,.2,1) both; }
+.wa-panel[hidden] { display: none; }
+.wa-panel .btn { justify-content: flex-start; text-align: left; }
+.wa-panel-x { position: absolute; top: .4rem; right: .4rem; width: 30px; height: 30px; border: 1px solid var(--borde); border-radius: 8px; background: var(--superficie); color: var(--texto); cursor: pointer; }
+.wa-docs { display: flex; flex-direction: column; gap: .35rem; }
+.wa-foto { display: block; max-width: 220px; max-height: 220px; border-radius: 8px; margin-top: .3rem; }
+.wa-msg .chip-boton { min-height: 30px; margin-top: .3rem; font-size: .8rem; }
 .wa-hilo { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column-reverse; padding: .75rem; background: var(--fondo); }
 .wa-msgs { display: flex; flex-direction: column; gap: .45rem; }
 .wa-dia { align-self: center; font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--texto-suave); padding: .3rem 0; }
