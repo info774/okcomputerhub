@@ -339,3 +339,8 @@ body.os-modo .wa.cerrado .wa-num { position: absolute; top: 4px; right: 4px; }
   .ok-flujo path { display: none; }
   .wa, .menu-item, .menu-item > span:first-child, .ok-area, .ok-panel, .ok-panel::before, .ok-panel::after, .ok-orden, .ok-hablar, .ok-voz-btn { transition: none !important; }
 }
+.wa-agente-b { display: block; margin: .4rem auto .8rem; min-height: 34px; padding: 0 .8rem; border: 1px dashed var(--borde); border-radius: 999px; background: transparent; color: var(--texto-suave); font: inherit; font-size: .8rem; cursor: pointer; }
+.wa-agente-b:hover { border-color: var(--verde); color: var(--primario); }
+.wa-agente { padding: .75rem; display: flex; flex-direction: column; gap: .5rem; }
+.wa-agente h4 { margin: 0; }
+.wa-agente ul { margin: 0 0 0 1.1rem; padding: 0; font-size: .85rem; }

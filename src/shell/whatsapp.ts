@@ -8,6 +8,7 @@ import { registrarAcciones } from '../core/dispatcher';
 import { llamarFuncion } from '../core/funciones';
 import { ir } from '../core/router';
 import { esc, hace, toast } from '../ui/dom';
+import { esAdmin } from '../core/estado';
 import { dejarBorrador } from '../ui/borrador';
 
 interface Conv {
@@ -104,15 +105,18 @@ function pintarResumen() {
   num.textContent = String(n);
 }
 
+// El conector del Agente de Meta (solo admin): ver dónde apunta y, tras el cambio, repuntarlo al hub.
+const pieAgente = () => esAdmin() ? '<button type="button" class="wa-agente-b" data-action="waAgente">🤖 Agente de Meta</button>' : '';
+
 function pintarLista() {
   const el = $id('wa-lista')!;
-  if (!convs.length) { el.innerHTML = '<p class="wa-vacio">No hay conversaciones todavía.</p>'; return; }
+  if (!convs.length) { el.innerHTML = `<p class="wa-vacio">No hay conversaciones todavía.</p>${pieAgente()}`; return; }
   el.innerHTML = `<ul>${convs.map(c => `
     <li><button type="button" class="wa-fila${c.pendiente ? ' pendiente' : ''}" data-action="waAbrir" data-p0="${esc(c.id)}">
       <span class="wa-ini" aria-hidden="true">${esc(iniciales(c.nombre))}</span>
       <span class="wa-fila-txt"><b>${esc(c.nombre)}</b><small>${esc(c.ultimo || '—')}</small></span>
       <span class="wa-fila-meta"><small>${esc(cuando(c.ultimo_at))}</small>${c.pendiente ? '<span class="wa-punto" title="Por contestar"></span>' : ''}</span>
-    </button></li>`).join('')}</ul>`;
+    </button></li>`).join('')}</ul>${pieAgente()}`;
 }
 
 async function abrir(id: string) {
@@ -387,6 +391,30 @@ registrarAcciones({
   },
   waDescartar: () => { $id('wa-oki')!.innerHTML = ''; },
   waCerrarPanel: cerrarPanel,
+  async waAgente() {
+    const el = $id('wa-lista')!;
+    el.innerHTML = '<p class="wa-vacio"><span class="hex-punto pulso" aria-hidden="true"></span> Mirando el Agente de Meta…</p>';
+    const { data: r, error } = await llamarFuncion<any>('whatsapp', { accion: 'meta_conector_estado' }, 40000);
+    if (!$id('wa-lista') || actual) return;
+    const ETQ: Record<string, string> = { active: '✅ activa', pending_review: '⏳ en revisión', blocked: '⛔ bloqueada', falta: '— sin instalar' };
+    const enHub = String(r?.base_url ?? '').includes('adomalsxsymxzuozksmt');
+    const detalle = error || !r?.ok ? `<p class="wa-err">${esc(error ?? r?.error ?? 'Sin respuesta')}</p>`
+      : !r.registrado ? '<p class="wa-nota">El conector todavía no está dado de alta en el Agente de Meta.</p>'
+        : `<p class="wa-nota">Apunta a <b>${enHub ? 'el hub' : 'la app'}</b>. Conexión: <b>${esc(r.conexion?.status ?? '—')}</b> · herramientas: <b>${esc(r.herramientas?.status ?? '—')}</b> (${esc(r.herramientas?.tool_count ?? 0)})</p>`;
+    const skills = (r?.skills ?? []).map((x: any) => `<li><code>${esc(x.title)}</code> ${ETQ[x.status] ?? esc(x.status)}</li>`).join('');
+    el.innerHTML = `<div class="wa-agente"><button type="button" class="wa-volver" data-action="waAgenteVolver" aria-label="Volver a las conversaciones">‹</button>
+      <h4>🤖 Agente de Meta</h4>${detalle}${skills ? `<p class="wa-nota">Skills:</p><ul>${skills}</ul>` : ''}
+      <button type="button" class="btn secundario" data-action="waAgenteActualizar">${r?.registrado ? 'Actualizar conector y skills' : 'Dar de alta conector y skills'}</button>
+      <p class="wa-nota">Solo se puede con el cambio de WhatsApp hecho: entonces el agente pasa a usar las herramientas del hub.</p></div>`;
+  },
+  waAgenteVolver: () => pintarLista(),
+  async waAgenteActualizar() {
+    if (!confirm('¿Registrar en Meta el conector y las skills del hub? El Agente de Meta pasará a usar las herramientas del hub.')) return;
+    const { data: x, error } = await llamarFuncion<any>('whatsapp', { accion: 'meta_conector' }, 60000);
+    if (error || !x?.ok) { toast(`No se pudo: ${error ?? x?.error ?? 'sin respuesta'}`, 'error'); return; }
+    const bloq = (x.skills ?? []).filter((k: any) => k.status === 'blocked').length;
+    toast(`Conector ${x.herramientas?.status ?? '—'} · ${(x.skills ?? []).length} skills${bloq ? ` (${bloq} bloqueadas)` : ''}`, bloq ? 'error' : 'info');
+  },
   // Ticket con cliente, sede y contacto de la conversación y el último texto del cliente.
   waTicket() {
     const c = actual;

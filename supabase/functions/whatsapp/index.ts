@@ -27,7 +27,12 @@
 //   zoho_id}: baja el PDF de Zoho Books y lo manda (suelto en las 24 h, con
 //   WHATSAPP_PLANTILLA_DOCUMENTO fuera), como enviarDocumentoZoho de la app;
 //   solo documentos de ESE cliente.
-import { makeCorsHeaders, json, getAuthedUser, unauthorized, forbidden } from '../_shared/http.ts'
+//   meta_conector_estado · meta_conector (solo admin): el conector MCP y las
+//   skills del Agente de Meta (metaConector de `whatsapp-api` de la app).
+//   Registrar lo apunta a `meta-agente-mcp` del HUB, así que solo se deja con
+//   el cambio de WhatsApp hecho; ver el estado vale siempre.
+import { makeCorsHeaders, json, getAuthedUser, unauthorized, forbidden, isAdminUser } from '../_shared/http.ts'
+import { SKILLS_AGENTE } from '../_shared/meta-agente-skills.ts'
 import { hubDb } from '../_shared/hub-db.ts'
 import { personaPorEmail } from '../_shared/personas.ts'
 import { claudeConfigurado, preguntarClaude } from '../_shared/claude.ts'
@@ -186,6 +191,14 @@ Deno.serve(async req => {
   const b = await req.json().catch(() => ({}))
   try {
     const wa = await fuente(user.email)
+    if (b.accion === 'meta_conector' || b.accion === 'meta_conector_estado') {
+      if (!(await isAdminUser(user))) return forbidden(cors)
+      if (b.accion === 'meta_conector' && !wa.enHub) {
+        return json({ ok: false, error: 'El WhatsApp se lleva en la app hasta el cambio: el conector se registra desde su bandeja. Aquí se repunta al hub el día del cambio.' }, 409, cors)
+      }
+      return json(await metaConector(b.accion === 'meta_conector'), 200, cors)
+    }
+
     if (b.accion === 'estado') return json({ envio: waConfigurado(), claude: claudeConfigurado(), plantilla: !!plantillaTexto() }, 200, cors)
 
     if (b.accion === 'conversaciones') {
@@ -328,10 +341,122 @@ Deno.serve(async req => {
       return json({ propuesta: propuesta.trim() || null }, 200, cors)
     }
 
-    return json({ error: 'Acción desconocida (estado, conversaciones, mensajes, leida, enviar, plantilla, proponer, media, documentos, enviar_documento)' }, 400, cors)
+    return json({ error: 'Acción desconocida (estado, conversaciones, mensajes, leida, enviar, plantilla, proponer, media, documentos, enviar_documento, meta_conector_estado, meta_conector)' }, 400, cors)
   } catch (e) {
     const status = (e as { status?: number }).status ?? 502
     console.error('[whatsapp]', e)
     return json({ error: (e as Error).message }, status, cors)
   }
 })
+
+// ── Conector MCP en Meta Business Agent ───────────────────────────────
+// POST/PUT https://api.facebook.com/{phone_number_id}/agent_connectors con
+// X-API-Version 2.0.0, protocolo MCP y auth API_KEY (cabecera x-mcp-token), y
+// después refreshMCPTools para que Meta descubra las herramientas. Se busca por
+// nombre: volver a lanzarlo actualiza el mismo conector en vez de duplicarlo.
+const NOMBRE_CONECTOR = 'Ok Computer Tenerife - Atención al cliente'
+
+async function metaConector(registrar: boolean) {
+  const entidad = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID') ?? ''
+  const tokenMeta = Deno.env.get('WHATSAPP_TOKEN') ?? ''
+  const tokenMcp = Deno.env.get('META_AGENTE_MCP_TOKEN') ?? ''
+  if (!entidad || !tokenMeta) {
+    // Qué falta exactamente y qué nombres parecidos hay puestos (solo los
+    // NOMBRES, nunca los valores): un espacio o una letra de más en el nombre
+    // del secret lo deja invisible para la función sin ningún otro aviso.
+    const faltan = [!entidad && 'WHATSAPP_PHONE_NUMBER_ID', !tokenMeta && 'WHATSAPP_TOKEN'].filter(Boolean).join(' y ')
+    const parecidos = Object.keys(Deno.env.toObject())
+      .filter(k => /WHATS|META|PHONE|WA_/i.test(k)).map(k => JSON.stringify(k)).sort().join(', ')
+    console.warn(`[whatsapp-api] meta_conector: falta ${faltan}; parecidos: ${parecidos || 'ninguno'}`)
+    return { ok: false, error: `Falta el secret ${faltan} en Supabase del hub (ver docs/PENDIENTE_FRAN.md). Secrets con nombre parecido que sí ve la función: ${parecidos || 'ninguno'}.` }
+  }
+  const base = `https://api.facebook.com/${entidad}/agent_connectors`
+  const h = { Authorization: `Bearer ${tokenMeta}`, 'X-API-Version': '2.0.0', 'Content-Type': 'application/json' }
+  const llamar = async (metodo: string, url: string, cuerpo?: unknown) => {
+    const r = await fetch(url, { method: metodo, headers: h, body: cuerpo ? JSON.stringify(cuerpo) : undefined })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) {
+      const traza = d?.fbtrace_id || r.headers.get('x-fb-request-id') || ''
+      const texto = [d?.title, d?.detail, d?.error?.message].filter(Boolean).join(' — ') || JSON.stringify(d).slice(0, 200)
+      let pista = ''
+      if (r.status === 401 || r.status === 403) pista = await diagnosticoToken(entidad, tokenMeta)
+      throw new Error(`Meta ${r.status}: ${texto}${traza ? ` (fbtrace ${traza})` : ''}${pista ? `. ${pista}` : ''}`)
+    }
+    return d
+  }
+  try {
+    const lista = await llamar('GET', base)
+    let conector = (Array.isArray(lista) ? lista : lista?.data ?? []).find((c: any) => c.name === NOMBRE_CONECTOR)
+    if (registrar) {
+      if (tokenMcp.length < 24) return { ok: false, error: 'Falta el secret META_AGENTE_MCP_TOKEN (texto aleatorio de 24+ caracteres).' }
+      const cuerpo = {
+        name: NOMBRE_CONECTOR,
+        description: 'Sistema de gestión de Ok Computer Tenerife. Identifica al cliente por su número de WhatsApp, ' +
+          'abre incidencias (tickets) para que un técnico las atienda, consulta el estado de sus incidencias, añade ' +
+          'información a una abierta y le manda por WhatsApp el PDF de sus facturas y presupuestos.',
+        base_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/meta-agente-mcp`,  // la del HUB
+        connector_protocol: 'MCP',
+        auth_type: 'API_KEY',
+        auth_config: { api_key: { headers: [{ field_name: 'x-mcp-token', value: tokenMcp }] } },
+      }
+      conector = conector
+        ? await llamar('PUT', `${base}/${conector.id}`, { ...cuerpo, connector_protocol: undefined })
+        : await llamar('POST', base, cuerpo)
+      conector = await llamar('POST', `${base}/${conector.id}/refreshMCPTools`)
+    }
+    // Skills: las instrucciones del agente (cuándo usar cada herramienta).
+    // Se buscan por título: volver a pulsar actualiza las mismas.
+    const baseSkills = `https://api.facebook.com/${entidad}/agent_config/skills`
+    const listaSkills = async () => {
+      const l = await llamar('GET', baseSkills)
+      return (Array.isArray(l) ? l : l?.data ?? []) as any[]
+    }
+    let skills = await listaSkills()
+    if (registrar) {
+      for (const sk of SKILLS_AGENTE) {
+        const previa = skills.find(x => x.title === sk.title)
+        if (previa) await llamar('PUT', `${baseSkills}/${previa.id}`, sk)
+        else await llamar('POST', baseSkills, sk)
+      }
+      skills = await listaSkills()
+    }
+    const estadoSkills = SKILLS_AGENTE.map(sk => {
+      const x = skills.find(y => y.title === sk.title)
+      return { title: sk.title, status: x ? (x.status || 'active') : 'falta' }
+    })
+
+    if (!conector) return { ok: true, registrado: false, skills: estadoSkills }
+    const logs = await llamar('GET', `${base}/${conector.id}/logs?summary_only=true&include_stats=true`).catch(() => null)
+    return {
+      ok: true, registrado: true, id: conector.id, base_url: conector.base_url ?? null,
+      conexion: conector.connection_status, herramientas: conector.mcp_tool_sync, errores: logs,
+      skills: estadoSkills,
+    }
+  } catch (e) {
+    console.error('[whatsapp-api] meta_conector', e)
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
+// Ante un 401/403 de la API del agente: ¿el token vale para WhatsApp? Si la API
+// normal (graph.facebook.com) lo acepta y ve el número, el token está bien y lo
+// que falta es el acceso al agente (activarlo en WhatsApp Manager, condiciones).
+async function diagnosticoToken(entidad: string, token: string): Promise<string> {
+  try {
+    const v = Deno.env.get('WHATSAPP_API_VERSION') || 'v23.0'
+    const r = await fetch(`https://graph.facebook.com/${v}/${entidad}?fields=display_phone_number,verified_name`,
+      { headers: { Authorization: `Bearer ${token}` } })
+    const d = await r.json().catch(() => ({}))
+    if (r.ok) {
+      return `El token SÍ vale para WhatsApp (número ${d.display_phone_number || '?'}, ${d.verified_name || ''}): ` +
+        'lo que falta es el acceso a Meta Business Agent — activarlo en WhatsApp Manager → pestaña Meta Business Agent y aceptar sus condiciones'
+    }
+    const e = d?.error || {}
+    if (e.code === 190) return `El token NO es válido para Meta (${e.message || 'caducado o revocado'}): genera uno permanente de usuario del sistema`
+    if (e.code === 100 || r.status === 404) return `El token no ve el número ${entidad}: revisa WHATSAPP_PHONE_NUMBER_ID o asigna la cuenta de WhatsApp al usuario del sistema`
+    return `Comprobación del token en la API de WhatsApp: ${r.status} ${e.message || ''}`.trim()
+  } catch (e) {
+    return `No se pudo comprobar el token: ${(e as Error).message}`
+  }
+}
+

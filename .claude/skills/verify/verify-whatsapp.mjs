@@ -71,6 +71,9 @@ async function waFalso(route) {
   }
   if (b.accion === 'leida') return resp(route, { ok: true });
   if (b.accion === 'media') return resp(route, { data_url: 'data:image/png;base64,iVBORw0KGgo=', mime: 'image/png' });
+  if (b.accion === 'meta_conector_estado') return resp(route, { ok: true, registrado: true, base_url: 'https://gaksrtxgnuuuvhvgwxue.supabase.co/functions/v1/meta-agente-mcp',
+    conexion: { status: 'CONNECTED' }, herramientas: { status: 'SYNCED', tool_count: 7 }, skills: [{ title: 'identidad-y-tono', status: 'active' }, { title: 'facturas-y-presupuestos', status: 'blocked' }] });
+  if (b.accion === 'meta_conector') return resp(route, { ok: false, error: 'El WhatsApp se lleva en la app hasta el cambio: el conector se registra desde su bandeja.' }, 409);
   if (b.accion === 'documentos') return resp(route, { documentos: [{ tipo: 'factura', id: '5001', numero: 'F26-0001' }, { tipo: 'presupuesto', id: '6001', numero: 'P-0007' }], plantilla: false });
   if (b.accion === 'enviar_documento') {
     const m = msg('m9', { direccion: 'saliente', tipo: 'document', texto: '📎 Factura F26-0001 de Ok Computer Tenerife', estado: 'enviado', usuario: 'Ana Admin', created_at: new Date().toISOString() });
@@ -178,6 +181,18 @@ try {
   ok(await page.locator('#wa-atajos [data-action="waPresupuesto"], #wa-atajos [data-action="waDocumentos"], #wa-atajos [data-action="waRemoto"]').count() === 0
     && await page.locator('#wa-atajos [data-action="waTicket"]').count() === 1, 'sin cliente: «Sin cliente» y solo el ticket');
   await page.screenshot({ path: `${CAPTURAS}/whatsapp-ventana.png` });
+
+  // Agente de Meta (admin): dónde apunta y, sin el cambio, no se repunta
+  await page.click('[data-action="waVolver"]');
+  await page.click('[data-action="waAgente"]');
+  await page.waitForSelector('.wa-agente');
+  const ag = await page.textContent('.wa-agente');
+  ok(ag.includes('Apunta a la app') && ag.includes('SYNCED') && ag.includes('bloqueada'), 'Agente de Meta: estado del conector (apunta a la app) y sus skills');
+  await page.click('[data-action="waAgenteActualizar"]');
+  await page.waitForFunction(() => document.body.textContent.includes('se lleva en la app hasta el cambio'));
+  ok(llamadas.some(l => l.accion === 'meta_conector'), 'Agente de Meta: sin el cambio de WhatsApp, repuntarlo lo rechaza la función y se dice');
+  await page.click('[data-action="waAgenteVolver"]');
+  await page.waitForSelector('.wa-fila');
   await page.click('#wa-cab');
 
   // ── Adjuntos del ticket (los que cuelga el webhook) ──────────────────────

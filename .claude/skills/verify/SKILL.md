@@ -235,6 +235,7 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   solo el ticket; en `#/tickets/whatsapp`, texto → sede por teléfono → ticket
   relleno, trabajo con fecha y hora, IA caída → reserva y cliente por nombre,
   y captura (la imagen viaja reescalada); los adjuntos en la ficha del ticket;
+  el panel «Agente de Meta» (estado y, sin el cambio, repuntar rechazado);
   `whatsapp` y `parse-whatsapp` SIMULADAS.
 
 `npm run verify` pasa todos los de la lista.

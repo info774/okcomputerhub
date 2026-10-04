@@ -678,7 +678,13 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   cambia de fuente sola (`fuente()`: app o hub según el área; en el hub, sin
   «embeds», `leerConvs` junta los nombres aparte). El corte:
   `supabase/cortes/corte_whatsapp.sql` y la URL en Meta, en ese orden
-  (PENDIENTE_FRAN §1 quinquies).
+  (PENDIENTE_FRAN §1 quinquies). Tanda 3: `meta-agente-mcp` (SIN_JWT,
+  `x-mcp-token`) portado con sus skills LITERALES (`_shared/meta-agente-skills.ts`;
+  si cambian en la app, cambiarlas aquí); sin el área del hub sus herramientas
+  contestan que no está activo. El alta del conector en Meta es la acción
+  `meta_conector` de la función `whatsapp` (admin, «🤖 Agente de Meta» al pie de
+  la lista de la ventana), que solo deja registrar con el cambio hecho (lo
+  apunta a la URL del hub); `meta_conector_estado` dice a dónde apunta.
 - **Trabajos: alta y edición** (`src/modulos/trabajos/formulario.ts`,
   2026-10-03, paridad bloque 1): UN formulario para crear y editar
   (`#/trabajos/nuevo`, `#/trabajos/<n>/editar`, prefijo `tf-`) con caras Simple
