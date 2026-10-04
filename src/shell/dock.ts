@@ -16,7 +16,21 @@ import { iconoHex } from './iconos';
 const BASE = 48, HUECO = 6, RELLENO = 10, SEP = 13;
 const AUMENTO = 1.85, ALCANCE = 150, REBOTE_MS = 1100;
 
-interface Config { repintar: () => void; defecto: () => string[]; titulo: (id: string) => string; abierta: (id: string) => boolean; cerrarLanzador: () => void }
+interface Config {
+  repintar: () => void; defecto: () => string[]; titulo: (id: string) => string; abierta: (id: string) => boolean; cerrarLanzador: () => void;
+  estado?: (id: string) => { minimizada: boolean; delante: boolean; nota?: string; tono?: string };
+}
+
+// Iconos de línea de 16 px para las opciones del menú (el trazo es el del texto).
+const ICONO_MENU: Record<string, string> = {
+  abrir: '<path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5"/>',
+  minimizar: '<path d="M3.5 11.5h9"/>',
+  cerrar: '<path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/>',
+  fijar: '<path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3.5 13.5h9"/>',
+  quitar: '<path d="M8 13.5v-8M4.5 9 8 5.5 11.5 9M3.5 2.5h9"/>',
+};
+const opcion = (accion: string, id: string, icono: string, texto: string, clase = '') =>
+  `<button role="menuitem" class="${clase}" data-action="${accion}" data-p0="${esc(id)}"><svg class="os-dmenu-ico" viewBox="0 0 16 16" aria-hidden="true">${ICONO_MENU[icono]}</svg>${esc(texto)}</button>`;
 let _cfg: Config | null = null;
 let _fijas: string[] | null = null;
 let _rebote: { id: string; t: number } | null = null;
@@ -114,7 +128,7 @@ export function instalarDock(dock: HTMLElement, lanzador: HTMLElement, cfg: Conf
   _cfg = cfg;
   const quieto = matchMedia('(prefers-reduced-motion: reduce)');
   dock.addEventListener('pointermove', e => {
-    if (_arrastrando || e.pointerType === 'touch' || quieto.matches) return;
+    if (_arrastrando || e.pointerType === 'touch' || quieto.matches || document.getElementById('os-dmenu')) return;
     _x = e.clientX; dock.classList.add('os-aumentando'); aumentar(dock, e.clientX);
   });
   dock.addEventListener('pointerleave', () => { _x = null; dock.classList.remove('os-aumentando'); reposo(dock); });
@@ -124,6 +138,8 @@ export function instalarDock(dock: HTMLElement, lanzador: HTMLElement, cfg: Conf
     const el = (e.target as Element).closest<HTMLElement>('[data-mod]');
     if (!el) return;
     e.preventDefault();
+    // Con el menú abierto el dock vuelve al reposo (si no, los iconos crecidos quedan debajo del menú).
+    _x = null; dock.classList.remove('os-aumentando'); reposo(dock);
     abrirMenu(el.dataset.mod!, e.clientX, e.clientY, el.closest('#os-dock') ? el.getBoundingClientRect() : null);
   };
   dock.addEventListener('contextmenu', menu);
@@ -149,10 +165,15 @@ function abrirMenu(id: string, x: number, y: number, sobre: DOMRect | null) {
   m.className = 'os-menu os-dmenu';
   m.setAttribute('role', 'menu');
   const fija = estaFija(id);
-  m.innerHTML = `<div class="os-menu-cab"><b>${esc(_cfg?.titulo(id) ?? id)}</b></div>
-    ${fija ? `<button role="menuitem" data-action="osDockQuitar" data-p0="${esc(id)}">Quitar del dock</button>`
-      : `<button role="menuitem" data-action="osDockFijar" data-p0="${esc(id)}">Mantener en el dock</button>`}
-    ${_cfg?.abierta(id) ? `<button role="menuitem" data-action="osCerrar" data-p0="${esc(id)}">Cerrar la ventana</button>` : ''}`;
+  const abierta = !!_cfg?.abierta(id);
+  const e = _cfg?.estado?.(id);
+  const titulo = _cfg?.titulo(id) ?? id;
+  const sub = [abierta ? (e?.minimizada ? 'Minimizada' : e?.delante ? 'Delante' : 'Abierta') : 'Sin abrir', fija ? 'en el dock' : ''].filter(Boolean).join(' · ');
+  m.innerHTML = `<div class="os-menu-cab os-dmenu-cab">${iconoHex(id, titulo, 'os-dmenu-hex')}<span><b>${esc(titulo)}</b><span>${esc(sub)}</span>${e?.nota ? `<span class="os-dmenu-nota ${e.tono === 'mal' ? 'g-mal' : ''}">${esc(e.nota)}</span>` : ''}</span></div>
+    ${!abierta || e?.minimizada || !e?.delante ? opcion('osAbrir', id, 'abrir', abierta ? 'Traer delante' : 'Abrir') : opcion('osMinimizar', id, 'minimizar', 'Minimizar')}
+    ${abierta ? opcion('osCerrar', id, 'cerrar', 'Cerrar la ventana') : ''}
+    <div class="os-dmenu-sep" role="separator"></div>
+    ${fija ? opcion('osDockQuitar', id, 'quitar', 'Quitar del dock', 'os-menu-peligro') : opcion('osDockFijar', id, 'fijar', 'Mantener en el dock')}`;
   document.getElementById('os-root')!.appendChild(m);
   const w = m.offsetWidth, h = m.offsetHeight;
   const left = Math.max(8, Math.min(innerWidth - w - 8, (sobre ? sobre.left + sobre.width / 2 : x) - w / 2));

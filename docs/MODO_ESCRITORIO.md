@@ -89,6 +89,15 @@ código el 2026-09-28. Convive con el hub clásico y no lo toca.
 - **Dock**: las pantallas del hub (sin las que enlazan a la app actual) con su
   estado (abierta, delante), **Claude** (abre la paleta en modo «Pedir a
   Claude») y **Todas** (lanzador con todo, incluidas las de la app actual).
+  Aspecto (2026-10-04): bandeja de cristal con brillo arriba, iconos con
+  relieve que se hunden al pulsarlos y un hexágono pequeño debajo (verde en la
+  ventana de delante, hueco si está minimizada). **Insignias** como en macOS:
+  cada pantalla del dock pasa su `contador()` (al entrar y cada 3 min) y, si
+  su tono es aviso o mal, el icono lleva un hexágono ámbar o rojo; el nombre
+  que sale al pasar el ratón lo cuenta («1 urgente(s)»). Sin número en el
+  icono, porque el valor del contador no siempre es lo pendiente. El clic
+  derecho trae el estado (sin abrir, abierta, delante, minimizada) y Abrir o
+  Minimizar, Cerrar la ventana y Mantener o Quitar del dock.
   Desde el 2026-10-03 funciona como el de macOS (`shell/dock.ts`): los iconos
   crecen al pasar el ratón, el nombre sale encima, la pantalla que se abre
   rebota y lo abierto lleva un punto. Iconos de línea en hexágono, como los de

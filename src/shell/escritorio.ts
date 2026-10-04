@@ -19,7 +19,7 @@
 // (ventanas, tamaño, sitio, zona de ajuste) se guarda por persona y por
 // escritorio en localStorage.
 // Prefijo de ids y clases: os-.
-import type { Modulo } from '../core/modulo';
+import type { Modulo, Contador } from '../core/modulo';
 import { modulo, rutaActual, ir } from '../core/router';
 import { usuario, esAdmin } from '../core/estado';
 import { registrarAcciones } from '../core/dispatcher';
@@ -150,6 +150,7 @@ export function pintarEscritorio(raiz: HTMLElement) {
     defecto: () => visibles().filter(delHub).filter(m => m.id !== 'inicio').slice(0, DOCK_FIJAS).map(m => m.id),
     titulo: id => modulo(id)?.titulo ?? id,
     abierta: id => !!ventanaDe(id),
+    estado: id => ({ minimizada: !!ventanaDe(id)?.min, delante: ventanaFrente()?.id === id, nota: notaInsignia(id), tono: tonoInsignia(id) }),
     cerrarLanzador: () => { document.getElementById('os-lanzador')!.hidden = true; },
   });
   pintarDock();
@@ -161,6 +162,7 @@ export function pintarEscritorio(raiz: HTMLElement) {
   _vuelta = 0;
   _timer = window.setInterval(() => { refrescarDatos(); reloj(); }, 60_000);
   void refrescarDatos();
+  void refrescarInsignias();
 }
 
 function quitarEscritorio() {
@@ -180,17 +182,44 @@ const delHub = (m: Modulo) => !m.enlaceExterno;
 
 // Panel y Oki delante; luego las fijas de la persona (en su orden) y lo
 // abierto que no esté fijo, mientras dure; tras la raya, Claude y «Todas».
+// Insignias del dock (como las de macOS): el `contador()` de cada pantalla
+// del dock. Solo se marca lo que pide atención (tono aviso o mal), con un
+// hexágono de color y sin número: el valor del contador no siempre es «lo
+// pendiente» (Inventario cuenta productos y avisa de los agotados).
+const _insignias = new Map<string, Contador>();
+async function refrescarInsignias() {
+  const ids = new Set([...fijas(), ...escritorio().ventanas.map(v => v.id)]);
+  await Promise.all([...ids].map(async id => {
+    const m = modulo(id);
+    if (!m?.contador || m.enlaceExterno) return;
+    try { const c = await m.contador(); if (c) _insignias.set(id, c); else _insignias.delete(id); } catch { /* la insignia es un extra: sin ella, nada */ }
+  }));
+  pintarDock();
+}
+const tonoInsignia = (id: string) => { const t = _insignias.get(id)?.tono; return t === 'mal' || t === 'aviso' ? t : ''; };
+// «3 mensajes sin leer»; si el subtítulo ya empieza por la cifra («1 urgente(s)»), solo él.
+const notaInsignia = (id: string) => {
+  const c = _insignias.get(id);
+  if (!c || !tonoInsignia(id)) return '';
+  const sub = (c.subtitulo ?? '').trim();
+  return /^\d/.test(sub) ? sub : `${c.valor} ${sub}`.trim();
+};
+
 function pintarDock() {
   const abiertas = new Set(escritorio().ventanas.map(v => v.id));
+  const minimizadas = new Set(escritorio().ventanas.filter(v => v.min).map(v => v.id));
   const frente = ventanaFrente()?.id;
   const hub = visibles().filter(delHub).filter(m => m.id !== 'inicio');
   const deHub = new Map(hub.map(m => [m.id, m]));
   const fijasM = fijas().map(id => deHub.get(id)).filter((m): m is Modulo => !!m);
   const sueltas = hub.filter(m => abiertas.has(m.id) && !fijasM.includes(m));
-  const estado = (id: string) => `${abiertas.has(id) ? 'abierta' : ''} ${frente === id ? 'activa' : ''}`;
-  const item = (m: Modulo, fija: boolean) => `
-    <button class="os-ditem ${estado(m.id)}" data-action="osAbrir" data-p0="${esc(m.id)}" data-mod="${esc(m.id)}"${fija ? ' data-fija="1"' : ''} aria-label="${esc(m.titulo)}">
-      ${iconoHex(m.id, m.titulo)}<span class="os-dlabel" aria-hidden="true">${esc(m.titulo)}</span><span class="os-dpunto"></span></button>`;
+  const estado = (id: string) => `${abiertas.has(id) ? 'abierta' : ''} ${minimizadas.has(id) ? 'minimizada' : ''} ${frente === id ? 'activa' : ''}`;
+  const item = (m: Modulo, fija: boolean) => {
+    const tono = tonoInsignia(m.id), nota = notaInsignia(m.id);
+    return `
+    <button class="os-ditem ${estado(m.id)}" data-action="osAbrir" data-p0="${esc(m.id)}" data-mod="${esc(m.id)}"${fija ? ' data-fija="1"' : ''} aria-label="${esc(m.titulo)}${nota ? ` · ${esc(nota)}` : ''}">
+      ${iconoHex(m.id, m.titulo)}${tono ? `<span class="os-dinsignia g-${tono}" aria-hidden="true"></span>` : ''}<span class="os-dlabel" aria-hidden="true">${esc(m.titulo)}${nota ? `<small>${esc(nota)}</small>` : ''}</span><span class="os-dpunto"></span></button>`;
+  };
   const fijo = (accion: string, extra: string, ico: string, titulo: string, clase = '') => `
     <button class="os-ditem ${clase}" data-action="${accion}"${extra} aria-label="${esc(titulo)}">
       ${ico}<span class="os-dlabel" aria-hidden="true">${esc(titulo)}</span><span class="os-dpunto"></span></button>`;
@@ -749,7 +778,9 @@ let _vuelta = 0;
 async function refrescarDatos() {
   if (!document.getElementById('os-root')) return;
   // Las estadísticas leen 30 días de tickets: cada 5 vueltas (≈ 5 min).
-  const stats = _vuelta++ % 5 === 0 ? widgetEstadisticas() : Promise.resolve();
+  const stats = _vuelta % 5 === 0 ? widgetEstadisticas() : Promise.resolve();
+  if (_vuelta > 0 && _vuelta % 3 === 0) void refrescarInsignias();
+  _vuelta++;
   await Promise.all([widgetHoy(), widgetAvisos(), esAdmin() ? widgetCobros() : Promise.resolve(), widgetEquipos(), widgetAgenda(), chipSync(), stats]);
 }
 
