@@ -9,7 +9,11 @@
 // F5 guarda el formulario de delante, tamaño del texto en el móvil, política
 // de privacidad (y su enlace en la entrada) y Configuración (empresa en la
 // fila facturacion_emisor sin perder lo demás, IGIC, tarifa sin
-// mantenimiento y las de los planes desde su plantilla). Sin datos reales.
+// mantenimiento y las de los planes desde su plantilla).
+// Tanda 3: deshacer (el chip, Ctrl+Z devuelve el cambio, el panel deshace un
+// alta y lo de otros no se toca) y la cola sin red (fichar sin conexión: se
+// ve al momento con la última copia, «☁ 1 sin enviar», y al volver la red sale
+// solo con la hora de la pulsación). Sin datos reales.
 //   npm run build && node .claude/skills/verify/verify-sistema.mjs
 import { servidor, navegador, baseMemoria, preparar, contador, CAPTURAS, SB } from './comun.mjs';
 
@@ -83,7 +87,8 @@ try {
   await page.fill('#us-tel-u-tito', '600 999 888');
   await page.selectOption('#us-rol-u-tito', 'admin');
   await page.click('[data-action="usGuardar"][data-p0="u-tito"]');
-  await page.waitForFunction(() => document.querySelector('#us-rol-u-tito')?.value === 'admin');
+  await page.waitForFunction(() => document.body.textContent.includes('Guardado'));
+  await page.waitForSelector('.us-tabla');
   ok(base.db.usuarios.find(u => u.id === 'u-tito')?.telefono === '600 999 888', 'usuarios: rol y teléfono guardados');
   await page.click('[data-action="usActivo"][data-p0="u-tito"]');
   await page.waitForFunction(() => document.querySelector('.us-tabla')?.textContent.includes('Desactivado'));
@@ -179,6 +184,70 @@ try {
   await page.reload();
   await page.waitForSelector('#menu .menu-item', { state: 'attached' });
   ok(await page.getAttribute('html', 'data-fs') === 'xl', 'tamaño del texto: se recuerda en el dispositivo');
+
+  await ctx.close();
+
+  // ── Deshacer ─────────────────────────────────────────────────────────────
+  base = baseMemoria({ ...inicial([]), tickets: [{ id: 'tk1', numero: 5001, titulo: 'Impresora', estado: 'Abierto', prioridad: 'Media', created_at: iso(ahora - 3600e3),
+    sla_respuesta_at: iso(ahora + 3600e3), sla_resolucion_at: iso(ahora + 86400e3) }], ticket_comentarios: [], plantillas_respuesta: [] }, {});
+  ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 900 } });
+  await preparar(ctx, { email: 'ana@ok.test', base });
+  page = await ctx.newPage();
+  page.on('pageerror', e => errores.push(String(e.stack ?? e)));
+  page.on('dialog', d => d.accept());
+  await page.goto(`${srv.base}/#/tickets/5001`);
+  await page.waitForSelector('#tk-estado');
+  ok(await page.isHidden('#sis-deshacer'), 'deshacer: sin cambios, sin chip');
+  await page.selectOption('#tk-estado', 'Cerrado');
+  await page.waitForFunction(() => !document.getElementById('sis-deshacer')?.hidden);
+  ok(base.db.tickets[0].estado === 'Cerrado', 'deshacer: el cambio se guarda y sale el chip «↩ Deshacer»');
+  await page.click('body');
+  await page.keyboard.press('Control+z');
+  await page.waitForFunction(() => document.body.textContent.includes('Deshecho'));
+  ok(base.db.tickets[0].estado === 'Abierto' && await page.isHidden('#sis-deshacer'), 'deshacer: Ctrl+Z devuelve el estado de antes');
+  await page.check('input[name="tk-tipo"][value="nota"]');
+  await page.fill('#tk-texto', 'Nota que sobra');
+  await page.click('#tk-enviar');
+  await page.waitForFunction(() => !document.getElementById('sis-deshacer')?.hidden);
+  ok(base.db.ticket_comentarios.length === 1, 'deshacer: una nota nueva se apunta');
+  await page.click('#sis-deshacer');
+  await page.waitForSelector('#sis-panel [data-action="sisDeshacerGrupo"]');
+  ok((await page.textContent('#sis-panel')).includes('Alta de comentario'), 'deshacer: el panel dice qué se deshace');
+  await page.click('#sis-panel [data-action="sisDeshacerGrupo"]');
+  await page.waitForFunction(() => document.body.textContent.includes('Deshecho: Alta de comentario'));
+  ok(base.db.ticket_comentarios.length === 0, 'deshacer: deshacer un alta la borra');
+  await ctx.close();
+
+  // ── Cola sin red: fichar sin conexión ───────────────────────────────────
+  const rpcs = [];
+  base = baseMemoria({ ...inicial([]), agenda: [], trabajos: [] }, {
+    fichar: (c, db) => {
+      rpcs.push(c);
+      const s = { id: `s${rpcs.length}`, tecnico_id: 'u-tito', traslado: c.p_cuando ?? new Date().toISOString(), inicio: null, fin: null, created_at: c.p_cuando ?? new Date().toISOString() };
+      db.sesiones.push(s);
+      return { ok: true, sesion: s };
+    },
+  });
+  ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, isMobile: true });
+  await preparar(ctx, { email: 'tito@ok.test', base });
+  page = await ctx.newPage();
+  page.on('pageerror', e => errores.push(String(e.stack ?? e)));
+  await page.goto(`${srv.base}/#/hoy`);
+  await page.waitForSelector('[data-action="hoTraslado"]');
+  await page.waitForTimeout(300);   // que la última copia quede guardada
+  await ctx.setOffline(true);
+  const pulsado = Date.now();
+  await page.click('[data-action="hoTraslado"]');
+  await page.waitForFunction(() => document.querySelector('.ho-fichaje')?.textContent.includes('En traslado'));
+  ok(!rpcs.length && await page.isVisible('#sis-cola'), 'sin red: el traslado se ve al momento (última copia + lo pendiente) y no sale');
+  ok((await page.getAttribute('#sis-cola', 'title')).includes('Sin conexión'), 'sin red: el chip «☁» dice que saldrá solo');
+  await ctx.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await page.waitForFunction(() => document.getElementById('sis-cola')?.hidden);
+  ok(rpcs.length === 1 && rpcs[0].p_accion === 'traslado' && Math.abs(Date.parse(rpcs[0].p_cuando) - pulsado) < 10_000, 'al volver la red: sale solo, con la hora de la pulsación');
+  await page.waitForFunction(() => document.querySelector('.ho-fichaje')?.textContent.includes('En traslado'));
+  ok(base.db.sesiones.length === 1, 'al volver la red: un solo fichaje (no se repite)');
+  await page.screenshot({ path: `${CAPTURAS}/sistema-cola.png` });
 
   ok(!errores.length, `sin errores JS${errores.length ? ': ' + errores.join(' | ') : ''}`);
 } finally {

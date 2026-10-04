@@ -804,6 +804,25 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   (`cfg-`, admin; en `hub.config`: la empresa es la MISMA `facturacion_emisor`
   de Facturación, `igic_pct`, `tarifa_sin_mantenimiento`). En el móvil, con el
   menú abierto se esconde la barra de WhatsApp (tapaba su pie).
+  Tanda 3: el cliente de datos (`core/api.ts`) lleva ahora, como la app, (1)
+  la COLA sin red (`core/cola.ts`, IndexedDB `hub-local`): las escrituras de
+  `TABLAS_OFFLINE` (todas con `id uuid`; un POST lleva su id de cliente ANTES
+  del primer intento) y las funciones de `RPCS_OFFLINE` se guardan sin red y
+  salen solas (al volver la red, al entrar, cada minuto), FIFO; lo rechazado
+  queda en rojo. El fichaje se encola SOLO sin red (no es idempotente) y lleva
+  `p_cuando` = la hora de la pulsación (`hub.fichar`, `20261029_fichar_cuando.sql`:
+  hasta 72 h atrás, nunca un fin antes del inicio). Cada op lleva su persona:
+  con otra en el mismo móvil, no sale. (2) La última copia de las lecturas de
+  `LECTURAS_OFFLINE` (`core/lecturas.ts`, por persona, se borra al salir): si
+  la red falla se sirve la copia con lo pendiente encima (`aplicarPendientes`;
+  las sesiones se recalculan con los fichajes encolados). (3) El DESHACER
+  (`core/deshacer.ts`, `registrarObservadorEscrituras`): foto antes de cada
+  PATCH/DELETE de su lista `TABLAS`, un gesto = una acción, `sinBorrado` en las
+  fichas con hijas; ni RPC ni upserts. `API._raw` es la petición sin nada de
+  esto. UI: chips abajo a la izquierda (`shell/pendientes.ts`, `sis-`) y Ctrl+Z
+  (`shell/atajos.ts`). OJO en los arneses: guardar ahora hace un GET antes del
+  PATCH; esperar a lo que dice la pantalla («Guardado»), no a un valor que ya
+  estaba puesto.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

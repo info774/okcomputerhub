@@ -70,9 +70,9 @@ async function cargar(mas = false) {
   if (!document.getElementById('rg-lista')) return;
   btn.disabled = false;
   if (error || !data) { lista.innerHTML = `<p class="aviso mal">No se pudo leer el registro: ${esc(error)}</p>`; btn.hidden = true; return; }
-  const filas = data.filas ?? [];
+  const filas = Array.isArray(data.filas) ? data.filas : [];
   const html = filas.map(fila).join('');
-  const aviso = data.app_ok ? '' : '<p class="aviso">No se ha podido leer el registro de la app: solo sale lo cambiado en el hub.</p>';
+  const aviso = data.app_ok === false ? '<p class="aviso">No se ha podido leer el registro de la app: solo sale lo cambiado en el hub.</p>' : '';
   if (!mas) lista.innerHTML = filas.length ? `${aviso}<ul class="rg-items">${html}</ul>`
     : `${aviso}<p class="vacio">${_ficha ? 'Sin cambios registrados en esta ficha (el registro empieza el día que se activó la auditoría).' : 'Nada que coincida.'}</p>`;
   else lista.querySelector('.rg-items')?.insertAdjacentHTML('beforeend', html);

@@ -246,7 +246,8 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   mismo), registro de cambios (global, filtros, «Cargar más», historial de
   una ficha y su enlace, solo admin; `historial` SIMULADA) y modo empleado
   (menú del técnico y entrada a «Hoy» en el móvil); aviso de versión, F5
-  guarda, tamaño del texto, privacidad y configuración.
+  guarda, tamaño del texto, privacidad y configuración; deshacer (chip,
+  Ctrl+Z, panel) y la cola sin red (fichar sin conexión con `setOffline`).
 
 `npm run verify` pasa todos los de la lista.
 
