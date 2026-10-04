@@ -175,6 +175,10 @@ try {
     await page.waitForSelector('#os-win-monitorizacion');
     ok((await page.$$('.os-win')).length === 2, 'dos ventanas: Proyectos y Monitorización');
     ok(await page.$eval('#os-win-monitorizacion', e => e.classList.contains('activa')), 'la última abierta va delante');
+    ok((await page.textContent('#os-frente')) === 'Monitorización', 'la barra dice qué ventana está delante');
+    ok((await page.textContent('.os-esc.activo .os-esc-n')) === '2', 'el escritorio cuenta sus ventanas (2)');
+    ok(!(await page.$eval('#os-barra', e => /\p{Extended_Pictographic}/u.test(e.textContent))), 'la barra no lleva emojis (iconos de línea)');
+    ok(await page.$eval('#os-reloj', e => e.getAttribute('href') === '#/calendario' && /\d{2}:\d{2}/.test(e.textContent)), 'el reloj lleva la hora y abre el calendario');
     ok(await page.$eval('.os-ditem[data-p0="proyectos"]', e => e.classList.contains('abierta')), 'el dock marca Proyectos como abierta');
 
     // Arrastrar al borde izquierdo → media pantalla
@@ -296,6 +300,8 @@ try {
     const tema = await page.evaluate(() => document.documentElement.dataset.theme);
     ok(tema === 'dark' || tema === 'light', `tema cambia desde la barra (${tema})`);
     if (tema !== 'dark') await page.click('#os-root [data-action="alternarTema"]');
+    await page.waitForTimeout(300); // que acaben las transiciones de color del cambio de tema
+    ok(await page.isVisible('#os-root .os-tema .os-bico-sol') && !(await page.isVisible('#os-root .os-tema .os-bico-luna')), 'en noche el botón del tema enseña el sol');
     await page.screenshot({ path: `${CAPTURAS}/escritorio-noche.png` });
 
     // Volver a la app clásica
