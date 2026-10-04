@@ -24,7 +24,16 @@ código el 2026-09-28. Convive con el hub clásico y no lo toca.
 - **El escritorio es el panel** (widgets, refrescados cada minuto). Cada
   widget se **arrastra** a cualquier sitio (cogiéndolo por donde no haya un
   enlace o botón); el sitio se guarda por escritorio y «Recolocar los widgets»
-  (menú del avatar) los devuelve a la rejilla:
+  (menú del avatar) los devuelve a la rejilla. La rejilla son columnas de
+  260 px o más (hasta cuatro) que se rellenan de arriba abajo en orden; las
+  reparte `rejillaWidgets` cortando la lista donde la columna más alta queda
+  más baja (antes eran columnas CSS, que con poco alto mandaban el último
+  widget a una columna invisible) y, si aun así no caben, el panel hace
+  scroll. Cada widget lleva en la cabecera el icono hexagonal de su pantalla
+  (los del dock), se levanta y enseña un asa al pasar el ratón, y su pie es un
+  enlace a lo ancho con flecha. Estadísticas va en tamaño widget (medidor del
+  SLA con las dos cifras al lado y barras compactas) y Órdenes rápidas en
+  baldosas de dos columnas:
   - *Hoy*: bloques de agenda de hoy, tickets abiertos, sin técnico y tareas.
   - *Avisos*: los cinco primeros del motor `hub.panorama_direccion` (el mismo
     que el puesto de mando, el bot y los informes).
