@@ -74,7 +74,7 @@ async function cargar(mas = false) {
   const html = filas.map(fila).join('');
   const aviso = data.app_ok === false ? '<p class="aviso">No se ha podido leer el registro de la app: solo sale lo cambiado en el hub.</p>' : '';
   if (!mas) lista.innerHTML = filas.length ? `${aviso}<ul class="rg-items">${html}</ul>`
-    : `${aviso}<p class="nota">${_ficha ? 'Sin cambios registrados en esta ficha (el registro empieza el día que se activó la auditoría).' : 'Nada que coincida.'}</p>`;
+    : `${aviso}<p class="vacio">${_ficha ? 'Sin cambios registrados en esta ficha (el registro empieza el día que se activó la auditoría).' : 'Nada que coincida.'}</p>`;
   else lista.querySelector('.rg-items')?.insertAdjacentHTML('beforeend', html);
   _ultimo = filas.at(-1)?.ts ?? _ultimo;
   btn.hidden = !data.mas;
