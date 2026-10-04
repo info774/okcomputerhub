@@ -84,6 +84,7 @@ try {
   await esperar(300);
   await page.click(`#os-dock .os-ditem[data-mod="${iniciales[3]}"]`, { button: 'right' });
   await page.waitForSelector('#os-dmenu [data-action="osDockQuitar"]');
+  await esperar(200);
   await page.screenshot({ path: `${CAPTURAS}/dock-menu.png`, clip: { x: 0, y: 550, width: 1600, height: 350 } });
   await page.click('#os-dmenu [data-action="osDockQuitar"]');
   await page.waitForFunction(m => !document.querySelector(`#os-dock .os-ditem[data-mod="${m}"]`), iniciales[3]);
@@ -177,6 +178,41 @@ try {
     ok(JSON.stringify(vistas) === JSON.stringify(guardadas), `en otro ordenador sale el mismo dock (lo guardado en la base)${JSON.stringify(vistas) === JSON.stringify(guardadas) ? '' : ': ' + vistas + ' ≠ ' + guardadas}`);
     ok(e2.length === 0, `sin errores JS en el segundo ordenador${e2.length ? ': ' + e2.join(' | ') : ''}`);
     await c2.close();
+  }
+
+  // Insignias: el contador de la pantalla pide atención → hexágono de color y
+  // el nombre lo cuenta; el menú del clic derecho trae el estado y las acciones.
+  {
+    const urgente = { grupo: 'dinero', gravedad: 'mal', titulo: 'Factura vencida: F26-0891', detalle: 'Polinesia', enlace: '#/cobros', persona: null, fecha: new Date().toISOString(), importe: 1240, dinero: true };
+    const ctx3 = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1600, height: 900 } });
+    const base3 = baseMemoria(FIX, { ...RPC, panorama_direccion: () => [urgente] });
+    await preparar(ctx3, { email: 'admin@ok.test', base: base3, escritorio: 'defecto' });
+    const p3 = await ctx3.newPage();
+    const e3 = [];
+    p3.on('pageerror', e => e3.push(String(e)));
+    await p3.goto(srv.base);
+    await p3.waitForSelector('#os-dock .os-ditem[data-mod="direccion"] .os-dinsignia.g-mal', { timeout: 5000 }).catch(() => {});
+    ok(!!(await p3.$('#os-dock .os-ditem[data-mod="direccion"] .os-dinsignia.g-mal')), 'un aviso urgente pone la insignia roja en Puesto de mando');
+    await p3.screenshot({ path: `${CAPTURAS}/dock-insignia-reposo.png`, clip: { x: 250, y: 780, width: 1100, height: 120 } });
+    ok((await p3.textContent('#os-dock .os-ditem[data-mod="direccion"] .os-dlabel small')) === '1 urgente(s)', 'y el nombre del icono lo cuenta («1 urgente(s)», sin repetir la cifra)');
+    ok(await p3.$$eval('#os-dock .os-dinsignia', es => es.length) === 1, 'lo que no pide atención no lleva insignia');
+    await p3.mouse.move(800, 300);
+    await p3.click('#os-dock .os-ditem[data-mod="direccion"]', { button: 'right' });
+    await p3.waitForSelector('#os-dmenu [data-action="osAbrir"]');
+    ok((await p3.textContent('#os-dmenu')).includes('Sin abrir') && !(await p3.$('#os-dmenu [data-action="osCerrar"]')), 'el menú dice que no está abierta y no ofrece cerrarla');
+    ok(await p3.$eval('#os-root .os-ditem[data-mod="direccion"] .os-dlabel', e => getComputedStyle(e).opacity === '0'), 'con el menú abierto no sale el nombre encima');
+    await esperar(200);
+    await p3.screenshot({ path: `${CAPTURAS}/dock-insignia.png`, clip: { x: 0, y: 550, width: 1600, height: 350 } });
+    await p3.click('#os-dmenu [data-action="osAbrir"]');
+    await p3.waitForSelector('#os-win-direccion');
+    await p3.click('#os-dock .os-ditem[data-mod="direccion"]', { button: 'right' });
+    await p3.waitForSelector('#os-dmenu [data-action="osCerrar"]');
+    ok(!!(await p3.$('#os-dmenu [data-action="osMinimizar"]')) && (await p3.textContent('#os-dmenu')).includes('Delante'), 'abierta y delante: el menú ofrece Minimizar y Cerrar');
+    await p3.click('#os-dmenu [data-action="osMinimizar"]');
+    await p3.waitForSelector('#os-win-direccion', { state: 'hidden' });
+    ok(await p3.$eval('#os-dock .os-ditem[data-mod="direccion"]', e => e.classList.contains('minimizada')), 'minimizada: el icono la marca (punto hueco)');
+    ok(e3.length === 0, `sin errores JS con insignias${e3.length ? ': ' + e3.join(' | ') : ''}`);
+    await ctx3.close();
   }
 } catch (e) {
   console.error(e);

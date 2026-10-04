@@ -565,7 +565,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   línea duotono en hexágono (`iconoHex(id)`), colores por CSS (`.os-ico-*`);
   pantalla nueva = su dibujo en `DIBUJOS` (si no, sale su inicial). OJO: tras
   un arrastre el clic que sigue se descarta, pero solo en ese mismo turno (si
-  no llega, no puede quedarse esperando al siguiente). Arnés `verify-dock.mjs`.
+  no llega, no puede quedarse esperando al siguiente). Aspecto (2026-10-04):
+  bandeja de cristal, iconos con relieve que se hunden al pulsar, hexágono
+  pequeño debajo (verde = delante, hueco = minimizada), nombre con flecha y
+  menú del clic derecho con estado y acciones (Abrir/Traer delante o
+  Minimizar, Cerrar, Mantener/Quitar; con él abierto el dock vuelve al reposo).
+  INSIGNIAS: el `contador()` de cada pantalla del dock (al pintar y cada
+  3 min); solo si su tono es `aviso`/`mal`, como un hexágono ámbar/rojo SIN
+  número (el valor no siempre es «lo pendiente»), y el nombre lo cuenta.
+  Arnés `verify-dock.mjs`.
 - **Widgets movibles** del modo escritorio: se arrastran por cualquier punto
   que no sea un enlace o botón; al mover el primero se congela el sitio de
   todos (`Escritorio.widgets`, por escritorio, en la misma disposición de
