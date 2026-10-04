@@ -67,6 +67,20 @@ const ICONO_WIN = {
   restaurar: '<rect x="2.8" y="5.2" width="8" height="8" rx="1.8"/><path d="M5.6 5.2V4.6a1.8 1.8 0 0 1 1.8-1.8h4a1.8 1.8 0 0 1 1.8 1.8v4a1.8 1.8 0 0 1-1.8 1.8h-.6"/>',
   cerrar: '<path d="M4 4l8 8M12 4l-8 8"/>',
 };
+// Iconos de la barra (línea de 16 px, trazo del texto), los mismos de las ventanas.
+const ICONO_BARRA: Record<string, string> = {
+  buscar: '<circle cx="7" cy="7" r="4.3"/><path d="M10.2 10.2 13.5 13.5"/>',
+  campana: '<path d="M4 11.5V7.2a4 4 0 0 1 8 0v4.3l1.2 1.3H2.8z"/><path d="M6.6 14.2a1.5 1.5 0 0 0 2.8 0"/>',
+  luna: '<path d="M13 9.6A5.3 5.3 0 0 1 6.4 3a5.3 5.3 0 1 0 6.6 6.6z"/>',
+  sol: '<circle cx="8" cy="8" r="2.8"/><path d="M8 1.8v1.4M8 12.8v1.4M1.8 8h1.4M12.8 8h1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/>',
+  mas: '<path d="M8 3.5v9M3.5 8h9"/>',
+  renombrar: '<path d="M10.5 3 13 5.5 6 12.5H3.5V10z"/>',
+  eliminar: '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5"/>',
+  widgets: '<rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1"/><rect x="9" y="9" width="4.5" height="4.5" rx="1"/>',
+  clasica: '<rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M5.5 3v10"/>',
+  salir: '<path d="M9.5 3H13v10H9.5M7 5.2 4.2 8 7 10.8M4.2 8H10"/>',
+};
+const svgBarra = (n: string, clase = '') => `<svg class="os-bico ${clase}" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${ICONO_BARRA[n]}</svg>`;
 const svgWin = (d: string, clase = '') => `<svg class="os-wico ${clase}" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${d}</svg>`;
 const sinMovimiento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -101,7 +115,7 @@ function cargarEstado() {
     if (g?.escritorios?.length) _estado = { activo: Math.min(g.activo ?? 0, g.escritorios.length - 1), escritorios: g.escritorios };
   } catch { /* disposición corrupta: se empieza de cero */ }
 }
-function guardarEstado() { guardar(claveDisposicion(), JSON.stringify(_estado)); }
+function guardarEstado() { guardar(claveDisposicion(), JSON.stringify(_estado)); contarVentanas(); }
 const escritorio = () => _estado.escritorios[_estado.activo];
 const ventanaDe = (id: string) => escritorio().ventanas.find(v => v.id === id);
 
@@ -118,21 +132,25 @@ export function pintarEscritorio(raiz: HTMLElement) {
   el.innerHTML = `
     <header id="os-barra">
       <a class="os-marca" href="#/inicio"><span class="hex" aria-hidden="true">OK</span>Ok Computer <b>Hub</b></a>
+      <span id="os-frente" class="os-frente" aria-live="polite"></span>
       <nav id="os-escritorios" aria-label="Escritorios"></nav>
-      <button class="os-buscar" data-action="abrirBuscador" aria-label="Buscar o pedir algo"><span aria-hidden="true">🔎</span><span>Buscar o pedir algo a Claude…</span><kbd>Ctrl</kbd><kbd>K</kbd></button>
+      <button class="os-buscar" data-action="abrirBuscador" aria-label="Buscar o pedir algo">${svgBarra('buscar')}<span>Buscar o pedir algo a Claude…</span><kbd>Ctrl</kbd><kbd>K</kbd></button>
       <div class="os-barra-der">
-        <span id="os-sync" class="chip">Sync…</span>
-        <button id="os-bell" class="os-bbtn" data-action="osAvisos" aria-label="Avisos">🔔<span id="os-bell-n" class="os-badge" hidden></span></button>
-        <button class="os-bbtn" data-action="alternarTema" aria-label="Tema claro u oscuro">🌓</button>
-        <span id="os-reloj" class="os-reloj"></span>
+        <span id="os-sync" class="chip"><i class="os-sync-punto"></i>Sync…</span>
+        <button id="os-bell" class="os-bbtn" data-action="osAvisos" aria-label="Avisos" title="Centro de avisos">${svgBarra('campana')}<span id="os-bell-n" class="os-badge" hidden></span></button>
+        <button class="os-bbtn os-tema" data-action="alternarTema" aria-label="Tema claro u oscuro" title="Cambiar a tema noche o día">${svgBarra('luna', 'os-bico-luna')}${svgBarra('sol', 'os-bico-sol')}</button>
+        <a id="os-reloj" class="os-reloj" href="#/calendario"></a>
         <button class="hex os-avatar" data-action="osMenu" aria-label="Menú de usuario" title="${esc(u?.email)}">${esc(ini)}</button>
         <div id="os-menu" class="os-menu" hidden>
-          <div class="os-menu-cab"><b>${esc(u?.nombre ?? '')}</b><span>${esc(u?.email ?? '')}</span></div>
-          <button data-action="osRenombrarEscritorio">Renombrar este escritorio</button>
-          <button data-action="osEliminarEscritorio">Eliminar este escritorio</button>
-          <button data-action="osRecolocarWidgets">Recolocar los widgets</button>
-          <button data-action="osSalir">Volver a la app clásica</button>
-          <button class="os-menu-peligro" data-action="salir">Salir</button>
+          <div class="os-menu-cab os-menu-yo"><span class="hex os-avatar os-avatar-g" aria-hidden="true">${esc(ini)}</span><span><b>${esc(u?.nombre ?? '')}</b><span>${esc(u?.email ?? '')}</span></span></div>
+          <button data-action="osNuevoEscritorio">${svgBarra('mas')}Nuevo escritorio</button>
+          <button data-action="osRenombrarEscritorio">${svgBarra('renombrar')}Renombrar este escritorio</button>
+          <button data-action="osEliminarEscritorio">${svgBarra('eliminar')}Eliminar este escritorio</button>
+          <div class="os-menu-sep" role="separator"></div>
+          <button data-action="osRecolocarWidgets">${svgBarra('widgets')}Recolocar los widgets</button>
+          <button data-action="osSalir">${svgBarra('clasica')}Volver a la app clásica</button>
+          <div class="os-menu-sep" role="separator"></div>
+          <button class="os-menu-peligro" data-action="salir">${svgBarra('salir')}Salir</button>
         </div>
       </div>
     </header>
@@ -174,8 +192,17 @@ function quitarEscritorio() {
 
 function pintarEscritorios() {
   document.getElementById('os-escritorios')!.innerHTML = _estado.escritorios.map((e, i) =>
-    `<button class="os-esc ${i === _estado.activo ? 'activo' : ''}" data-action="osEscritorio" data-p0="${i}">${esc(e.nombre)}</button>`).join('')
-    + `<button class="os-esc os-esc-mas" data-action="osNuevoEscritorio" aria-label="Nuevo escritorio">+</button>`;
+    `<button class="os-esc ${i === _estado.activo ? 'activo' : ''}" data-action="osEscritorio" data-p0="${i}">${esc(e.nombre)}<span class="os-esc-n" data-esc="${i}"></span></button>`).join('')
+    + `<button class="os-esc os-esc-mas" data-action="osNuevoEscritorio" aria-label="Nuevo escritorio" title="Nuevo escritorio">${svgBarra('mas')}</button>`;
+  contarVentanas();
+}
+// Cuántas ventanas tiene cada escritorio (sin repintar los botones: solo el número).
+function contarVentanas() {
+  document.querySelectorAll<HTMLElement>('#os-escritorios .os-esc-n').forEach(n => {
+    const v = _estado.escritorios[Number(n.dataset.esc)]?.ventanas.length ?? 0;
+    n.textContent = v ? String(v) : '';
+    n.title = v ? `${v} ventana${v === 1 ? '' : 's'}` : '';
+  });
 }
 
 const delHub = (m: Modulo) => !m.enlaceExterno;
@@ -230,6 +257,8 @@ function pintarDock() {
     + '<span class="os-dsep" aria-hidden="true"></span>'
     + fijo('osClaude', '', iconoHex('claude', 'Claude', 'os-ico-claude'), 'Pedir a Claude', 'os-claude')
     + fijo('osLanzador', ' data-p0="1"', iconoHex('todas', 'Todas'), 'Todas las pantallas');
+  const fr = document.getElementById('os-frente');
+  if (fr) fr.textContent = frente ? (frente === 'inicio' ? 'Oki' : modulo(frente)?.titulo ?? '') : '';
   const dock = document.getElementById('os-dock');
   if (!dock) return;
   // Mismo HTML, mismo DOM: rehacerlo entre pointerdown y pointerup se come el clic.
@@ -247,9 +276,14 @@ function pintarLanzador() {
     + grupo('Del hub', lista.filter(delHub)) + grupo('En la app actual', lista.filter(m => !delHub(m)));
 }
 
+// Hora y, al lado, el día; lleva al calendario.
 function reloj() {
   const el = document.getElementById('os-reloj');
-  if (el) el.textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  if (!el) return;
+  const d = new Date();
+  const dia = d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' }).replace('.', '');
+  el.innerHTML = `<small>${esc(dia)}</small><b>${esc(d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }))}</b>`;
+  el.title = `${d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} · abrir el calendario`;
 }
 
 // ── Ventanas ────────────────────────────────────────────────────────────────
@@ -796,7 +830,7 @@ async function chipSync() {
   const s = data?.[0];
   const min = s?.ultima_ok ? (Date.now() - new Date(s.ultima_ok).getTime()) / 60000 : Infinity;
   el.className = `chip ${!s?.ultima_ok || min > 60 ? 'mal' : s.ultimo_error || min > 30 ? 'aviso' : 'ok'}`;
-  el.textContent = s?.ultima_ok ? `Sync ${hace(s.ultima_ok)}` : 'Sin sync';
+  el.innerHTML = `<i class="os-sync-punto"></i>${esc(s?.ultima_ok ? `Sync ${hace(s.ultima_ok)}` : 'Sin sync')}`;
   el.title = s?.ultimo_error ?? 'Sincronización con la app actual';
 }
 
@@ -967,6 +1001,7 @@ registrarAcciones({
     pintarEscritorio(_raiz!);
   },
   osNuevoEscritorio() {
+    document.getElementById('os-menu')!.hidden = true;
     const nombre = prompt('Nombre del escritorio nuevo', `Escritorio ${_estado.escritorios.length + 1}`)?.trim();
     if (!nombre) return;
     _estado.escritorios.push({ nombre, ventanas: [] });
@@ -999,6 +1034,7 @@ registrarAcciones({
   osAvisos() {
     const a = document.getElementById('os-avisos')!;
     a.hidden = !a.hidden;
+    document.getElementById('os-bell')?.setAttribute('aria-expanded', String(!a.hidden));
     if (!a.hidden) pintarCentroAvisos();
   },
   osAvisosMios(v: string) { _soloMios = v === '1'; pintarCentroAvisos(); },

@@ -21,6 +21,12 @@ código el 2026-09-28. Convive con el hub clásico y no lo toca.
   avatar renombra o elimina), buscador **Ctrl+K**, chip del **sync** con la
   app (`hub.sync_estado`, verde / ámbar / rojo por antigüedad), **campana** con
   el número de avisos, tema día/noche, reloj y avatar.
+  Desde el 2026-10-04: cristal como el dock y con iconos de línea (sin
+  emojis); junto a la marca, «› Proyectos» con la ventana de delante (como la
+  barra de macOS; se esconde por debajo de 1280 px); cada escritorio con su
+  número de ventanas; el sync con un hexágono de su color (late en rojo); el
+  tema enseña luna de día y sol de noche; el reloj lleva el día y abre el
+  calendario, y el menú del avatar trae iconos y «Nuevo escritorio».
 - **El escritorio es el panel** (widgets, refrescados cada minuto). Cada
   widget se **arrastra** a cualquier sitio (cogiéndolo por donde no haya un
   enlace o botón); el sitio se guarda por escritorio y «Recolocar los widgets»
