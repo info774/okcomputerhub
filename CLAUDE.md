@@ -524,9 +524,25 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   entrada de Vite, `src/contrato/`) + función `firma-contrato` (SIN_JWT, por el
   token; sin el área del hub contesta 409); al firmar baja plan, cuota NETA y
   frecuencia a la sede salvo que ya se cobre. El pago tras firmar (`pagar`)
-  espera al motor de Stripe. `sync-app` repasa tablas sueltas con
+  usa el alta de Stripe del cobro (abajo), solo tras el corte. `sync-app` repasa tablas sueltas con
   `{ modo: 'completo', tablas: [...] }` (así entra una tabla auditada nueva).
   Arnés `verify-contratos.mjs`.
+- **Cobro del mantenimiento** (paridad bloque 4, tanda 3, 2026-10-04,
+  PREPARADO Y SIN CONECTAR, decisión de Fran): `#/mantenimientos/cobros`
+  (`cobros.ts`, solo admin; `/sede/<id>`, `/cambiar/<id>`, `/abonar/<id>`,
+  `/ajustes`) y las funciones `stripe-suscripcion` (admin) y `stripe-webhook`
+  (SIN_JWT, firma de Stripe), portadas de la app CASI LITERAL: hablan con la
+  base por `dbHub()` de `_shared/sb-hub.ts` (supabase-js sobre `hub`; OJO, sin
+  «embeds»: el espejo no tiene claves foráneas, la sede y su cliente se leen
+  aparte) y con Zoho por `_shared/zoho-ctx.ts` (el Zoho propio del hub). Con
+  el área `mantenimiento` de la app NO hacen nada (409 / el webhook contesta
+  200 sin tocar): cobra y factura la app, y el webhook del hub NO se registra
+  en Stripe hasta el corte (PENDIENTE_FRAN §8 bis), o habría dos facturas por
+  cuota. Las series MANT-/ABONO- solo salen de `hub.siguiente_numero_*()` (que
+  exigen el área) y sus contadores son espejo, para seguir la numeración de
+  la app. Arreglado al portar: el import que rompía «Emitir en Zoho», la
+  frecuencia sin normalizar en «Cambiar plan» y la forma de pago
+  («Stripe <frecuencia>»). Arnés `verify-cobros.mjs`.
 - **Inventario** (`src/modulos/inventario/`, `#/inventario`, 2026-10-02): el
   stock POR UBICACIÓN (furgonetas, tienda) y «Todas» sumando el mismo producto
   por `catalogo_id` o por nombre (la regla de «Total» de `furgonetas.js`), el

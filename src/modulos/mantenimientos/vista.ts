@@ -9,6 +9,7 @@
 //   #/mantenimientos/checklist  tareas del plan del periodo (checklist.ts)
 //   #/mantenimientos/seguimiento el kanban comercial (seguimiento.ts)
 //   #/mantenimientos/plantillas los planes, sus tareas y los checklists de visita (planes.ts)
+//   #/mantenimientos/cobros/…   el cobro de las cuotas: Stripe + Zoho, solo admin (cobros.ts)
 //   #/mantenimientos/documentos los contratos y sus renovaciones (documentos.ts)
 //   #/mantenimientos/contrato/… generar, editar, enlace y firmado (contrato.ts)
 // Reglas de la app (mant-estados.js) en datos.ts. Prefijo de ids: mt-.
@@ -25,7 +26,7 @@ import {
   fechaCorta, ROLES_SENSIBLES, textoCodigo, mesesDe, type Contrato, COLS_CONTRATO, contratoDeSede, renovacionesProximas,
 } from './datos';
 
-export const PESTANAS: [string, string][] = [['', 'Resumen'], ['locales', 'Locales'], ['checklist', 'Checklist'], ['seguimiento', 'Seguimiento'], ['plantillas', 'Plantillas'], ['documentos', 'Documentos']];
+export const PESTANAS: [string, string][] = [['', 'Resumen'], ['locales', 'Locales'], ['cobros', 'Cobros'], ['checklist', 'Checklist'], ['seguimiento', 'Seguimiento'], ['plantillas', 'Plantillas'], ['documentos', 'Documentos']];
 const PASARELA: Record<Pasarela, [string, string]> = {
   stripe: ['Stripe', 'bien'], espera: ['Esperando el primer pago', 'aviso'], zoho: ['Zoho (cartera vieja)', ''], nadie: ['Sin domiciliar', 'aviso'],
 };
@@ -109,7 +110,8 @@ function filtradas(): Sede[] {
 /** Las pestañas; «Documentos» lleva las renovaciones a 60 días sin avisar (`renov` la pone al día quien las acaba de contar). */
 export const navPestanas = (actual: string, renov?: number) => {
   if (renov != null) _renovSinAvisar = renov;
-  return `<nav class="pestanas" role="tablist" aria-label="Mantenimientos">${PESTANAS.map(([k, n]) =>
+  // Cobros es dinero: solo para administración (como la app, que no la enseña al técnico).
+  return `<nav class="pestanas" role="tablist" aria-label="Mantenimientos">${PESTANAS.filter(([k]) => k !== 'cobros' || esAdmin()).map(([k, n]) =>
     `<a role="tab" class="${k === actual ? 'activo' : ''}" aria-selected="${k === actual}" href="#/mantenimientos${k ? `/${k}` : ''}">${n}${k === 'documentos' && _renovSinAvisar
       ? ` <span class="insignia" title="Renovaciones en los próximos 2 meses sin avisar">${_renovSinAvisar}</span>` : ''}</a>`).join('')}</nav>`;
 };
@@ -252,6 +254,7 @@ export async function pintarMantenimientos(el: HTMLElement, params: string[] = [
   if (p === 'seguimiento') return (await import('./seguimiento')).pintarSeguimiento(el, id);
   if (p === 'plantillas') return (await import('./planes')).pintarPlanes(el, id, sub);
   if (p === 'documentos') return (await import('./documentos')).pintarDocumentos(el);
+  if (p === 'cobros') return (await import('./cobros')).pintarCobros(el, id, sub);
   if (p === 'contrato' && id) return (await import('./contrato')).pintarContrato(el, id, sub);
   el.innerHTML = '<p class="cargando">Cargando…</p>';
   const [error, escribe] = await Promise.all([cargar(), esDelHub('locales')]);

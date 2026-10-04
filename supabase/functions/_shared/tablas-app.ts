@@ -74,6 +74,20 @@ export const TABLAS_APP: Record<string, TablaApp> = {
   checklist_plantillas: { auditada: false, columnas: c('id plan nombre items activa created_at') },
   checklist_respuestas: { auditada: false, columnas: c('id trabajo_id plantilla_id plantilla_nombre respuestas completado tecnico_id created_at') },
   mantenimientos_programados: { auditada: true, columnas: c('id created_at cliente_id local_id plan proxima_fecha ultimo_generado activo contacto_id') },
+  // Motor de cobro del mantenimiento (paridad bloque 4, tanda 3): ninguna está en
+  // el audit_log de la app. Los CONTADORES de las series van también, para que el
+  // hub siga la numeración MANT-/ABONO- donde la deje la app al cortar.
+  mant_config: { auditada: false, columnas: c(`id updated_at serie_prefijo serie_digitos precio_incluye_impuesto zoho_tax_id
+    zoho_tax_percent zoho_cuenta_cobro_id zoho_notas facturar_automatico moneda enviar_factura_email pago_metodos serie_prefijo_abono`) },
+  mant_serie: { auditada: false, clave: 'anio', columnas: c('anio contador') },
+  mant_serie_abonos: { auditada: false, clave: 'anio', columnas: c('anio contador') },
+  mant_facturas: { auditada: false, columnas: c(`id created_at updated_at local_id cliente_id plan stripe_invoice_id stripe_subscription_id
+    stripe_customer_id stripe_payment_intent_id stripe_hosted_url stripe_pdf_url periodo_inicio periodo_fin fecha_emision importe
+    base_imponible impuesto moneda estado intento error_pago numero_serie zoho_invoice_id zoho_invoice_number zoho_estado zoho_error
+    zoho_at email_enviado_at email_destinatarios tipo saldo_aplicado`) },
+  mant_abonos: { auditada: false, columnas: c(`id created_at updated_at factura_id local_id cliente_id numero_serie motivo fecha_emision
+    importe base_imponible impuesto moneda zoho_creditnote_id zoho_creditnote_number zoho_estado zoho_error zoho_at
+    stripe_balance_txn_id stripe_error creado_por`) },
   // Contratos de mantenimiento con su firma (paridad bloque 4, tanda 2); en el audit_log de la app.
   contratos: { auditada: true, columnas: c(`id created_at token plan_nombre cliente_id local_id contacto_id cliente_nombre cliente_nif
     direccion municipio precio_mensual cuerpo_html estado firmante_nombre firma_img firmante_ip firmante_user_agent firmado_at
