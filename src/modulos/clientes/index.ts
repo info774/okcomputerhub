@@ -22,6 +22,7 @@ import {
   type Cliente, type Crm, type Evento, type Oportunidad,
   TIPOS_ACTIVIDAD, ICONO_EVENTO, CLASE_TONO, eur, clases, olvidarClases, telWhatsApp, enApp,
 } from '../ventas/datos';
+import { enlaceHistorial } from '../../ui/historial';
 
 const PESTANAS = [['resumen', 'Resumen'], ['actividad', 'Actividad'], ['sedes', 'Sedes'], ['contactos', 'Contactos'], ['oportunidades', 'Oportunidades']] as const;
 let _lista: Cliente[] = [];
@@ -231,7 +232,7 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
       <div class="acciones">${c.telefono ? `<a class="btn secundario" href="tel:${esc(c.telefono)}">📞 ${esc(c.telefono)}</a>` : ''}
         ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬</a>` : ''}
         ${c.email ? `<a class="btn secundario" href="mailto:${esc(c.email)}">✉️</a>` : ''}
-        ${botones}</div></div>
+        ${botones}${enlaceHistorial('clientes', c.id)}</div></div>
     ${deBaja ? '<p class="aviso">Este cliente está <strong>de baja</strong>: no sale en listados ni buscadores, pero no se ha borrado nada.</p>' : ''}
     ${escribe ? '' : avisoSoloLectura('Los datos del cliente')}
     <p class="nota">${[c.nif, c.direccion].filter(Boolean).map(x => esc(x)).join(' · ')}</p>

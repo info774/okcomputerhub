@@ -6,6 +6,7 @@ import { instalarDispatcher, registrarAcciones } from './core/dispatcher';
 import { sesionInicial, alCambiarSesion, entrarConCorreo, entrarConGoogle, salir, emailSesion } from './core/auth';
 import { API } from './core/api';
 import { setUsuario, type Usuario } from './core/estado';
+import { esEmpleado } from './core/empleado';
 import { registrarModulos, iniciarRouter } from './core/router';
 import { MODULOS } from './modulos';
 import { aplicarTema, alternarTema } from './shell/tema';
@@ -69,6 +70,11 @@ async function arrancarUnaVez() {
   }
   setUsuario(data[0]);
   arrancado = true;
+  // Modo empleado: en el móvil, el técnico entra a «Hoy» (como el dashboard
+  // «Mi jornada» de la app) si no viene a una pantalla concreta.
+  if (esEmpleado() && matchMedia('(max-width: 767px)').matches && !location.hash.replace(/^#\/?/, '')) {
+    history.replaceState(null, '', '#/hoy');
+  }
   pintarShell(raiz);
   iniciarRouter(mostrarModulo);
   tourSiEsNuevo();
