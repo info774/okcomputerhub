@@ -6,17 +6,21 @@
 // Nada sale solo hacia un cliente: Oki PROPONE y la persona manda.
 import { registrarAcciones } from '../core/dispatcher';
 import { llamarFuncion } from '../core/funciones';
-import { esc, hace } from '../ui/dom';
+import { ir } from '../core/router';
+import { esc, hace, toast } from '../ui/dom';
+import { dejarBorrador } from '../ui/borrador';
 
 interface Conv {
   id: string; telefono: string; nombre: string; perfil: string | null; sede: string | null;
+  cliente_id: string | null; local_id: string | null; contacto_id: string | null;
+  plan?: string | null; estado_pago?: string | null;
   ticket: { id: string; numero: number; estado: string } | null;
   ultimo: string; ultimo_at: string | null; ultimo_entrante_at: string | null;
   sin_leer: number; pendiente: boolean; ventana: boolean;
 }
 interface Msg {
   id: string; created_at: string; direccion: 'entrante' | 'saliente'; tipo: string; texto: string | null;
-  media_url: string | null; media_nombre: string | null; media_descripcion: string | null;
+  media_id: string | null; media_url: string | null; media_nombre: string | null; media_descripcion: string | null;
   estado: string; error: string | null; usuario: string | null; automatico: boolean;
 }
 
@@ -53,6 +57,8 @@ export function pintarWhatsapp(raiz: HTMLElement) {
       <div id="wa-lista" class="wa-lista"></div>
       <div id="wa-hilo-vista" class="wa-hilo-vista" hidden>
         <div class="wa-convcab" id="wa-convcab"></div>
+        <div class="wa-atajos" id="wa-atajos"></div>
+        <div class="wa-panel" id="wa-panel" hidden></div>
         <div class="wa-hilo" id="wa-hilo"><div id="wa-msgs" class="wa-msgs"></div></div>
         <div id="wa-oki"></div>
         <div class="wa-pie">
@@ -116,6 +122,7 @@ async function abrir(id: string) {
   $id('wa-hilo-vista')!.hidden = false;
   $id('wa-err')!.textContent = '';
   $id('wa-oki')!.innerHTML = '';
+  cerrarPanel();
   ($id('wa-in') as HTMLTextAreaElement).value = '';
   _vistos = new Set();
   pintarCabConv();
@@ -167,8 +174,54 @@ function pintarCabConv() {
   campo.placeholder = !envio ? 'Falta conectar el envío de WhatsApp en el hub'
     : !c.ventana ? 'Fuera de las 24 h: primero hay que mandar la plantilla' : 'Escribe la respuesta…';
   ($id('wa-env') as HTMLButtonElement).disabled = bloqueado;
+  pintarAtajos();
   pintarOki();
 }
+
+// Chip del contrato de la sede (chipPlan de la app): el plan y, si va torcido,
+// el estado de pago. Que se vea que NO tiene contrato es tan útil como ver cuál.
+function chipPlan(c: Conv) {
+  const plan = (c.plan ?? '').trim();
+  if (!plan || plan === 'Sin mantenimiento') return '<span class="chip" title="La sede no tiene plan de mantenimiento">Sin mantenimiento</span>';
+  const pago = (c.estado_pago ?? '').trim();
+  return `<span class="chip bien" title="Plan de mantenimiento de la sede">${esc(plan)}</span>`
+    + (pago && pago !== 'Al corriente' ? `<span class="chip aviso" title="Estado de pago del mantenimiento">${esc(pago)}</span>` : '');
+}
+
+// Enlaces rápidos de la conversación (como la cabecera de la bandeja de la app):
+// la ficha, el plan, el acceso remoto y las altas con cliente y sede puestos.
+function pintarAtajos() {
+  const c = actual!;
+  const el = $id('wa-atajos')!;
+  el.innerHTML = [
+    c.cliente_id ? `<a class="chip-boton" href="#/clientes/${esc(c.cliente_id)}">👤 Cliente</a>` : '<span class="chip aviso" title="El teléfono no está en ninguna ficha">Sin cliente</span>',
+    c.local_id ? `<a class="chip-boton" href="#/sitios/${esc(c.local_id)}">📍 Sede</a>${chipPlan(c)}` : '',
+    c.local_id ? '<button type="button" class="chip-boton" data-action="waRemoto">🖥 Remoto</button>' : '',
+    '<button type="button" class="chip-boton" data-action="waTicket">🎫 Ticket</button>',
+    c.cliente_id ? '<button type="button" class="chip-boton" data-action="waPresupuesto">📄 Presupuesto</button>' : '',
+    c.cliente_id && envio ? '<button type="button" class="chip-boton" data-action="waDocumentos" aria-expanded="false">📎 Factura / presupuesto</button>' : '',
+  ].filter(Boolean).join('');
+}
+
+function abrirPanel(html: string) {
+  const p = $id('wa-panel')!;
+  p.innerHTML = `${html}<button type="button" class="wa-panel-x" data-action="waCerrarPanel" aria-label="Cerrar">✕</button>`;
+  p.hidden = false;
+}
+function cerrarPanel() {
+  const p = $id('wa-panel');
+  if (p) { p.hidden = true; p.innerHTML = ''; }
+}
+
+// El último mensaje de TEXTO del cliente, de arranque del aviso (una foto solo aporta «📷 Foto»).
+function ultimoTextoCliente(): string {
+  return [...mensajes].reverse().find(m => m.direccion === 'entrante' && m.texto && !m.media_id)?.texto ?? '';
+}
+
+interface Remoto { tipo: 'anydesk' | 'rustdesk'; id: string; nombre: string }
+let _remotos: Remoto[] = [];
+interface Doc { tipo: 'factura' | 'presupuesto'; id: string; numero: string }
+let _docs: Doc[] = [];
 
 function pintarOki(propuesta?: string | null, motivo?: string) {
   const el = $id('wa-oki')!;
@@ -209,9 +262,17 @@ function pintarMensajes() {
     dia = d;
     const hora = new Date(m.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     const quien = m.direccion === 'saliente' ? (m.automatico ? 'Bot' : (m.usuario ?? '')) : '';
+    // Con copia en Storage (media_url, la guarda el webhook de la app) la foto se
+    // ve en la conversación; si no, se pide a Meta (que la borra a las pocas semanas).
+    const etiqueta = m.tipo === 'image' ? 'foto' : m.tipo === 'video' ? 'vídeo' : 'archivo';
+    const desc = m.media_descripcion ? `<br><i>${esc(m.media_descripcion)}</i>` : '';
     const adjunto = m.media_url
-      ? `<a href="${esc(m.media_url)}" target="_blank" rel="noopener">${esc(m.media_nombre || `[${m.tipo}]`)}</a>${m.media_descripcion ? `<br><i>${esc(m.media_descripcion)}</i>` : ''}`
-      : '';
+      ? (m.tipo === 'image'
+        ? `<a href="${esc(m.media_url)}" target="_blank" rel="noopener"><img class="wa-foto" src="${esc(m.media_url)}" alt="Foto del cliente" loading="lazy"></a>${desc}`
+        : `<a href="${esc(m.media_url)}" target="_blank" rel="noopener">${m.tipo === 'video' ? '🎬' : '📎'} ${esc(m.media_nombre || `Ver ${etiqueta}`)}</a>${desc}`)
+      : m.direccion === 'entrante' && m.media_id
+        ? `<button type="button" class="chip-boton" data-action="waMedia" data-p0="${esc(m.id)}">${m.tipo === 'image' ? '🖼' : '📎'} Ver ${etiqueta}</button>${desc}`
+        : m.media_nombre ? `📎 ${esc(m.media_nombre)}` : '';
     const texto = m.texto ? esc(m.texto) : (adjunto ? '' : `[${esc(m.tipo)}]`);
     const nuevo = !primera && !_vistos.has(m.id);
     return `${sep}<div class="wa-msg ${m.direccion === 'saliente' ? 'yo' : 'ellos'}${m.estado === 'fallido' ? ' fallido' : ''}${nuevo ? ' nuevo' : ''}">
@@ -325,4 +386,79 @@ registrarAcciones({
     campo.focus();
   },
   waDescartar: () => { $id('wa-oki')!.innerHTML = ''; },
+  waCerrarPanel: cerrarPanel,
+  // Ticket con cliente, sede y contacto de la conversación y el último texto del cliente.
+  waTicket() {
+    const c = actual;
+    if (!c) return;
+    const texto = ultimoTextoCliente();
+    dejarBorrador('ticket', {
+      cliente_id: c.cliente_id, local_id: c.local_id, contacto_id: c.contacto_id, canal: 'whatsapp',
+      titulo: texto ? texto.replace(/\s+/g, ' ').slice(0, 70) : '', descripcion: texto,
+    });
+    ir('tickets', 'nuevo');
+  },
+  waPresupuesto() {
+    const c = actual;
+    if (!c?.cliente_id) return;
+    if (c.local_id) ir('presupuestos', 'nuevo', 'l', c.local_id); else ir('presupuestos', 'nuevo', 'c', c.cliente_id);
+  },
+  // AnyDesk de la ficha + RustDesk de Breeze: uno se abre, varios se eligen (waRemoto de la app).
+  async waRemoto() {
+    const c = actual;
+    if (!c?.local_id) return;
+    const { remotosDe, abrirRemoto } = await import('../modulos/sitios/equipamiento');
+    _remotos = await remotosDe(c.local_id);
+    if (actual?.id !== c.id) return;
+    if (!_remotos.length) { toast(`${c.sede ?? 'La sede'} no tiene ningún acceso remoto guardado (AnyDesk o RustDesk)`, 'error'); return; }
+    if (_remotos.length === 1) { await abrirRemoto(_remotos[0], c.local_id); return; }
+    abrirPanel(`<p class="wa-nota">¿A qué equipo de ${esc(c.sede ?? 'la sede')}?</p>${_remotos.map((r, i) => `
+      <button type="button" class="btn secundario" data-action="waRemotoAbrir" data-p0="${i}">${r.tipo === 'anydesk' ? 'AnyDesk' : 'RustDesk'} · ${esc(r.nombre)} <small class="nota">${esc(r.id)}</small></button>`).join('')}`);
+  },
+  async waRemotoAbrir(i: string) {
+    const r = _remotos[Number(i)], c = actual;
+    if (!r || !c?.local_id) return;
+    const { abrirRemoto } = await import('../modulos/sitios/equipamiento');
+    await abrirRemoto(r, c.local_id);
+    cerrarPanel();
+  },
+  async waDocumentos() {
+    const c = actual;
+    if (!c) return;
+    abrirPanel('<p class="wa-nota">Buscando sus facturas y presupuestos…</p>');
+    const { data, error } = await llamarFuncion<{ documentos: Doc[]; motivo?: string; plantilla?: boolean }>('whatsapp', { accion: 'documentos', conversacion_id: c.id });
+    if (actual?.id !== c.id) return;
+    _docs = data?.documentos ?? [];
+    if (error || data?.motivo || !_docs.length) { abrirPanel(`<p class="wa-nota">${esc(error ?? data?.motivo ?? 'Este cliente no tiene facturas ni presupuestos en Zoho.')}</p>`); return; }
+    const aviso = !c.ventana ? `<p class="wa-nota">${data?.plantilla ? 'Fuera de las 24 h: saldrá con la plantilla de documentos de Meta.' : 'Fuera de las 24 h hace falta la plantilla de documentos de Meta, y aún no está puesta en el hub (WHATSAPP_PLANTILLA_DOCUMENTO).'}</p>` : '';
+    abrirPanel(`<p class="wa-nota">Mandar por WhatsApp a ${esc(c.nombre)}:</p>${aviso}<div class="wa-docs">${_docs.map((d, i) => `
+      <button type="button" class="btn secundario" data-action="waMandarDoc" data-p0="${i}" ${!c.ventana && !data?.plantilla ? 'disabled' : ''}>${d.tipo === 'factura' ? '🧾 Factura' : '📄 Presupuesto'} ${esc(d.numero)}</button>`).join('')}</div>`);
+  },
+  async waMandarDoc(i: string) {
+    const d = _docs[Number(i)], c = actual;
+    if (!d || !c || enviando) return;
+    if (!confirm(`¿Mandar a ${c.nombre} ${d.tipo === 'factura' ? 'la factura' : 'el presupuesto'} ${d.numero} por WhatsApp?`)) return;
+    enviando = true;
+    abrirPanel('<p class="wa-nota"><span class="hex-punto pulso" aria-hidden="true"></span> Bajando el PDF de Zoho y mandándolo…</p>');
+    const { data, error } = await llamarFuncion<{ ok: boolean; mensaje: Msg }>('whatsapp', { accion: 'enviar_documento', conversacion_id: c.id, tipo: d.tipo, zoho_id: d.id }, 60000);
+    enviando = false;
+    if (error || !data?.ok) { abrirPanel(`<p class="wa-err">No se ha enviado: ${esc(error ?? 'error desconocido')}</p>`); void cargarHilo(); return; }
+    cerrarPanel();
+    toast('Enviado por WhatsApp');
+    if (actual?.id === c.id && data.mensaje) { mensajes = [...mensajes, data.mensaje]; pintarMensajes(); }
+  },
+  // Lo que mandó el cliente y la app no copió: se pide a Meta y se abre aparte.
+  async waMedia(msgId: string) {
+    const c = actual;
+    if (!c) return;
+    const w = window.open('', '_blank');
+    const { data, error } = await llamarFuncion<{ data_url: string; mime: string }>('whatsapp', { accion: 'media', conversacion_id: c.id, mensaje_id: msgId }, 40000);
+    if (error || !data?.data_url) { w?.close(); toast(`No se pudo abrir: ${error ?? 'sin fichero'}`, 'error'); return; }
+    if (!w) { toast('El navegador bloqueó la ventana', 'error'); return; }
+    const img = w.document.createElement(data.mime.startsWith('image/') ? 'img' : 'iframe');
+    img.setAttribute('src', data.data_url);
+    img.setAttribute('style', data.mime.startsWith('image/') ? 'max-width:100%' : 'border:0;width:100%;height:100vh');
+    w.document.body.style.margin = '0';
+    w.document.body.appendChild(img);
+  },
 });

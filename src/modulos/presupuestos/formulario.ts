@@ -36,7 +36,7 @@ async function opciones(tabla: 'locales' | 'contactos', clienteId: string | null
   return `<option value="">${vacio}</option>${(data ?? []).map(x => `<option value="${esc(x.id)}" ${x.id === elegida ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}`;
 }
 
-export async function pintarFormulario(el: HTMLElement, id?: string, desde?: { cliente?: string; oportunidad?: string }) {
+export async function pintarFormulario(el: HTMLElement, id?: string, desde?: { cliente?: string; oportunidad?: string; local?: string }) {
   const [escribe, personas] = await Promise.all([esDelHub('presupuestos'), equipo()]);
   let p: any = null;
   if (id) {
@@ -50,10 +50,13 @@ export async function pintarFormulario(el: HTMLElement, id?: string, desde?: { c
   _oportunidad = p?.oportunidad_id ?? opo?.id ?? null;
   _elegidas.clear();
   _tituloAuto = '';
-  const clienteId = p?.cliente_id ?? opo?.cliente_id ?? desde?.cliente ?? null;
+  // Desde una sede (#/presupuestos/nuevo/l/<sede>, p. ej. la conversación de WhatsApp): su cliente y ella.
+  const sede = !p && desde?.local
+    ? (await API.single<{ id: string; cliente_id: string | null }>('locales', { select: 'id,cliente_id', id: `eq.${desde.local}` })).data : null;
+  const clienteId = p?.cliente_id ?? opo?.cliente_id ?? desde?.cliente ?? sede?.cliente_id ?? null;
   const [cli, sedes, contactos, lineas, plantillas] = await Promise.all([
     clienteId ? API.single<{ id: string; nombre: string }>('clientes', { select: 'id,nombre', id: `eq.${clienteId}` }) : Promise.resolve({ data: null }),
-    opciones('locales', clienteId, p?.local_id ?? opo?.local_id ?? null, '— Sin sede —'),
+    opciones('locales', clienteId, p?.local_id ?? opo?.local_id ?? sede?.id ?? null, '— Sin sede —'),
     opciones('contactos', clienteId, p?.contacto_id ?? opo?.contacto_id ?? null, '— Sin contacto —'),
     p ? API.get<any[]>('documento_lineas', { select: 'nombre,cantidad,precio,descuento', presupuesto_id: `eq.${p.id}`, order: 'orden.nullslast,created_at' }) : Promise.resolve({ data: [] }),
     p ? Promise.resolve([]) : plantillasActivas(),

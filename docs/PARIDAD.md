@@ -76,6 +76,13 @@ Fran, 2026-10-03).
    (y de `clientes`): falta lo de Fran (PENDIENTE_FRAN §5 y §8 bis).
 5. **WhatsApp completo**: webhook con menú y horario, medios, plantilla fuera de
    24 h, mandar documentos, enlaces rápidos, de WhatsApp a ticket.
+   Decisiones de Fran (2026-10-04): el webhook y el conector del Agente de Meta,
+   **preparados y sin conectar** (Meta sigue apuntando a la app hasta el cambio
+   de WhatsApp); mandar documentos desde el hub, **igual que contestar** (lo
+   cubre el permiso de escribir en `wa_*` de la app).
+   Tanda 1 HECHA (2026-10-04): bandeja completa (documentos, medios, enlaces
+   rápidos, chip del plan) y «Desde WhatsApp» (pegado o captura → ticket o
+   trabajo).
 6. **Sistema**: usuarios y modo empleado, deshacer, cola offline, historial por
    ficha, configuración, push y APK, aviso de versión.
 7. **Resto**: inventario completo (albaranes, historial, Excel), VeriFactu,
@@ -190,7 +197,7 @@ Fran, 2026-10-03).
 | Facturas de venta desde Zoho | Solo lectura | espejo `hub.zoho_facturas` (+ Enlace «Facturación y cobros») | Listado; credenciales de Zoho. |
 | Facturar trabajos en Zoho (`send-to-zoho-invoice`, `add-to-zoho-invoice`) | Preparado | `#/trabajos/facturar/<ids>` (desde la ficha o marcando en «Por facturar»): factura nueva, añadir a un borrador o presupuesto; función `zoho-ventas` | Corte de `trabajos` y permisos de Zoho. |
 | Asignar cliente a sede suelta al facturar | Preparado | La pantalla de facturar pide el cliente y se lo deja a las sedes sueltas y sus trabajos | Corte. |
-| Factura o presupuesto en PDF por WhatsApp | Falta | — | — |
+| Factura o presupuesto en PDF por WhatsApp | Hecho | Chat de WhatsApp → «📎 Factura / presupuesto» (función `whatsapp`, `enviar_documento`; solo documentos de ese cliente) | Desde la lista de facturas a un teléfono suelto (el hub aún no tiene el listado de facturas). Fuera de 24 h, `WHATSAPP_PLANTILLA_DOCUMENTO` (PENDIENTE_FRAN §1 quater). |
 | Tablero VeriFactu (`modules/verifactu.js`) | Falta | — | Tabla y pantalla. |
 | Facturas de compra (`facturas_compra.js`) | Falta | — | — |
 
@@ -226,10 +233,10 @@ Fran, 2026-10-03).
 | Tonos y avisos del chat | Falta | — | — |
 | Push web y FCM (`push.js`, `send-*-push`) | Falta | — | El hub avisa por Telegram. |
 | Bandeja de notificaciones (`inbox.js`) | Falta | (campana de avisos) | — |
-| Bandeja de WhatsApp: leer y contestar (`wa-bandeja.js`) | Hecho | `shell/whatsapp.ts`, función `whatsapp` | Plantilla fuera de 24 h, documentos, ver medios, enlaces rápidos, chip del plan. |
+| Bandeja de WhatsApp: leer y contestar (`wa-bandeja.js`) | Hecho | `shell/whatsapp.ts`, función `whatsapp`: plantilla fuera de 24 h, documentos de Zoho, fotos en la conversación y «Ver foto» pedida a Meta, enlaces rápidos (Cliente, Sede, Remoto, Ticket, Presupuesto) y chip del plan (2026-10-04) | Vincular un teléfono a una ficha (en la app). |
 | Webhook de WhatsApp: menú, horario, ticket u oportunidad, órdenes del equipo, adjuntos | Falta | — | Entra por la app. |
 | Agente de Meta por MCP (`meta-agente-mcp`) | Falta | — | — |
-| WhatsApp pegado o captura a ticket/trabajo (`parse-whatsapp`) | Falta | — | — |
+| WhatsApp pegado o captura a ticket/trabajo (`parse-whatsapp`) | Hecho | `#/tickets/whatsapp` (`tickets/whatsapp.ts`, `wai-`) + función `parse-whatsapp` (Groq, el mismo prompt); abre el alta de ticket o trabajo rellena (`ui/borrador.ts`) | `GROQ_API_KEY` en el hub (PENDIENTE_FRAN §3). «Compartir» desde el móvil (share target) al hub. |
 | Asistente de voz (`voice.js`, `groq-proxy`) | Falta | (notas de voz → comandas) | — |
 | Repaso matinal y cierre | Hecho | `informes-enviar`, `telegram-bot` | — |
 | Dictado en formularios (`dictado.js`, `transcribe-audio`) | Falta | — | — |

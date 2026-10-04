@@ -877,3 +877,14 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .mco-doc .c-serv-no li { color: var(--texto-suave); }
 .mt-crear { font-size: .85rem; white-space: nowrap; }
 @media print { .mco-imprimible, .mco-imprimible * { visibility: visible; } .mco-imprimible { position: absolute; top: 0; left: 0; right: 0; } .mco-imprimible .tarjeta { border: 0; } }
+
+/* ---- Desde WhatsApp (#/tickets/whatsapp, wai-) ---- */
+.wai-captura { display: flex; align-items: flex-start; gap: .75rem; margin: .5rem 0; }
+.wai-captura[hidden] { display: none; }
+.wai-captura img { max-width: 160px; max-height: 240px; border: 1px solid var(--borde); border-radius: 8px; }
+.wai-cands { display: flex; flex-direction: column; gap: .35rem; margin-bottom: .75rem; }
+.wai-cand { display: flex; align-items: center; gap: .6rem; width: 100%; min-height: 48px; padding: .4rem .7rem; border: 1px solid var(--borde); border-radius: 10px; background: var(--superficie); color: var(--texto); font: inherit; text-align: left; cursor: pointer; }
+.wai-cand[aria-checked="true"] { border-color: var(--verde); background: var(--primario-suave); }
+.wai-cand-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wai-cand-txt small { color: var(--texto-suave); }
+.wai-cand-ok { color: var(--primario); font-weight: 700; }

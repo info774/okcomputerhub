@@ -145,7 +145,7 @@ export async function tabSeguimiento(localId: string, plan: string | null, escri
 }
 
 // ── Acceso remoto ───────────────────────────────────────────────────────────
-interface Remoto { tipo: 'anydesk' | 'rustdesk'; id: string; nombre: string }
+export interface Remoto { tipo: 'anydesk' | 'rustdesk'; id: string; nombre: string }
 
 /** AnyDesk de hardware + software (sin repetir) y RustDesk de los equipos de Breeze. */
 export async function remotosDe(localId: string): Promise<Remoto[]> {
@@ -182,7 +182,7 @@ async function abrirRustDesk(id: string, localId: string) {
   abrir(`rustdesk://${id}`);
 }
 
-function abrirRemoto(r: Remoto, localId: string) {
+export function abrirRemoto(r: Remoto, localId: string) {
   if (r.tipo === 'rustdesk') return abrirRustDesk(r.id, localId);
   abrir(`anydesk://${r.id}`);
 }

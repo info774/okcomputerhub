@@ -635,6 +635,21 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   Fuera de las 24 h, «📨 Mandar plantilla» manda `WHATSAPP_PLANTILLA_TEXTO`
   (plantilla de Meta con UNA variable, `{{1}}` = nombre) y se apunta como
   `tipo = template`, igual que las de la app.
+  Desde el 2026-10-04 (paridad bloque 5, tanda 1) con la cabecera de la
+  bandeja de la app: fila de enlaces rápidos (`#wa-atajos`: Cliente, Sede con
+  el chip del plan del espejo, 🖥 Remoto con `remotosDe`/`abrirRemoto` de
+  `sitios/equipamiento.ts`, 🎫 Ticket, 📄 Presupuesto `#/presupuestos/nuevo/l/<sede>`
+  y 📎 Factura / presupuesto: `enviar_documento` baja el PDF de Zoho, SOLO de
+  documentos de ese cliente, y fuera de 24 h usa `WHATSAPP_PLANTILLA_DOCUMENTO`),
+  panel `#wa-panel` para elegir, fotos en la conversación y «Ver foto» (`media`,
+  por el id del MENSAJE, nunca un media_id suelto). Un alta que llega rellena
+  desde otra pantalla va por `dejarBorrador` / `tomarBorrador` de
+  `src/ui/borrador.ts` (ticket y trabajo; se gasta al tomarlo). «Desde
+  WhatsApp» (`#/tickets/whatsapp`, `tickets/whatsapp.ts`, `wai-`): pegado o
+  captura → `parse-whatsapp` (portada literal, Groq; prompt en
+  `_shared/whatsapp-clasificar.ts`, el mismo del webhook) → sede/cliente/contacto
+  por teléfono o nombre (`buscarCandidatos` de la app sobre el espejo) → alta
+  rellena; sin IA, `analisisDeReserva`. Arnés `verify-whatsapp.mjs`.
 - **Trabajos: alta y edición** (`src/modulos/trabajos/formulario.ts`,
   2026-10-03, paridad bloque 1): UN formulario para crear y editar
   (`#/trabajos/nuevo`, `#/trabajos/<n>/editar`, prefijo `tf-`) con caras Simple

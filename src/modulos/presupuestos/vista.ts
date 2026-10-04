@@ -191,7 +191,7 @@ async function pintarFicha(el: HTMLElement, id: string) {
 export async function pintarPresupuestos(el: HTMLElement, params: string[]) {
   const [a, b, c] = params;
   if (a === 'nuevo') {
-    const desde = b === 'c' ? { cliente: c } : b === 'o' ? { oportunidad: c } : undefined;
+    const desde = b === 'c' ? { cliente: c } : b === 'o' ? { oportunidad: c } : b === 'l' ? { local: c } : undefined;
     return (await import('./formulario')).pintarFormulario(el, undefined, desde);
   }
   if (a === 'plantillas') return (await import('./plantillas')).pintarPlantillas(el, b);
