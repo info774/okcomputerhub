@@ -121,4 +121,8 @@ export const TABLAS_APP: Record<string, TablaApp> = {
   furgoneta_movimientos: { auditada: false, columnas: c('id created_at furgoneta_id producto_id tipo cantidad destino_id tecnico_id notas trabajo_id') },
   gastos: { auditada: true, columnas: c(`id created_at importe fecha categoria trabajo_id tecnico_id notas
     foto_url tipo descripcion contacto_id local_id`) },
+  // Bloque 7 (20261102_verifactu.sql): el tablero VeriFactu, auditado en la app.
+  verifactu_sedes: { auditada: true, columnas: c(`id local_id cliente_id fase carril tipo_contribuyente camino software_origen
+    software_destino fecha_objetivo tecnico hw_tipo_tpv hw_sistema hw_almacenamiento hw_ram hw_estado impresora_modelo
+    impresora_interfaz impresora_qr_ok checklist presupuesto_aceptado fecha_go_live trabajo_id notas created_at updated_at`) },
 }

@@ -630,6 +630,7 @@ try {
   ok(!noCortado.ok && /app/.test(noCortado.err), 'final: sin el corte, fichar desde el hub avisa de que se hace en la app');
   ok(!psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_guardar_lineas('${tr}', '[]');`), { esperaError: true }).ok, 'final: sin el corte, el material tampoco');
   ok(!psql(como('authenticated', 'tito@ok.test', `select hub.inventario_entradas(gen_random_uuid(), '[{"nombre":"x","cantidad":1}]');`), { esperaError: true }).ok, 'inventario: sin el corte, el albarán no entra');
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.verifactu_sedes (local_id) values (gen_random_uuid());`), { esperaError: true }).ok, 'verifactu: sin el corte, el tablero no se toca');
   psql(`insert into hub.trabajos (id, numero, titulo, estado, fecha_programada) values ('00000000-0000-0000-0000-0000000000e2', 699, 'Copia de la app', 'Pendiente', current_date)`);
   ok(psql(`select count(*) from hub.agenda where trabajo_id = '00000000-0000-0000-0000-0000000000e2'`) === '0', 'paridad: sin el corte, una fecha en el trabajo no crea bloque (la agenda la trae el espejo)');
   // Chat
@@ -892,6 +893,12 @@ commit;`);
   ok(gm.length === 36 && psql(`select count(*) from hub.gastos where id = '${gm}'`) === '1', 'gastos: tras el corte se apuntan en el hub, y borrar es de un admin');
   una('ana@ok.test', `delete from hub.gastos where id = '${gm}';`);
   ok(psql(`select count(*) from hub.gastos where id = '${gm}'`) === '0', 'gastos: el admin sí lo borra');
+
+  // VeriFactu (paridad bloque 7, tanda 3): espejo; tras el corte se escribe y quitar es de un admin.
+  const vfs = una('tito@ok.test', `insert into hub.verifactu_sedes (local_id, carril) values (gen_random_uuid(), 'urgente') returning id;`);
+  una('tito@ok.test', `delete from hub.verifactu_sedes where id = '${vfs}';`);
+  ok(vfs.length === 36 && psql(`select count(*) from hub.verifactu_sedes where id = '${vfs}'`) === '1'
+    && psql(`select count(*) from hub.auditoria where tabla = 'verifactu_sedes'`) !== '0', 'verifactu: tras el corte se mueve en el hub; quitar del tablero es de un admin');
 
   // Feedback y avisos push (paridad bloque 6, tanda 4).
   psql(como('authenticated', 'tito@ok.test', `insert into hub.feedback (tipo, descripcion, estado, autor_nombre, resultado) values ('bug', 'No guarda la sede', 'hecha', 'Otro', 'trampa');`));

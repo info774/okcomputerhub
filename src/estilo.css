@@ -1145,3 +1145,15 @@ body.os-modo .sis { bottom: 108px; }
 #inw-lineas td.num input { max-width: 6rem; text-align: right; }
 #inw-lineas tr.apagado { opacity: .5; }
 .in-escribir { margin-top: -.25rem; }
+
+/* ---- VeriFactu (bloque 7, vf-) ---- */
+.vf-cifras .vf-carril { text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.vf-cifras .vf-carril.activo { outline: 2px solid var(--accion); outline-offset: -2px; }
+.vf-tarjeta.vf-urgente { border-left: 4px solid var(--mal); }
+.vf-tarjeta.vf-compleja { border-left: 4px solid var(--aviso); }
+.vf-tarjeta.vf-estandar { border-left: 4px solid var(--linea); }
+.vf-tarjeta h4 { margin: 0 0 .15rem; }
+.vf-tarjeta .pr-tarjeta-pie { flex-wrap: wrap; gap: .35rem .6rem; font-size: .78rem; }
+.vf-mover { margin-top: .4rem; width: 100%; }
+.vf-checklist { display: grid; gap: .35rem; margin-bottom: .75rem; }
+.vf-cifras { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
