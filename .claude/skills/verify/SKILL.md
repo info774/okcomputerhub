@@ -264,6 +264,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   Personas → Gastos (área de la app: solo se ven; del hub: gasto con trabajo y
   foto, cobro con descripción obligatoria, editar).
 
+- `verify-verifactu.mjs`: bloque 7, tanda 3: tablero VeriFactu (área de la
+  app: solo lectura; del hub: arrastrar avisa de lo que falta, selector,
+  ficha con casillas y auditoría, «Cargar sedes con TPV» con el carril por el
+  NIF, quitar solo admin).
+
 `npm run verify` pasa todos los de la lista.
 
 ## Pantalla nueva

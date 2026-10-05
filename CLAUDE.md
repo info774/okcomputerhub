@@ -351,6 +351,14 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   en la app la tabla nunca llegó a producción). Almacén → «Facturas de compra»
   (`almacen/facturas.ts`, `afc-`); el adjunto lo sube y lo lee `gastos-ocr`
   (`compra`, `compra_url`). Arnés de las dos: `verify-compras-gastos.mjs`.
+- **VeriFactu** (`src/modulos/verifactu/`, `#/verifactu`, paridad bloque 7,
+  tanda 3, PREPARADO para el corte del área `verifactu`): el tablero de la app
+  (una tarjeta por SEDE, seis fases, tres carriles). Sus reglas (carril por la
+  letra del NIF, plazos 1/1/2027 y 1/7/2027, criterio de salida que AVISA al
+  avanzar y no bloquea) están COPIADAS en `verifactu/reglas.ts`: si cambian en
+  `modules/verifactu.js` de la app, cambiarlas ahí. Espejo `hub.verifactu_sedes`
+  (auditado en la app, va por el incremental). Quitar del tablero, solo admin.
+  Arnés `verify-verifactu.mjs`.
 - Firmas: lo firmado es inmutable (trigger `hub.firma_antes`); solo
   `hub.firma_firmar` (service_role, con la huella) lo pasa a firmado.
 - Ficheros privados (Storage, cubo `gastos`): los sube y firma URLs
