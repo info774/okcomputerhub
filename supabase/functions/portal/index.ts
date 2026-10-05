@@ -142,10 +142,18 @@ async function conSesion(db: Db, s: Sesion, accion: string, b: any): Promise<unk
       const [p] = await db.get(`presupuestos?select=id,numero_presupuesto,titulo,estado,total&id=eq.${b.id}&cliente_id=eq.${s.cliente_id}`)
       if (!p) throw new Error('Presupuesto no válido')
       if (p.estado !== 'Enviado') throw new Error('Este presupuesto ya no está pendiente de aceptar')
-      await db.post('portal_aceptaciones', { presupuesto_id: p.id, acceso_id: s.acceso_id, nombre, comentario: txt(b.comentario, 2000) || null })
+      const [ac] = await db.post('portal_aceptaciones', { presupuesto_id: p.id, acceso_id: s.acceso_id, nombre, comentario: txt(b.comentario, 2000) || null })
       await traza(db, s, 'aceptar_presupuesto', { presupuesto: p.numero_presupuesto, total: p.total })
+      // Con el área `presupuestos` del hub (tras el corte) pasa a «Aceptado» solo y la
+      // aceptación queda revisada; antes, lo pasa una persona en la app (paridad bloque 8, tanda 3).
+      const [area] = await db.get('areas?select=dueno&tablas=cs.{presupuestos}&limit=1')
+      const delHub = ((area?.dueno as string | undefined) ?? 'hub') === 'hub'
+      if (delHub) {
+        await db.patch(`presupuestos?id=eq.${p.id}`, { estado: 'Aceptado' })
+        if (ac?.id) await db.patch(`portal_aceptaciones?id=eq.${ac.id}`, { revisada_at: new Date().toISOString() })
+      }
       const [c] = await db.get(`clientes?select=nombre&id=eq.${s.cliente_id}`)
-      await avisarEquipo(db, `✅ <b>Presupuesto aceptado en el portal</b>\n${h(p.numero_presupuesto ?? '')} ${h(p.titulo ?? '')} · ${h(c?.nombre ?? '')}\nLo aceptó ${h(nombre)}. Pásalo a aceptado en la app.`)
+      await avisarEquipo(db, `✅ <b>Presupuesto aceptado en el portal</b>\n${h(p.numero_presupuesto ?? '')} ${h(p.titulo ?? '')} · ${h(c?.nombre ?? '')}\nLo aceptó ${h(nombre)}. ${delHub ? 'Ya está como aceptado en el hub.' : 'Pásalo a aceptado en la app.'}`)
       return { ok: true }
     }
     case 'facturas': {
