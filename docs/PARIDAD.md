@@ -111,6 +111,18 @@ Fran, 2026-10-03).
    cobros en Personas), 3 (VeriFactu), 4 (control de equipos) y 5 (Google)
    HECHAS el 2026-10-05. **Bloque 7 HECHO**: falta lo de Fran (claves de
    Action1, permiso de Calendar y carpeta de Drive, PENDIENTE_FRAN §2 ter).
+8. **Lo que quedaba en «Falta»** (propuesto el 2026-10-05): 1 tickets
+   completos, 2 mapa planificador (Día, Semana, Ruta, técnicos por GPS),
+   3 entrada de ventas (formulario de las webs, captación de leads, aceptar el
+   presupuesto en el portal), 4 catálogo y conocimiento con escritura, escáner
+   y guía de cámaras, 5 chat (tonos, bandeja de avisos), backup propio y
+   limpieza de filas. Decisiones de Fran (2026-10-05): ese orden; las tareas
+   del ticket, como la app (preparadas para el corte de `tareas`); la
+   resolución del ticket, a la wiki del hub; formulario de las webs y
+   captación, preparados sin conectar.
+   Tanda 1 HECHA (2026-10-05): tareas del ticket, duplicar, ticket a trabajo,
+   resolución a la wiki y ticket desde una alerta de Breeze
+   (`20261104_tickets_completos.sql`).
 
 ## El mapa
 
@@ -173,10 +185,10 @@ Fran, 2026-10-03).
 | Lista y kanban de tickets, Excel | Hecho | `#/tickets` | Kanban y Excel. |
 | Ficha del ticket, comentarios y estado | Hecho | `#/tickets` | — |
 | Adjuntos, también fotos y vídeos de WhatsApp descritos por IA (`ticket_adjuntos`; la app lo amplió el 2026-10-02, `73b8ff6`) | Hecho | `hub.ticket_adjuntos` (área `tickets`, las altas de la app entran por el sync) y la lista «Adjuntos» de la ficha del ticket, con la foto en miniatura | Subir un fichero desde la ficha. |
-| Tareas dentro del ticket | Falta | — | — |
-| Ticket a trabajo, duplicar ticket | Falta | — | — |
-| Resolución a Conocimiento | Falta | — | — |
-| Ticket desde una alerta del RMM (`rmmTicketDeAlerta`) | Falta | — | — |
+| Tareas dentro del ticket | Preparado | Ficha del ticket → «Tareas» (`tickets/extra.ts`): se ven ya | Crear: corte del área `tareas`. |
+| Ticket a trabajo, duplicar ticket | Hecho / Preparado | Ficha del ticket: «Duplicar» (vale ya) y «Crear trabajo desde el ticket» (lo enlaza y lo cierra) | A trabajo: corte del área `trabajos` (hasta entonces, vincular por número). |
+| Resolución a Conocimiento | Hecho | Ficha del ticket → «Guardar en la wiki» (una página por ticket bajo «Resoluciones», decisión de Fran 2026-10-05) | — |
+| Ticket desde una alerta del RMM (`rmmTicketDeAlerta`) | Hecho | Monitorización → Alertas (y la del equipo y la sede): «Abrir ticket»; el enlace en `hub.tickets.rmm_alerta_id`, uno por alerta | — |
 
 ### 4. Ventas y presupuestos
 

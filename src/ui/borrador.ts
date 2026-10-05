@@ -6,6 +6,8 @@ export interface Borrador {
   cliente_id?: string | null; local_id?: string | null; contacto_id?: string | null;
   titulo?: string; descripcion?: string; prioridad?: string;
   fecha?: string; hora?: string; tipo?: string; canal?: string;
+  // Trabajo que nace de un ticket: al crearlo, el ticket queda enlazado y cerrado.
+  ticket_id?: string; ticket_numero?: number;
 }
 export type Destino = 'ticket' | 'trabajo';
 

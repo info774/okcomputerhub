@@ -632,6 +632,13 @@ try {
   ok(!psql(como('authenticated', 'tito@ok.test', `select hub.inventario_entradas(gen_random_uuid(), '[{"nombre":"x","cantidad":1}]');`), { esperaError: true }).ok, 'inventario: sin el corte, el albarán no entra');
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.verifactu_sedes (local_id) values (gen_random_uuid());`), { esperaError: true }).ok, 'verifactu: sin el corte, el tablero no se toca');
   ok(!psql(como('authenticated', 'ana@ok.test', `insert into hub.equipos_control (clave) values ('pc-1');`), { esperaError: true }).ok, 'equipos: sin el corte, el control de equipos es solo lectura');
+  // Tickets completos (20261104): un ticket por alerta de Breeze; las tareas del ticket, con el corte.
+  const AL = '00000000-0000-0000-0000-0000000000a7';
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.tickets (titulo, canal, rmm_alerta_id) values ('Disco lleno', 'rmm', '${AL}');`));
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.tickets (titulo, canal, rmm_alerta_id) values ('Otra vez', 'rmm', '${AL}');`), { esperaError: true }).ok, 'tickets: una alerta de Breeze abre un solo ticket');
+  psql(`update hub.areas set dueno = 'app' where area = 'tareas'`);
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.tareas (id, titulo, estado, ticket_id) values (gen_random_uuid(), 'Llamar', 'pendiente', gen_random_uuid());`), { esperaError: true }).ok, 'tickets: sin el corte de tareas, las tareas del ticket no se crean');
+  psql(`update hub.areas set dueno = 'hub' where area = 'tareas'`);
   psql(`insert into hub.trabajos (id, numero, titulo, estado, fecha_programada) values ('00000000-0000-0000-0000-0000000000e2', 699, 'Copia de la app', 'Pendiente', current_date)`);
   ok(psql(`select count(*) from hub.agenda where trabajo_id = '00000000-0000-0000-0000-0000000000e2'`) === '0', 'paridad: sin el corte, una fecha en el trabajo no crea bloque (la agenda la trae el espejo)');
   // Chat

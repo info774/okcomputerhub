@@ -70,6 +70,14 @@ export async function nombresLocales(ids: string[]): Promise<Map<string, string>
   return new Map((data ?? []).map(l => [l.id, l.nombre]));
 }
 
+// El ticket abierto desde cada alerta (hub.tickets.rmm_alerta_id): id de la alerta → número del ticket.
+export async function ticketsDeAlertas(ids: string[]): Promise<Map<string, number>> {
+  const unicos = [...new Set(ids.filter(Boolean))];
+  if (!unicos.length) return new Map();
+  const { data } = await API.get<{ numero: number; rmm_alerta_id: string }[]>('tickets', { select: 'numero,rmm_alerta_id', rmm_alerta_id: `in.(${unicos.join(',')})` });
+  return new Map((data ?? []).map(t => [t.rmm_alerta_id, t.numero]));
+}
+
 // Pone (o quita, con null) la sede de un Site a mano: ya no lo toca el emparejado automático.
 export const emparejarSite = (siteId: string, localId: string | null) =>
   API.upsert('rmm_sitios', 'site_id', { site_id: siteId, local_id: localId, manual: true });

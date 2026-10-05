@@ -10,7 +10,7 @@ import { ico } from '../../shell/linea';
 import {
   type Equipo, type Alerta, type Site, type EstadoLocal,
   ESTADOS_SEDE, SEVERIDAD, ESTADO_ALERTA, enBreeze,
-  listarEquipos, estadosLocales, listarAlertas, listarSites, nombresLocales, emparejarSite, pedirABreeze, estadoBreeze,
+  listarEquipos, estadosLocales, listarAlertas, listarSites, nombresLocales, emparejarSite, pedirABreeze, estadoBreeze, ticketsDeAlertas,
 } from './datos';
 import { tabControl, seccionControlSede } from './control';
 
@@ -58,7 +58,7 @@ export function tablaEquipos(equipos: Equipo[], sedes: Map<string, string>, conS
     </tr>`).join('')}</tbody></table></div>`;
 }
 
-export function tablaAlertas(alertas: Alerta[], sedes: Map<string, string>): string {
+export function tablaAlertas(alertas: Alerta[], sedes: Map<string, string>, tickets: Map<string, number> = new Map()): string {
   if (!alertas.length) return `<p class="vacio">Sin alertas. ${ico('trofeo')}</p>`;
   return `<div class="tarjeta mo-scroll"><table class="tabla">
     <thead><tr><th>Gravedad</th><th>Alerta</th><th>Equipo</th><th>Cuándo</th><th>Estado</th><th></th></tr></thead>
@@ -73,6 +73,8 @@ export function tablaAlertas(alertas: Alerta[], sedes: Map<string, string>): str
         <td>${esc(ESTADO_ALERTA[a.estado] ?? a.estado)}${a.acusada_por ? `<br><small class="nota">por ${esc(a.acusada_por)}</small>` : ''}</td>
         <td class="acciones">
           ${a.estado === 'active' ? `<button class="btn secundario" data-action="moAcusar" data-p0="${esc(a.id)}">Acusar</button>` : ''}
+          ${tickets.has(a.id) ? `<a class="btn secundario" href="#/tickets/${tickets.get(a.id)}">${ico('etiqueta')} Ticket #${tickets.get(a.id)}</a>`
+            : a.estado !== 'resolved' ? `<button class="btn secundario" data-action="moTicketAlerta" data-p0="${esc(a.id)}" title="Abre un ticket de la sede con esta alerta">${ico('etiqueta')} Abrir ticket</button>` : ''}
           <a class="btn secundario" href="${esc(enBreeze.alerta(a.id))}" target="_blank" rel="noopener">${a.estado === 'resolved' ? 'Ver' : 'Resolver'} en Breeze ${ico('externo')}</a>
         </td>
       </tr>`;
@@ -120,7 +122,7 @@ async function tabAlertas(): Promise<string> {
   return `<div class="acciones mo-barra"><div class="segmentado" role="tablist">
       <button role="tab" aria-selected="${!_alertasTodas}" class="${_alertasTodas ? '' : 'activo'}" data-action="moAlertasTodas" data-p0="0">Abiertas</button>
       <button role="tab" aria-selected="${_alertasTodas}" class="${_alertasTodas ? 'activo' : ''}" data-action="moAlertasTodas" data-p0="1">Últimos 90 días</button>
-    </div></div>${tablaAlertas(data ?? [], sedes)}`;
+    </div></div>${tablaAlertas(data ?? [], sedes, await ticketsDeAlertas((data ?? []).map(a => a.id)))}`;
 }
 
 async function tabEmparejado(): Promise<string> {
@@ -173,7 +175,7 @@ async function vistaSede(localId: string): Promise<string> {
   return `<p><a href="#/monitorizacion/sedes">← Todas las sedes</a></p>
     <div class="tarjeta-cab"><h2>${esc(nombres.get(localId) ?? 'Sede')}</h2>${e ? chip(e.texto, e.tono) : ''}</div>
     ${eq.error ? `<p class="aviso mal">${esc(eq.error.message)}</p>` : tablaEquipos(eq.data ?? [], nombres, false)}
-    <h3>Alertas abiertas</h3>${tablaAlertas(al.data ?? [], nombres)}
+    <h3>Alertas abiertas</h3>${tablaAlertas(al.data ?? [], nombres, await ticketsDeAlertas((al.data ?? []).map(a => a.id)))}
     ${control}`;
 }
 
@@ -243,6 +245,29 @@ registrarAcciones({
     if (r.error) { toast(`No se pudo cambiar: ${r.error.message}`, 'error'); return; }
     _siteEditando = null;
     repintar();
+  },
+  // rmmTicketDeAlerta de la app: un ticket de la sede con la alerta, enlazado a ella
+  // en el ticket (a Breeze no se le escribe). Una alerta abre un solo ticket.
+  async moTicketAlerta(alertaId: string) {
+    const ya = await ticketsDeAlertas([alertaId]);
+    if (ya.has(alertaId)) { ir('tickets', String(ya.get(alertaId))); return; }
+    const { data: a } = await API.single<Alerta>('rmm_alertas', { select: '*', id: `eq.${alertaId}` });
+    if (!a) { toast('La alerta ya no existe', 'error'); return; }
+    const sede = a.local_id ? (await API.single<{ cliente_id: string | null }>('locales', { select: 'cliente_id', id: `eq.${a.local_id}` })).data : null;
+    const r = await API.post<{ numero: number }[]>('tickets', {
+      titulo: `Monitorización: ${a.titulo || a.mensaje || 'alerta'}`.slice(0, 200),
+      descripcion: `Alerta de Breeze (${SEVERIDAD[a.severidad]?.texto ?? a.severidad}) en ${a.hostname ?? 'un equipo'}, disparada el ${fechaHora(a.disparada)}.\n${a.mensaje ?? ''}`.trim(),
+      prioridad: a.severidad === 'critical' ? 'Alta' : 'Media', canal: 'rmm', via_contacto: 'Monitorización', estado: 'Abierto',
+      local_id: a.local_id, cliente_id: sede?.cliente_id ?? null, rmm_alerta_id: a.id,
+    });
+    if (r.error || !r.data?.[0]) {
+      // Otra persona lo abrió a la vez: el índice único lo para; se va al suyo.
+      const otra = await ticketsDeAlertas([alertaId]);
+      if (otra.has(alertaId)) { ir('tickets', String(otra.get(alertaId))); return; }
+      toast(`No se pudo crear el ticket: ${r.error?.message ?? 'sin respuesta'}`, 'error'); return;
+    }
+    toast(`Ticket #${r.data[0].numero} creado`);
+    resolver();
   },
   async moAcusar(alertaId: string) {
     const r = await pedirABreeze({ accion: 'acusar_alerta', alerta_id: alertaId });
