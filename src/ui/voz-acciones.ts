@@ -14,7 +14,7 @@ import { deshacer, nuevaAccion } from '../core/deshacer';
 import { remotosDe, type Remoto } from '../modulos/sitios/equipamiento';
 
 export interface Resultado { tipo: 'trabajo' | 'tarea' | 'ticket' | 'presupuesto' | 'cliente' | 'local' | 'remoto' | 'lugar'; id: string; titulo: string; sub?: string; ruta?: string; localId?: string; remoto?: Remoto }
-export interface Respuesta { ok: boolean; mensaje: string; contexto?: string; resultados?: Resultado[]; abrir?: Resultado }
+export interface Respuesta { ok: boolean; mensaje: string; contexto?: string; resultados?: Resultado[]; abrir?: Resultado; confirmable?: boolean }
 export type Datos = Record<string, unknown>;
 
 // ── Utilidades (las de la app) ──────────────────────────────────────────────
@@ -277,7 +277,8 @@ export async function ejecutarAccion(accion: string, datos: Datos = {}): Promise
       case 'control_remoto': return await controlRemoto(datos);
       case 'deshacer': return await deshacerUltimo();
     }
-    if (!OTRAS[accion]) await import('./voz-ordenes');   // las órdenes directas se cargan al primer uso
+    // Órdenes directas y altas: se cargan al primer uso.
+    if (!OTRAS[accion]) await Promise.all([import('./voz-ordenes'), import('./voz-altas')]);
     if (OTRAS[accion]) return await OTRAS[accion](datos);
     return { ok: false, mensaje: 'Eso todavía no lo hago desde el hub: hazlo desde su pantalla.', contexto: `La acción ${accion} aún no está disponible en el hub.` };
   } catch (e) {

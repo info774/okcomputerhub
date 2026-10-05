@@ -93,6 +93,16 @@ function pintarResultados(rs: Resultado[]) {
 
 async function abrirResultado(r: Resultado) {
   if (r.tipo === 'remoto' && r.remoto && r.localId) { const { abrirRemoto } = await import('../modulos/sitios/equipamiento'); await abrirRemoto(r.remoto, r.localId); return; }
+  // Un lugar de Google Maps: tocarlo es darlo de alta (cliente y sede), y lo que diga se cuenta aquí.
+  if (r.tipo === 'lugar') {
+    const { altaDesdeLugar } = await import('./voz-altas');
+    const res = await altaDesdeLugar(r.id);
+    burbuja('assistant', res.mensaje);
+    if (res.resultados?.length) pintarResultados(res.resultados);
+    _historial.push({ role: 'assistant', content: res.contexto || res.mensaje });
+    hablar(res.mensaje);
+    return;
+  }
   if (r.ruta) { (document.getElementById('vz') as HTMLDialogElement | null)?.close(); location.hash = r.ruta; }
 }
 
