@@ -478,7 +478,7 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .op-cierre { position: sticky; bottom: 0; z-index: 2; display: flex; gap: .5rem; align-items: stretch; flex-wrap: wrap;
   margin-top: .75rem; padding: .5rem; background: var(--fondo); border-top: 1px solid var(--borde); }
 .op-cierre > span { align-self: center; font-size: .85rem; color: var(--texto-suave); }
-.op-zona { flex: 1 1 160px; display: grid; place-items: center; min-height: 48px; border: 2px dashed var(--borde); border-radius: var(--radio);
+.op-zona { flex: 1 1 160px; display: flex; align-items: center; justify-content: center; gap: .4rem; min-height: 48px; border: 2px dashed var(--borde); border-radius: var(--radio);
   font-weight: 600; transition: background-color .15s, border-color .15s; }
 .op-zona.op-ganada { color: var(--bien); }
 .op-zona.op-perdida { color: var(--mal); }

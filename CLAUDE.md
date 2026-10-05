@@ -579,8 +579,14 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   barra `.pr-barra` con campos alineada a la izquierda). Una pantalla nueva usa
   esas clases y no se pinta las suyas. Cabecera de pantalla = `.pantalla-cab`
   con el hexágono de su módulo (`iconoHex`, el del dock) y el menú lateral
-  también; los iconos de línea de la interfaz salen de `src/shell/linea.ts`
-  (`svgLinea`), nada de emojis en el cromo. Los grupos del puesto de mando
+  también; los iconos de línea salen de `src/shell/linea.ts`: `svgLinea` en
+  el cromo y `ico('nombre')` (1 em, color del texto, nombres tipados
+  `IconoLinea`) en el CONTENIDO. Nada de emojis en ninguna pantalla
+  (2026-10-05): donde no cabe HTML (`<option>`, `title`, toast, CSV, texto
+  que sale a Telegram/WhatsApp) va el texto solo; los emojis que escribe una
+  persona (icono de una página de la wiki o de una plantilla) son datos y se
+  respetan. El `icono` del contrato `Modulo` ya no se pinta (paleta, baldosas y
+  lanzador usan `iconoHex`). Icono nuevo = su trazo en `ICONOS`. Los grupos del puesto de mando
   usan `AVISO_PANTALLA` (en `direccion/`, compartido con el centro de avisos).
   Para repasar el aspecto de todo: `verify-galeria.mjs` (captura de cada
   pantalla del menú; `GALERIA_NOCHE=1`, `GALERIA_MOVIL=1`, `GALERIA=a,b`).
