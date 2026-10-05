@@ -904,6 +904,9 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--texto-suave) 35%, transparent) transparent; }
 :focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
 .os-bico { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* Icono de línea dentro de un texto o botón (ico() de shell/linea.ts): el
+   tamaño y el color de la letra que lo rodea. Sustituye a los emojis. */
+.ico { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -.17em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .os-bico-sol { display: none; }
 :root[data-theme="dark"] .os-tema .os-bico-luna { display: none; }
 :root[data-theme="dark"] .os-tema .os-bico-sol { display: block; }
