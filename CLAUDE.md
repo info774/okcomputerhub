@@ -949,6 +949,19 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   prefs en `localStorage.hub_chat_avisos_<usuario>`. Arnés `verify-chat-avisos.mjs`.
   Backup propio: `.github/workflows/backup.yml` (volcado de `hub`; sin el
   secret `HUB_DB_PASSWORD` avisa y no falla).
+- **Asistente de voz** (paridad de `voice.js`/`groq-proxy`, decisiones de Fran
+  2026-10-05: Groq como la app y Claude de reserva, micro en la cabecera
+  `#voz-btn` + la voz de Oki, las 21 órdenes, confirmar como la app): función
+  `voz` (con sesión; el `SYSTEM_PROMPT` de la app COPIADO más `crear_comanda` y
+  el aviso de áreas; `accion: 'estado'`), ventana `src/ui/voz.ts` (`vz-`:
+  reconocimiento del navegador o grabar + `comandas` `transcribir`, leer en voz
+  alta, manos libres solo con reconocimiento) y ejecutor `src/ui/voz-acciones.ts`
+  (las reglas de `voice-actions.js`: estados de palabra, local por nombre de
+  sede o cliente; sin «embeds»: `sedes()` cachea sedes + clientes). Una acción
+  nueva: su texto en el prompt de `voz/index.ts` Y su función aquí
+  (`registrarAccionesVoz`), desplegando la función en el mismo rato. Oki:
+  con asistente configurado (`asistenteDisponible()`), lo dictado va a él; si
+  no, como antes (buscador o comanda). Arnés `verify-voz.mjs`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

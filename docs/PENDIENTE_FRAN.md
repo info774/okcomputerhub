@@ -277,9 +277,11 @@ conectar (decisión tuya, 2026-10-05).
 5. A los comerciales, el enlace nuevo:
    `https://okhub-tenerife.web.app/captacion.html?ref=<NombreDeLaAgencia>`.
 
-## 3 · Clave de Groq (notas de voz → comandas, WhatsApp → ticket)
+## 3 · Clave de Groq (asistente de voz, notas de voz → comandas, WhatsApp → ticket)
 
-**Desbloquea**: dictar comandas en #/comandas y mandarle notas de voz al bot, y
+**Desbloquea**: el ASISTENTE DE VOZ (el micro de la cabecera y la voz de Oki:
+«¿qué tengo hoy?», «conéctame al bar Manolo»…; sin la clave dice que falta),
+dictar comandas en #/comandas y mandarle notas de voz al bot, y
 que **Tickets → 💬 Desde WhatsApp** resuma el chat pegado o la captura (sin la
 clave también funciona, pero con un resumen básico y sin leer capturas). Puede
 ser la misma clave que usa la app.

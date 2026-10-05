@@ -23,6 +23,7 @@ export function pintarShell(raiz: HTMLElement) {
       <a class="marca" href="#/inicio"><span class="hex" aria-hidden="true">OK</span>Ok Computer <b>Hub</b></a>
       <button id="buscador-btn" class="buscador-btn" data-action="abrirBuscador" aria-label="Buscar">${svgLinea('buscar')}<span class="btn-label">Buscar o pedir algo…</span><kbd>Ctrl K</kbd></button>
       <span class="hueco"></span>
+      <button id="voz-btn" class="icono-btn" data-action="vozAbrir" aria-label="Asistente de voz" title="Asistente de voz: dime qué necesitas">${svgLinea('micro')}</button>
       <button id="tema-btn" class="icono-btn os-tema" data-action="alternarTema" aria-label="Tema claro u oscuro" title="Cambiar a tema noche o día">${svgLinea('luna', 'os-bico-luna')}${svgLinea('sol', 'os-bico-sol')}</button>
       <button class="icono-btn" data-action="empezarTour" aria-label="Tour" title="Tour por el hub">${svgLinea('ayuda')}</button>
       <span class="usuario" title="${esc(u?.email)}">${esc(u?.nombre ?? u?.email ?? '')}</span>

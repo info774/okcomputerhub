@@ -184,6 +184,10 @@ async function escuchar(grupo: string) {
   });
   vozEstado(grupo, 'quieto', puedeDictar() ? 'Pulsa para hablar' : '');
   if (!r.texto) { vozResultado(grupo, `<p class="nota">${esc(r.error ?? 'No se entendió nada')}</p>`); return; }
+  // Con el asistente configurado, lo dicho va a él (lo mismo que el micro de la
+  // cabecera); si no, como hasta ahora: pregunta → buscador, encargo → comanda.
+  const voz = await import('../../ui/voz');
+  if (await voz.asistenteDisponible()) { voz.abrirVoz({ texto: r.texto }); return; }
   _dicho.set(grupo, r.texto);
   if (esPregunta(r.texto)) { ir('buscar', r.texto); return; }
   vozResultado(grupo, `<p class="ok-dicho">«${esc(r.texto)}»</p>

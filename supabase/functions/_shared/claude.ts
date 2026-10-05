@@ -41,3 +41,17 @@ export async function preguntarClaude<T = string>(p: PeticionClaude): Promise<T>
   const texto = (r.content as any[]).filter(b => b.type === 'text').map(b => b.text).join('').trim()
   return (p.esquema ? JSON.parse(texto) : texto) as T
 }
+
+// Conversación de varios turnos (el asistente de voz, de reserva si no hay Groq).
+export async function charlarClaude(sistema: string, turnos: { role: 'user' | 'assistant'; content: string }[], maxTokens = 800): Promise<string> {
+  if (!claudeConfigurado()) throw new Error('Falta ANTHROPIC_API_KEY (ver docs/PENDIENTE_FRAN.md)')
+  // deno-lint-ignore no-explicit-any
+  const cuerpo: any = {
+    model: MODELO, max_tokens: maxTokens, system: sistema, messages: turnos,
+    output_config: { effort: 'low' }, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default',
+  }
+  const r = await cliente().beta.messages.create(cuerpo)
+  if (r.stop_reason === 'refusal') throw new Error('Claude no ha querido contestar a esto')
+  // deno-lint-ignore no-explicit-any
+  return (r.content as any[]).filter(b => b.type === 'text').map(b => b.text).join('').trim()
+}
