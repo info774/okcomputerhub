@@ -122,7 +122,9 @@ Fran, 2026-10-03).
    captación, preparados sin conectar.
    Tanda 1 HECHA (2026-10-05): tareas del ticket, duplicar, ticket a trabajo,
    resolución a la wiki y ticket desde una alerta de Breeze
-   (`20261104_tickets_completos.sql`).
+   (`20261104_tickets_completos.sql`). Tanda 2 HECHA (2026-10-05): el
+   planificador del Mapa (Día, Semana con arrastrar y soltar, Ruta y técnicos
+   fichados).
 
 ## El mapa
 
@@ -150,7 +152,7 @@ Fran, 2026-10-03).
 | Agenda de contactos (`modules/contactos.js`) | Preparado | `#/contactos` (+ Nuevo contacto, ✎ Editar, Dar de baja/Reactivar); `#/contactos/nuevo[/c/<cliente>|/l/<sede>]` y `#/contactos/<id>/editar` (`contactos/formulario.ts`); empleados solo admin | Corte. Renombrar al usuario si es empleado, favoritos por persona (`user_favoritos`) y Google Contactos (bloque 7). |
 | Google Contacts (`google-contacts.js`) | Preparado | Al crear o editar un cliente, la función `google` (acción `contacto`) lo guarda en los Contactos de info@ y apunta `google_contact_id` (delegación con el permiso de contactos, que ya está) | Corte del área `clientes` (hasta entonces lo hace la app; la función contesta 409). |
 | Mapa de sedes con estado RMM (`modules/mapa.js`) | Hecho | `#/mapa` | — |
-| Mapa: Día, Semana (planificador), Ruta, técnicos por GPS | Falta | — | Planificar y rutas. |
+| Mapa: Día, Semana (planificador), Ruta, técnicos por GPS | Hecho / Preparado | `#/mapa` → panel Día · Semana · Ruta y técnicos fichados (`mapa/planificador.ts`); se ve ya | Arrastrar en la Semana: corte de `trabajos` y `agenda`. Sin geocodificar en Nominatim: el hub usa las coordenadas que la app guarda en `locales.lat/lng`. |
 
 ### 2. Trabajos y calendario
 

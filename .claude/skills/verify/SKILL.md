@@ -285,6 +285,15 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   app no sale) y la resolución a la wiki (una página por ticket bajo
   «Resoluciones»); y «Abrir ticket» desde una alerta de Breeze (uno por alerta).
 
+- `verify-mapa-planificador.mjs`: bloque 8, tanda 2: panel del Mapa (Día con
+  técnicos fichados, trabajos por fecha y por bloque, tickets; Semana con
+  arrastrar y soltar —pendiente a un día, bloque a otro día por
+  `agenda_mover` SIMULADA, bloque a la bandeja—; Ruta con Google Maps desde la
+  oficina) y, con las áreas de la app, la semana solo se ve. OJO: el arrastre
+  va con eventos HTML5 sintéticos (`arrastrar`): el `dragAndDrop` de
+  Playwright no arranca el arrastre de un bloque dentro del panel con scroll
+  (con el ratón de verdad sí).
+
 `npm run verify` pasa todos los de la lista.
 
 ## Pantalla nueva
