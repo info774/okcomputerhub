@@ -315,6 +315,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   abrir un resultado, abrir por número, control remoto, deshacer, lo que aún no
   está, el resultado vuelve al historial, sin clave lo dice, y la voz de Oki
   manda lo dictado al asistente (grabación simulada).
+- `verify-voz-ordenes.mjs`: órdenes directas del asistente (función `voz`
+  SIMULADA): fichar inicio/fin, candidatos por local, completar sin fichaje,
+  estados por `hub.trabajo_estado` y del ticket, mover y añadir un día, cita,
+  gasto, nota, descripción y comanda; con las áreas de la app lo dice y no
+  escribe nada.
 
 `npm run verify` pasa todos los de la lista.
 

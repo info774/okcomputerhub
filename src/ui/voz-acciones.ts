@@ -15,7 +15,7 @@ import { remotosDe, type Remoto } from '../modulos/sitios/equipamiento';
 
 export interface Resultado { tipo: 'trabajo' | 'tarea' | 'ticket' | 'presupuesto' | 'cliente' | 'local' | 'remoto' | 'lugar'; id: string; titulo: string; sub?: string; ruta?: string; localId?: string; remoto?: Remoto }
 export interface Respuesta { ok: boolean; mensaje: string; contexto?: string; resultados?: Resultado[]; abrir?: Resultado }
-type Datos = Record<string, unknown>;
+export type Datos = Record<string, unknown>;
 
 // ── Utilidades (las de la app) ──────────────────────────────────────────────
 export const norm = (s: unknown) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
@@ -89,14 +89,14 @@ function filtroEstadoPresupuesto(v: unknown) {
 }
 
 // ── Búsquedas ───────────────────────────────────────────────────────────────
-const SEL_TRABAJO = 'id,numero,titulo,descripcion,materiales,estado,fecha_programada,tecnicos,cliente_id,local_id';
+export const SEL_TRABAJO = 'id,numero,titulo,descripcion,materiales,estado,fecha_programada,tecnicos,cliente_id,local_id';
 export async function mapTrabajos(filas: any[]): Promise<Resultado[]> {
   const s = await sedes();
   return filas.map(t => ({ tipo: 'trabajo', id: t.id, ruta: `#/trabajos/${t.numero ?? t.id}`,
     titulo: `${t.numero ? `#${t.numero} · ` : ''}${t.titulo || String(t.descripcion || 'Trabajo').slice(0, 60)}`,
     sub: [donde(s, t.local_id, t.cliente_id), t.estado, fmtFecha(t.fecha_programada)].filter(Boolean).join(' · ') }));
 }
-async function mapTareas(filas: any[]): Promise<Resultado[]> {
+export async function mapTareas(filas: any[]): Promise<Resultado[]> {
   const s = await sedes();
   return filas.map(t => ({ tipo: 'tarea', id: t.id, ruta: `#/tareas/${t.id}`,
     titulo: `${t.numero ? `#${t.numero} · ` : ''}${t.titulo || String(t.descripcion || 'Tarea').slice(0, 60)}`,
@@ -128,15 +128,17 @@ async function buscarTareas(d: Datos): Promise<Resultado[]> {
   await filtroLocal(d, p);
   return mapTareas((await API.get<any[]>('tareas', p)).data ?? []);
 }
+export async function mapTickets(filas: any[]): Promise<Resultado[]> {
+  const s = await sedes();
+  return filas.map(t => ({ tipo: 'ticket' as const, id: t.id, ruta: `#/tickets/${t.numero}`, titulo: `#${t.numero} · ${t.titulo || 'Ticket'}`, sub: [donde(s, t.local_id, t.cliente_id), t.estado].filter(Boolean).join(' · ') }));
+}
 async function buscarTickets(d: Datos): Promise<Resultado[]> {
   const p: Record<string, string> = { select: 'id,numero,titulo,estado,cliente_id,local_id', order: 'created_at.desc', limit: '8' };
   const num = esNumero(d.texto), txt = num ? '' : limpiarTexto(d.texto);
   if (num) p.numero = `eq.${num}`; else if (txt) p.or = `(titulo.ilike.${like(txt)},descripcion.ilike.${like(txt)})`;
   const est = filtroEstadoTicket(d.estado); if (est) p.estado = est;
   await filtroLocal(d, p);
-  const s = await sedes();
-  return ((await API.get<any[]>('tickets', p)).data ?? []).map(t => ({ tipo: 'ticket' as const, id: t.id, ruta: `#/tickets/${t.numero}`,
-    titulo: `#${t.numero} · ${t.titulo || 'Ticket'}`, sub: [donde(s, t.local_id, t.cliente_id), t.estado].filter(Boolean).join(' · ') }));
+  return mapTickets((await API.get<any[]>('tickets', p)).data ?? []);
 }
 async function buscarPresupuestos(d: Datos): Promise<Resultado[]> {
   const p: Record<string, string> = { select: 'id,titulo,exigencias,estado,total,cliente_id,local_id', order: 'created_at.desc', limit: '8' };
@@ -158,8 +160,8 @@ async function buscarLocales(d: Datos): Promise<Resultado[]> {
     .map(l => ({ tipo: 'local' as const, id: l.id, ruta: `#/sitios/${l.id}`, titulo: l.nombre, sub: [l.cliente, l.direccion].filter(Boolean).join(' · ') }));
 }
 
-const ETIQUETA: Record<string, string> = { trabajo: 'Trabajo', tarea: 'Tarea', ticket: 'Ticket', presupuesto: 'Presupuesto', cliente: 'Cliente', local: 'Local' };
-const lista = (rs: Resultado[]) => rs.map(r => `- ${ETIQUETA[r.tipo] ?? ''} ${r.titulo}${r.sub ? ` (${r.sub})` : ''}`).join('\n');
+export const ETIQUETA: Record<string, string> = { trabajo: 'Trabajo', tarea: 'Tarea', ticket: 'Ticket', presupuesto: 'Presupuesto', cliente: 'Cliente', local: 'Local' };
+export const lista = (rs: Resultado[]) => rs.map(r => `- ${ETIQUETA[r.tipo] ?? ''} ${r.titulo}${r.sub ? ` (${r.sub})` : ''}`).join('\n');
 
 async function buscar(d: Datos): Promise<Respuesta> {
   const tipo = norm(d.tipo);
@@ -275,6 +277,7 @@ export async function ejecutarAccion(accion: string, datos: Datos = {}): Promise
       case 'control_remoto': return await controlRemoto(datos);
       case 'deshacer': return await deshacerUltimo();
     }
+    if (!OTRAS[accion]) await import('./voz-ordenes');   // las órdenes directas se cargan al primer uso
     if (OTRAS[accion]) return await OTRAS[accion](datos);
     return { ok: false, mensaje: 'Eso todavía no lo hago desde el hub: hazlo desde su pantalla.', contexto: `La acción ${accion} aún no está disponible en el hub.` };
   } catch (e) {
