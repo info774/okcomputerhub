@@ -279,6 +279,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   recordar, aviso sin permiso), «Drive» en las fichas y Contactos al guardar un
   cliente (función `google` SIMULADA; drive.google.com interceptado).
 
+- `verify-tickets-completos.mjs`: bloque 8, tanda 1: en la ficha del ticket,
+  tareas (crear con el área del hub; con la de la app, solo verlas), duplicar,
+  «Crear trabajo desde el ticket» (queda enlazado y cerrado; con trabajos de la
+  app no sale) y la resolución a la wiki (una página por ticket bajo
+  «Resoluciones»); y «Abrir ticket» desde una alerta de Breeze (uno por alerta).
+
 `npm run verify` pasa todos los de la lista.
 
 ## Pantalla nueva

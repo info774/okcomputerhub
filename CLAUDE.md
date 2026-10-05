@@ -896,6 +896,17 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   pantalla de antes) y `buildActual()`. «Pasar a Claude» = estado `claude`; el
   trabajador lo toma por el MCP (`feedback_pendientes`/`_tomar`/`_terminar`,
   docs/CLAUDE_TRABAJADOR.md punto 3) y deja `resultado`. Sin GitHub.
+- **Tickets completos** (paridad bloque 8, tanda 1, 2026-10-05,
+  `20261104_tickets_completos.sql`): en la ficha del ticket, TAREAS (las de la
+  app, `hub.tareas.ticket_id`: se ven ya y se crean con el corte de `tareas`),
+  DUPLICAR (vale ya), «Crear trabajo desde el ticket» (borrador con
+  `ticket_id`: al crear el trabajo, el ticket queda enlazado y cerrado «Pasó a
+  trabajo»; solo con el área `trabajos` del hub) y la RESOLUCIÓN A LA WIKI
+  (decisión de Fran: una página por ticket, `hub.paginas.ticket_id`, colgada de
+  «Resoluciones»; se reindexa). En las alertas de Breeze, «Abrir ticket»
+  (`moTicketAlerta`): el enlace vive en `hub.tickets.rmm_alerta_id` (único: una
+  alerta, un ticket), porque a Breeze no se le escribe. Código en
+  `tickets/extra.ts` (`tkx-`). Arnés `verify-tickets-completos.mjs`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

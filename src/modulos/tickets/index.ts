@@ -16,6 +16,8 @@ import { markdown } from '../../ui/markdown';
 import { buscarClientes, nombresClientes, telWhatsApp } from '../ventas/datos';
 import { botonChatFicha } from '../../ui/chat-ficha';
 import { tomarBorrador } from '../../ui/borrador';
+import { esDelHub } from '../../core/areas';
+import { seccionTareas, botonATrabajo, botonWiki } from './extra';
 import {
   type Ticket, type Comentario, type Plantilla,
   ESTADOS, ABIERTOS, PRIORIDADES, CATEGORIAS, CANALES, ICONO_CANAL, TONO_PRIORIDAD, prioridadNorm, sla, limiteSla, esMio, rellenar, enlaceValoracion,
@@ -172,6 +174,8 @@ async function pintarFicha(el: HTMLElement, numero: string) {
     API.get<any[]>('ticket_adjuntos', { select: 'id,nombre,drive_url,mime_type,usuario,created_at', ticket_id: `eq.${t.id}`, order: 'created_at' }),
   ]);
   const c = cli.data, k = con.data;
+  const [escribeTareas, escribeTrabajos] = await Promise.all([esDelHub('tareas'), esDelHub('trabajos')]);
+  const [tareasHtml, wikiHtml] = await Promise.all([seccionTareas(t, personas, escribeTareas), botonWiki(t, c?.nombre ?? null)]);
   _ctx = { contacto: k?.nombre ?? null, cliente: c?.nombre ?? null, email: t.email_de ?? k?.email ?? c?.email ?? null, telefono: k?.telefono ?? c?.telefono ?? null };
   const wa = telWhatsApp(_ctx.telefono);
   const s = sla(t);
@@ -226,23 +230,28 @@ async function pintarFicha(el: HTMLElement, numero: string) {
             <small class="nota">${esc([a.usuario, hace(a.created_at)].filter(Boolean).join(' · '))}</small></li>`).join('')}</ul></section>` : ''}
         <section class="tarjeta"><h3>Trabajo</h3>
           ${trab.data ? `<p>${ico('herramienta')} Trabajo #${trab.data.numero} ${esc(trab.data.titulo ?? '')} · ${esc(trab.data.estado)} <button class="btn secundario" data-action="tkDesvincular">Quitar</button></p>`
-            : `<form class="acciones" data-on-submit="tkVincular" data-prevent="1"><input id="tk-trabajo" type="number" min="1" placeholder="Nº de trabajo" aria-label="Número de trabajo">
+            : `${escribeTrabajos ? `<div class="acciones">${botonATrabajo()}</div>` : ''}
+              <form class="acciones" data-on-submit="tkVincular" data-prevent="1"><input id="tk-trabajo" type="number" min="1" placeholder="Nº de trabajo" aria-label="Número de trabajo">
               <button class="btn secundario" type="submit">Vincular</button></form>
-              <p class="nota">¿Hay que ir? Crea el trabajo en la <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">app actual ${ico('externo')}</a> y vincúlalo aquí con su número.</p>`}
+              ${escribeTrabajos ? '<p class="nota">Al crear el trabajo, este ticket queda enlazado y cerrado («Pasó a trabajo»).</p>'
+                : `<p class="nota">¿Hay que ir? Crea el trabajo en la <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">app actual ${ico('externo')}</a> y vincúlalo aquí con su número.</p>`}`}
         </section>
+        ${tareasHtml}
         <section class="tarjeta"><h3>${cerrado ? 'Cerrado' : 'Cerrar'}</h3>
           ${cerrado ? `<p>${esc(t.resolucion ?? '')}${t.resolucion_categoria ? ` <span class="chip">${esc(t.resolucion_categoria)}</span>` : ''}</p>
             ${t.valoracion ? `<p>Valoración: ${estrellas(t.valoracion)}${t.valoracion_comentario ? `<br><em>«${esc(t.valoracion_comentario)}»</em>` : ''}</p>`
               : '<p class="nota">Sin valoración todavía.</p>'}
             <div class="acciones"><button class="btn secundario" data-action="tkCopiarValoracion">Copiar enlace de valoración</button>
+              ${wikiHtml}
               <button class="btn secundario" data-action="tkCambiar" data-p0="estado" data-p1="Abierto">Reabrir</button></div>`
           : `<form data-on-submit="tkCerrar" data-prevent="1">
               <label>Qué se hizo <textarea id="tk-resolucion" rows="3" required>${esc(t.resolucion ?? '')}</textarea></label>
               <label>Cómo <select id="tk-categoria">${CATEGORIAS.map(x => `<option ${x === t.resolucion_categoria ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
-              <div class="acciones"><button class="btn" type="submit">Cerrar ticket</button></div>
+              <div class="acciones"><button class="btn" type="submit">Cerrar ticket</button> ${wikiHtml}</div>
               <p class="nota">Al cerrar se prepara el mensaje de cierre con el enlace para que el cliente valore (lo mandas tú).</p></form>`}
         </section>
-        ${esAdmin() ? '<div class="acciones"><button class="btn peligro" data-action="tkBorrar">Borrar ticket</button></div>' : ''}
+        <div class="acciones"><button class="btn secundario" data-action="tkxDuplicar">${ico('repetir')} Duplicar</button>
+          ${esAdmin() ? '<button class="btn peligro" data-action="tkBorrar">Borrar ticket</button>' : ''}</div>
       </div>
     </div>`;
   if (_prepararCierre) {

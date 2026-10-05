@@ -31,6 +31,7 @@ const modoInicial = (): Modo => (leer(CLAVE_MODO) as Modo | null) ?? (window.mat
 
 let _editando: { id: string; numero: number; estado: string } | null = null;
 let _plantillas: Plantilla[] = [];
+let _ticket: { id: string; numero: number } | null = null; // alta que nace de un ticket
 
 // Hora local de Canarias → ISO con su desfase (la app hace lo mismo con _localTzOffset).
 function horaIso(fecha: string, hora: string): string | null {
@@ -57,6 +58,7 @@ export async function pintarFormulario(el: HTMLElement, numero?: string, desdeOp
   }
   // Desde WhatsApp (ventana fija o «Desde WhatsApp»): el aviso ya resumido.
   const b = !t && !op ? tomarBorrador('trabajo') : null;
+  _ticket = b?.ticket_id ? { id: b.ticket_id, numero: b.ticket_numero ?? 0 } : null;
   // Valores de partida: los del trabajo que se edita, los de la oportunidad o los del borrador.
   const v: any = t ?? (op ? { cliente_id: op.cliente_id, local_id: op.local_id, contacto_id: op.contacto_id, titulo: op.titulo, descripcion: op.descripcion }
     : b ? { cliente_id: b.cliente_id, local_id: b.local_id, contacto_id: b.contacto_id, titulo: b.titulo, descripcion: b.descripcion,
@@ -71,8 +73,8 @@ export async function pintarFormulario(el: HTMLElement, numero?: string, desdeOp
   _plantillas = plantillas;
   const modo = modoInicial();
   const opt = (v: string, txt: string, sel: boolean) => `<option value="${esc(v)}" ${sel ? 'selected' : ''}>${esc(txt)}</option>`;
-  const atras = t ? `#/trabajos/${t.numero}` : op ? `#/oportunidades/${op.id}` : '#/trabajos';
-  el.innerHTML = `<p><a href="${atras}">← ${t ? `Trabajo #${t.numero}` : op ? 'Oportunidad' : 'Trabajos'}</a></p>
+  const atras = t ? `#/trabajos/${t.numero}` : op ? `#/oportunidades/${op.id}` : _ticket ? `#/tickets/${_ticket.numero}` : '#/trabajos';
+  el.innerHTML = `<p><a href="${atras}">← ${t ? `Trabajo #${t.numero}` : op ? 'Oportunidad' : _ticket ? `Ticket #${_ticket.numero}` : 'Trabajos'}</a></p>
     <h2>${t ? `Editar el trabajo #${t.numero}` : op ? `Nuevo trabajo de la oportunidad «${esc(op.titulo)}»` : 'Nuevo trabajo'}</h2>
     ${escribe ? '' : avisoSoloLectura('Los trabajos')}
     <form class="tarjeta tf-form" id="tf-form" data-modo="${modo}" data-on-submit="tfGuardar" data-prevent="1">
@@ -278,7 +280,15 @@ const acciones = {
         const { anadirALista } = await import('../lista-dia/vista');
         for (const persona of tecnicos) await anadirALista({ tipo: 'trabajo', refId: r.data[0].id, persona, fecha: fecha || undefined, asignarlo: false });
       }
-      toast(`Trabajo #${r.data[0].numero} creado`);
+      // Desde un ticket (convertirTicketATrabajo de la app): el ticket queda enlazado y cerrado.
+      if (_ticket) {
+        const tk = (await API.single<any>('tickets', { select: 'resolucion', id: `eq.${_ticket.id}` })).data;
+        const e = await API.patch('tickets', { id: `eq.${_ticket.id}` }, { trabajo_id: r.data[0].id, estado: 'Cerrado', resolucion_categoria: 'Pasó a trabajo',
+          ...(tk?.resolucion ? {} : { resolucion: `Pasó al trabajo #${r.data[0].numero}.` }) });
+        if (e.error) toast(`Trabajo #${r.data[0].numero} creado, pero el ticket no se pudo cerrar: ${e.error.message}`, 'error');
+        else toast(`Trabajo #${r.data[0].numero} creado y el ticket #${_ticket.numero} cerrado`);
+        _ticket = null;
+      } else toast(`Trabajo #${r.data[0].numero} creado`);
       ir('trabajos', String(r.data[0].numero));
       return;
     }

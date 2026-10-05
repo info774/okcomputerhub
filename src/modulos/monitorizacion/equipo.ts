@@ -10,7 +10,7 @@ import { ico } from '../../shell/linea';
 import { tablaAlertas } from './lista';
 import {
   type Equipo, type Metrica, type Script,
-  equipo as leerEquipo, metricas, listarAlertas, listarScripts, nombresLocales, pedirABreeze, estadoBreeze, enBreeze,
+  equipo as leerEquipo, metricas, listarAlertas, listarScripts, nombresLocales, pedirABreeze, estadoBreeze, enBreeze, ticketsDeAlertas,
 } from './datos';
 
 const PESTANAS = [
@@ -147,7 +147,7 @@ async function tabSoftware(e: Equipo): Promise<string> {
 async function tabAlertas(e: Equipo): Promise<string> {
   const { data, error } = await listarAlertas({ device_id: `eq.${e.id}` });
   if (error) return `<p class="aviso mal">${esc(error.message)}</p>`;
-  return tablaAlertas(data ?? [], await nombresLocales([e.local_id ?? '']));
+  return tablaAlertas(data ?? [], await nombresLocales([e.local_id ?? '']), await ticketsDeAlertas((data ?? []).map(a => a.id)));
 }
 
 // ── Comandos y scripts ─────────────────────────────────────────────────────
