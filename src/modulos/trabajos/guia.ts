@@ -16,7 +16,7 @@ import { esAdmin, usuario } from '../../core/estado';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir } from '../../core/router';
-import { esc, toast, hace } from '../../ui/dom';
+import { esc, toast, hace, pl } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { GUIA_TIPOS, textoOpcion, type TipoGuia } from './guia-tipos';
 
@@ -178,7 +178,7 @@ async function finalizar() {
   if (t.estado === 'Pendiente') await API.rpc('trabajo_estado', { p_id: t.id, p_estado: 'En progreso' });
   let enSede = 0;
   if (t.local_id && await esDelHub('local_hardware', 'local_software', 'local_camaras')) enSede = await guardarEnSede(inst, t.local_id).catch(() => 0);
-  toast(`Instalación completada${enSede ? ` · ${enSede} equipo(s) a la ficha de la sede` : ''}`);
+  toast(`Instalación completada${enSede ? ` · ${pl(enSede, 'equipo', 'equipos')} a la ficha de la sede` : ''}`);
   ir('trabajos', String(t.numero), 'instalacion', inst.id);
 }
 

@@ -24,6 +24,7 @@ import { esAdmin, usuario } from '../../core/estado';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, hace } from '../../ui/dom';
 import { type Aviso, urgentesDe, hrefAviso, diceHTML, pintarEstadisticas, vozHTML, ordenesHTML, ola } from './piezas';
+import { ico as icoLinea } from '../../shell/linea';
 
 // Las seis áreas del diagrama: posición del centro de la tarjeta en el lienzo
 // de 860 × 620 y el módulo cuyo contador pinta su dato.
@@ -327,13 +328,20 @@ function ponDato(id: string, texto: string, tono?: string) {
   s.dataset.tono = tono ?? 'neutro';
 }
 
+// «12 abiertos»; si el subtítulo ya trae su cifra («1 alerta activa»), la del
+// contador va delante separada («2/3 · 1 alerta activa») y no pegada.
+const datoDe = (c: Contador) => {
+  const sub = (c.subtitulo ?? '').trim();
+  return /^\d/.test(sub) ? `${c.valor} · ${sub}` : `${c.valor} ${sub}`.trim();
+};
+
 async function datosAreas() {
   const mods = new Map<string, Modulo>(modulos().filter(m => !m.soloAdmin || esAdmin()).map(m => [m.id, m]));
   for (const a of AREAS) {
     if (a.id === 'whatsapp') continue;
     const m = mods.get(a.id);
     if (!m?.contador) { ponDato(a.id, '—'); continue; }
-    m.contador().then((c: Contador | null) => ponDato(a.id, c ? `${c.valor} ${c.subtitulo ?? ''}`.trim() : '—', c?.tono))
+    m.contador().then((c: Contador | null) => ponDato(a.id, c ? datoDe(c) : '—', c?.tono))
       .catch(() => ponDato(a.id, '—'));
   }
   const { data } = await llamarFuncion<{ conversaciones: { pendiente: boolean }[]; envio?: boolean }>('whatsapp', { accion: 'conversaciones' }, 20000);
@@ -523,7 +531,7 @@ registrarAcciones({
     const r = await llamarFuncion<{ texto: string }>('informes-enviar', { accion: 'vista_previa', tipo: 'repaso_matinal' }, 60000);
     if (caja.hidden) return;
     caja.innerHTML = `<div class="ok-ph"><span class="hex-punto" aria-hidden="true"></span><h3>Repaso de la mañana</h3><span class="ok-ph-l"></span>
-        <button type="button" class="icono-btn pequeno" data-action="okRepaso" aria-label="Cerrar el repaso">✕</button></div>
+        <button type="button" class="icono-btn pequeno" data-action="okRepaso" aria-label="Cerrar el repaso">${icoLinea('cerrar')}</button></div>
       ${r.error ? `<p class="aviso mal">${esc(r.error)}</p>` : `<div class="ok-repaso-txt">${htmlTelegram(r.data?.texto ?? '')}</div>`}
       <p class="nota">Programarlo o recibirlo por Telegram: <a href="#/informes">Informes y Telegram ›</a></p>`;
     caja.scrollIntoView({ block: 'nearest', behavior: 'smooth' });

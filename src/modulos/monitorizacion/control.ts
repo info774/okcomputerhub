@@ -15,7 +15,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
-import { esc, toast, hace } from '../../ui/dom';
+import { esc, toast, hace, pl } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 
 export interface EquipoControl { id: string; clave: string; hostname: string | null; local_id: string | null; local_manual: boolean; ignorar: boolean; faltan: string[] | null;
@@ -66,7 +66,7 @@ export async function tabControl(): Promise<string> {
   const ult = ultima(todos);
   return `${escribe ? '' : avisoSoloLectura('El control de equipos')}
     <div class="di-cifras pp-cifras mce-cifras">
-      <article class="tarjeta di-cifra"><h3>PCs controlados</h3><p class="di-valor">${activos.length}</p><p class="nota">${todos.length - activos.length} ignorado(s)</p></article>
+      <article class="tarjeta di-cifra"><h3>PCs controlados</h3><p class="di-valor">${activos.length}</p><p class="nota">${pl(todos.length - activos.length, 'ignorado', 'ignorados')}</p></article>
       <article class="tarjeta di-cifra ${incompletos.length ? 'mal' : ''}"><h3>Incompletos</h3><p class="di-valor">${incompletos.length}</p><p class="nota">les falta algún programa</p></article>
       <article class="tarjeta di-cifra ${sinSede.length ? 'atento' : ''}"><h3>Sin sede</h3><p class="di-valor">${sinSede.length}</p><p class="nota">vistos sin saber de quién son</p></article>
       <article class="tarjeta di-cifra"><h3>Última comprobación</h3><p class="di-valor">${ult ? esc(hace(ult)) : '—'}</p><p class="nota">cada día con Breeze y Action1</p></article>

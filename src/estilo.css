@@ -251,11 +251,11 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .toast.error { background: var(--mal); color: #fff; }
 
 /* ── Formularios comunes ─────────────────────────────────────────────── */
-.principal input:not([type=checkbox]), .principal select, .principal textarea {
+.principal input:not([type=checkbox]):not([type=radio]), .principal select, .principal textarea {
   min-height: 40px; padding: .4rem .6rem; font: inherit; color: var(--texto);
   border: 1px solid var(--borde); border-radius: 8px; background: var(--fondo); max-width: 100%;
 }
-.principal textarea { width: 100%; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9rem; }
+.principal textarea { width: 100%; resize: vertical; font-size: .95rem; line-height: 1.45; }
 .principal label { display: grid; gap: .25rem; font-size: .9rem; color: var(--texto-suave); margin-bottom: .6rem; }
 .principal label.check { display: inline-flex; align-items: center; gap: .4rem; margin: 0; color: var(--texto); }
 .btn.peligro { background: transparent; color: var(--mal); border-color: var(--mal); }
@@ -570,7 +570,6 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .tk-nota { justify-self: stretch; max-width: none; background: var(--aviso-fondo); border-style: dashed; }
 .tk-responder .segmentado { margin-bottom: .5rem; }
 .tk-tipo { display: inline-flex; align-items: center; gap: .35rem; min-height: 40px; padding: 0 .8rem; cursor: pointer; }
-.tk-tipo:has(input:checked) { background: var(--primario); color: var(--primario-texto); }
 .tk-responder textarea { width: 100%; }
 .tk-responder [hidden] { display: none; }
 .tk-dl { display: grid; grid-template-columns: auto 1fr; gap: .3rem .75rem; margin: .75rem 0 0; }
@@ -585,7 +584,7 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 
 /* ── Comandas (fase 8) ──────────────────────────────────────────────────── */
 .co-dictar textarea { width: 100%; }
-.co-manual input { flex: 1; min-width: 12rem; }
+.co-manual > input:not([type=checkbox]) { flex: 1; min-width: 12rem; }
 .co-chips { flex-wrap: wrap; }
 .co-tarjeta { cursor: grab; }
 .co-tarjeta.co-prioridad { border-left: 4px solid var(--mal); }
@@ -743,7 +742,8 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 /* ── Barras horizontales de una serie (ui/barras.ts) ─────────────────── */
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .num, .tabla .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.barras-tarjeta h3 { margin: 0 0 .5rem; font-size: .9rem; color: var(--texto-suave); font-weight: 600; }
+.barras-tarjeta h3 { margin: 0 0 .6rem; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--texto-suave); font-weight: 700; }
+.barras[hidden] { display: none; }
 .barras { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
 .barras th { text-align: left; font-weight: 500; padding-right: .6rem; white-space: nowrap; width: 1%; }
 .barras .num { padding-left: .6rem; width: 1%; }
@@ -765,7 +765,7 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .tabla .chip { white-space: nowrap; }
 
 /* Lista del día (paridad bloque 1, tanda 3) */
-.ld-personas { flex-wrap: wrap; }
+.ld-personas { flex-wrap: wrap; margin-bottom: .75rem; }
 .ld-lista { list-style: none; margin: 0; padding: 0; }
 .ld-fila { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .7rem; padding: .55rem 0; border-top: 1px solid var(--borde); }
 .ld-fila.hecho .ld-txt strong { text-decoration: line-through; color: var(--texto-suave); }
@@ -1058,8 +1058,8 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .di-cifra > a:hover h3 { text-decoration: none; color: var(--primario); }
 
 /* Sin datos (.vacio): texto suave precedido del hexágono hueco de la marca. */
-p.vacio, div.vacio { font-size: .92rem; }
-p.vacio::before, div.vacio::before {
+p.vacio, div.vacio, li.vacio { font-size: .92rem; }
+p.vacio::before, div.vacio::before, li.vacio::before {
   content: ''; display: inline-block; vertical-align: -2px; margin-right: .5rem; width: 15px; height: 15px; background: currentColor; opacity: .55;
   -webkit-mask: var(--hex-hueco) center / contain no-repeat; mask: var(--hex-hueco) center / contain no-repeat;
 }
@@ -1072,7 +1072,8 @@ p.vacio.col-vacia::before { content: none; }
 
 /* Calendario: barra agrupada (‹ título › juntos), días más compactos y el
    panel de pendientes debajo cuando la semana no cabe con él al lado. */
-.ca-barra { justify-content: flex-start; }
+.ca-barra { justify-content: flex-start; align-items: center; }
+.ca-capas { flex-wrap: nowrap; gap: .9rem; }
 @media (min-width: 768px) {
   .ca-barra .ca-titulo { min-width: 13rem; text-align: center; font-size: 1.05rem; }
   .ca-barra #ca-ir { margin-left: auto; }
@@ -1108,6 +1109,134 @@ details > summary { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .btn, .icono-btn, .buscador-btn, .segmentado > *, .pestanas > *, .tabla td, .marca .hex, .di-cifra { transition: none; }
   .di-cifra:has(> a):hover { transform: none; }
+}
+
+/* ---- Repaso de pantallas (2026-10-05) ----
+   Arreglos comunes que salieron al repasar todas las pantallas con la galería
+   (verify-galeria.mjs, también GALERIA_FICHAS=1 y GALERIA_ESCRITORIO=1). */
+/* Rejillas de campos: el campo no empuja su columna (se pisaban). */
+.pr-campos, .in-campos { align-items: end; }
+.pr-campos > *, .in-campos > * { min-width: 0; }
+.principal label > input:not([type=checkbox]):not([type=radio]), .principal label > select, .principal label > textarea { width: 100%; min-width: 0; }
+/* Una celda de botones sigue siendo celda (con .acciones dejaba de serlo y la raya de la fila salía partida). */
+.tabla td.acciones { display: table-cell; white-space: nowrap; }
+.tabla td.acciones > * + * { margin-left: .5rem; }
+/* Tarjetas: sin el margen del primer y último hijo (una tarjeta de una línea medía el doble). */
+.tarjeta > :first-child { margin-top: 0; }
+.tarjeta > :last-child { margin-bottom: 0; }
+/* En una rejilla el margen no se colapsa: lo pone el gap. */
+.di-cifras > .tarjeta { margin: 0; }
+.di-cifras { margin-bottom: 1rem; }
+/* Barras de herramientas juntas a la izquierda: repartidas a los extremos, al
+   partirse en dos líneas dejaban botones sueltos por todo el ancho. */
+.pr-barra { justify-content: flex-start; }
+.pr-barra > label { margin-bottom: 0; }
+/* Pestañas en píldora (Almacén, Personas): una sola fila que se desplaza. */
+.al-pestanas { flex-wrap: nowrap; }
+/* Una etiqueta que empieza por un icono: icono y texto en la misma línea. */
+.principal label:has(> svg:first-child) { grid-auto-flow: column; justify-content: start; align-items: center; }
+/* Un vacío dentro de una rejilla de tarjetas ocupa toda la fila. */
+.tb-rejilla > p.vacio { grid-column: 1 / -1; }
+.mo-barra input[type=search] { flex: 1 1 320px; }
+/* Chat: los dos formularios del panel izquierdo, en su fila y con aire. */
+.ch-lista form { display: flex; flex-wrap: nowrap; gap: .5rem; margin-top: .5rem; }
+.ch-lista form > :is(select, input) { flex: 1; min-width: 0; }
+.wk-lateral > form { margin-bottom: .6rem; }
+#bu-carpeta { flex: 1 1 24rem; min-width: 0; }
+/* Una columna de texto tras una de cifras (alineada a la derecha): con aire, o los dos rótulos parecen uno. */
+.tabla th.num + th:not(.num), .tabla td.num + td:not(.num) { padding-left: 1.25rem; }
+@media (max-width: 767px) {
+  .op-cierre > span { flex-basis: 100%; }
+  /* Desk en el móvil: número, ticket, prioridad y SLA (lo que manda); el resto en la ficha. */
+  .tk-tabla td:nth-child(4), .tk-tabla th:nth-child(4), .tk-tabla td:nth-child(6), .tk-tabla th:nth-child(6) { display: none; }
+}
+.me-grid { align-items: stretch; }
+.me-grid > .tarjeta { margin: 0; }
+/* `hidden` manda siempre (una .acciones o .tarjeta con display propio seguía viéndose). */
+[hidden] { display: none !important; }
+/* Opciones con radio dentro de una píldora (.segmentado): como sus botones. */
+.principal .segmentado > label { display: inline-flex; align-items: center; gap: .35rem; min-height: 34px; margin: 0; padding: 0 .9rem; border-radius: 999px;
+  color: var(--texto-suave); font-size: .9rem; font-weight: 600; cursor: pointer; white-space: nowrap; flex: none; transition: background .15s, color .15s, box-shadow .15s; }
+.principal .segmentado > label { position: relative; }
+.principal .segmentado > label > input[type=radio] { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+.principal .segmentado > label:hover { color: var(--texto); }
+.principal .segmentado > label:has(input:checked) { background: var(--superficie); color: var(--primario); box-shadow: 0 1px 3px rgb(11 31 20 / .14); }
+.principal .segmentado > label:has(input:focus-visible) { outline: 2px solid var(--verde); outline-offset: 1px; }
+:root[data-theme="dark"] .principal .segmentado > label:has(input:checked) { background: var(--primario-suave); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .principal .segmentado > label:has(input:checked) { background: var(--primario-suave); } }
+.segmentado.cl-tipos { flex-wrap: wrap; overflow: visible; border-radius: 14px; }
+/* «Nombre (obligatorio)»: el texto y su nota en la misma línea, el campo debajo. */
+.principal label:has(> .nota) { grid-template-columns: max-content 1fr; column-gap: .3rem; align-items: baseline; }
+.principal label:has(> .nota) > :is(input, select, textarea, .resultados, div) { grid-column: 1 / -1; }
+/* Grupos (fieldset) con el mismo marco redondeado en todo el programa. */
+:where(.principal) fieldset { min-width: 0; margin: 0 0 .75rem; padding: .55rem .9rem .75rem; border: 1px solid var(--borde); border-radius: 12px; }
+:where(.principal) legend { padding: 0 .3rem; font-size: .85rem; color: var(--texto-suave); }
+/* Selector de fichero: su botón con el estilo de los secundarios. */
+.principal input[type=file] { padding: .3rem .4rem; cursor: pointer; }
+.principal input[type=file]::file-selector-button { min-height: 32px; margin-right: .75rem; padding: 0 .85rem; border: 1px solid color-mix(in srgb, var(--texto) 22%, var(--borde)); border-radius: 8px;
+  background: var(--superficie); color: var(--texto); font: inherit; font-weight: 600; cursor: pointer; }
+/* Vista previa todavía vacía: un hueco con su rótulo, no una píldora. */
+.tarjeta.md:empty { min-height: 10rem; }
+.tarjeta.md:empty::before { content: 'Aquí se verá el texto con formato'; color: var(--texto-suave); }
+/* Mensajes de vacío dentro de listas y rejillas: a todo el ancho. */
+.di-ultimo > li.nota { display: block; }
+:is(.mpl-planes, .mo-sedes, .me-grid) > p.vacio { grid-column: 1 / -1; }
+.pr-barra > .nota { align-self: center; margin: 0; }
+.di-cuerpo:has(> .di-lateral:empty) { grid-template-columns: 1fr; }
+/* Etiqueta suelta (label for) pegada a su campo, notas vacías fuera y la píldora de un formulario con aire debajo. */
+.principal label[for]:not(:has(input, select, textarea)) { margin-bottom: .25rem; }
+.principal p.nota:empty { display: none; }
+.principal form > .segmentado { margin-bottom: .75rem; }
+/* Material del trabajo: el concepto crece y la cantidad es estrecha. */
+#tr-l-q { flex: 1 1 16rem; min-width: 0; }
+#tr-l-cant { flex: none; width: 5.5rem; }
+#tr-inv-res + .acciones { margin-top: .75rem; }
+/* Tableros con más columnas que ancho: difuminado a la derecha, como las pestañas del móvil. */
+.pr-kanban { scrollbar-width: thin; }
+/* Dos filas de acciones seguidas, con aire. */
+.acciones + .acciones, .acciones + .pr-barra { margin-top: .5rem; }
+:where(.principal .tarjeta-cab + .acciones, .principal .acciones + .tarjeta, .principal .acciones + label, .principal .acciones + section) { margin-top: .75rem; }
+/* Casillas sueltas en una barra con campos: centradas, no por abajo. */
+.pr-barra > label.check { align-self: center; }
+/* Un chip neutro no es un agujero del color del fondo en el tema noche. */
+.chip:not(.bien):not(.aviso):not(.mal) { background: color-mix(in srgb, var(--texto) 8%, transparent); }
+/* Interruptores con más opciones que ancho: se desplazan, no se cortan. */
+.segmentado { max-width: 100%; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+.segmentado::-webkit-scrollbar { display: none; }
+.segmentado > * { flex: none; }
+.tabla th { white-space: nowrap; }
+.principal code { overflow-wrap: anywhere; }
+.chip-boton { min-height: 36px; }
+.acciones .chip-boton, .mo-barra .chip-boton { min-height: 40px; }
+@media (max-width: 767px) {
+  /* La barra plegada de WhatsApp (60 px + margen) no tapa lo último de la pantalla. */
+  .principal { padding-bottom: calc(60px + 12px + 2rem); }
+  /* Botones redondos de 36 px y la marca solo «OK Hub» por debajo de 420 px: así cabe todo en 390. */
+  .cabecera .icono-btn, .cabecera .buscador-btn { flex: none; width: 36px; height: 36px; min-height: 36px; }
+  /* Tablas anchas: se desplazan dentro de su tarjeta en vez de partir palabra a palabra. */
+  .tarjeta > .tabla:has(th:nth-child(5)), .mo-scroll > .tabla:has(th:nth-child(5)) { min-width: 40rem; }
+  /* Pestañas que no caben: se difuminan por la derecha para que se vea que hay más. */
+  .pestanas { mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
+  /* Cabecera de pantalla: hexágono más pequeño y la explicación a todo el ancho. */
+  #pantalla-icono .os-ico { width: 34px; }
+  /* Hexágono y título en una fila; la explicación debajo, a todo el ancho. */
+  .pantalla-cab { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: .6rem; }
+  .pantalla-cab:has(#pantalla-icono:empty) { grid-template-columns: 1fr; }
+  .pantalla-cab > .pantalla-txt { display: contents; }
+  #pantalla-titulo { margin: 0; font-size: 1.4rem; }
+  .pantalla-cab .explicacion { grid-column: 1 / -1; }
+  .tarjeta-cab > .acciones { width: 100%; }
+  .tarjeta-cab > .acciones > .btn { flex: 1 1 auto; }
+}
+@media (max-width: 420px) { .marca-txt { display: none; } }
+@media (min-width: 768px) { .principal { padding-bottom: calc(60px + 20px + 1.5rem); } }
+body.os-modo .principal { padding-bottom: 1.25rem; }
+/* Mapa en el tema noche: los controles de Leaflet no son cajas blancas. */
+:root[data-theme="dark"] .leaflet-bar a, :root[data-theme="dark"] .leaflet-control-attribution { background: var(--superficie); color: var(--texto); border-color: var(--borde); }
+:root[data-theme="dark"] .leaflet-control-attribution a { color: var(--primario); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-bar a, :root:not([data-theme="light"]) .leaflet-control-attribution { background: var(--superficie); color: var(--texto); border-color: var(--borde); }
+  :root:not([data-theme="light"]) .leaflet-control-attribution a { color: var(--primario); }
 }
 
 /* ---- Usuarios (us-) y Registro de cambios (rg-) ---- */

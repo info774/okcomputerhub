@@ -86,8 +86,10 @@ export function trasPintar(dock: HTMLElement) {
   const items = [...dock.children] as HTMLElement[];
   const n = items.filter(e => !e.classList.contains('os-dsep')).length;
   const seps = items.length - n;
-  const cabe = Math.floor((innerWidth - 48 - RELLENO * 2 - seps * (SEP + HUECO)) / n) - HUECO;
-  const base = Math.max(30, Math.min(BASE, cabe));
+  // A cada lado se deja sitio para el botón de WhatsApp (92 px); con muchas
+  // ventanas abiertas los iconos encogen hasta 24 px antes de salirse.
+  const cabe = Math.floor((innerWidth - 184 - RELLENO * 2 - seps * (SEP + HUECO)) / n) - HUECO;
+  const base = Math.max(24, Math.min(BASE, cabe));
   dock.style.setProperty('--os-dbase', `${base}px`);
   dock.dataset.base = String(base);
   if (_rebote && performance.now() - _rebote.t < REBOTE_MS) {

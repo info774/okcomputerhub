@@ -8,7 +8,7 @@ import { API } from '../../core/api';
 import { esAdmin, usuario } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
-import { esc, hace, fechaHora } from '../../ui/dom';
+import { esc, hace, fechaHora, pl } from '../../ui/dom';
 import { iconoHex } from '../../shell/iconos';
 import { ico, type IconoLinea } from '../../shell/linea';
 
@@ -108,8 +108,8 @@ function pintarCifras(r: Resumen): string {
     ${tarjeta('Facturado este mes', eur(r.facturado_mes), dif == null ? 'Sin datos del año pasado'
       : `${dif >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(dif))} % frente a ${eur(r.facturado_mes_anterior_ano)} el año pasado a estas alturas`)}
     ${tarjeta('Cobrado este mes', eur(r.cobrado_mes), 'Pagos registrados en Zoho')}
-    ${tarjeta('Pendiente de cobro', eur(r.pendiente), r.vencido ? `<span class="mal">${eur(r.vencido)} vencido</span> en ${r.facturas_vencidas} factura(s)` : 'Nada vencido', r.vencido ? 'mal' : '')}
-    ${tarjeta('Presupuestos', eur(r.presupuestos_enviados), `enviados sin respuesta · ${eur(r.presupuestos_aceptados)} aceptados · ${r.para_facturar} trabajo(s) por facturar`)}
+    ${tarjeta('Pendiente de cobro', eur(r.pendiente), r.vencido ? `<span class="mal">${eur(r.vencido)} vencido</span> en ${pl(r.facturas_vencidas, 'factura', 'facturas')}` : 'Nada vencido', r.vencido ? 'mal' : '')}
+    ${tarjeta('Presupuestos', eur(r.presupuestos_enviados), `enviados sin respuesta · ${eur(r.presupuestos_aceptados)} aceptados · ${pl(r.para_facturar, 'trabajo', 'trabajos')} por facturar`)}
   </div><p class="nota di-pie">Importes con impuestos, como en Zoho Books. Última copia de Zoho: ${r.zoho?.ultima_ok ? esc(hace(r.zoho.ultima_ok)) : 'nunca'}${r.zoho?.ultimo_error ? ` · <span class="mal">último error: ${esc(r.zoho.ultimo_error)}</span>` : ''}.</p>`;
 }
 
@@ -192,7 +192,7 @@ async function contador(): Promise<Contador | null> {
   const { data, error } = await avisos();
   if (error || !data) return null;
   const mal = data.filter(a => a.gravedad === 'mal').length;
-  return { valor: data.length, subtitulo: mal ? `${mal} urgente(s)` : 'avisos pendientes', tono: mal ? 'mal' : data.length ? 'aviso' : 'bien' };
+  return { valor: data.length, subtitulo: mal ? `${pl(mal, 'urgente', 'urgentes')}` : 'avisos pendientes', tono: mal ? 'mal' : data.length ? 'aviso' : 'bien' };
 }
 
 registrarAcciones({

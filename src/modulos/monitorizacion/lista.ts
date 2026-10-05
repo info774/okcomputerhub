@@ -5,7 +5,7 @@
 import { API } from '../../core/api';
 import { ir, resolver } from '../../core/router';
 import { registrarAcciones } from '../../core/dispatcher';
-import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { esc, toast, hace, fechaHora, pl } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import {
   type Equipo, type Alerta, type Site, type EstadoLocal,
@@ -50,7 +50,7 @@ export function tablaEquipos(equipos: Equipo[], sedes: Map<string, string>, conS
       <td><strong>${esc(e.nombre)}</strong>${e.ultimo_usuario ? `<br><small class="nota">${ico('persona')} ${esc(e.ultimo_usuario)}</small>` : ''}</td>
       <td>${conexion(e)}</td>
       ${conSede ? `<td>${e.local_id ? esc(sedes.get(e.local_id) ?? '…') : `<span class="nota">${esc(e.sitio ?? 'Sin Site')} · sin sede</span>`}</td>` : ''}
-      <td>${esc((e.so_version ?? e.so).replace(/^Microsoft /, ''))}</td>
+      <td>${esc((e.so_version ?? e.so ?? '').replace(/^Microsoft /, ''))}</td>
       <td>${discoPeor(e)}</td>
       <td>${e.parches_pendientes ? chip(String(e.parches_pendientes), e.parches_pendientes > 10 ? 'aviso' : 'neutro') : '<span class="nota">0</span>'}</td>
       <td>${e.alertas_abiertas ? chip(String(e.alertas_abiertas), 'mal') : '<span class="nota">0</span>'}</td>
@@ -93,10 +93,10 @@ async function tabSedes(): Promise<string> {
     return `<article class="tarjeta fila-clic mo-sede ${esc(e.tono)}" data-action="moSede" data-p0="${esc(s.local_id)}">
       <h3>${esc(nombres.get(s.local_id) ?? 'Sede')}</h3>
       <p>${chip(e.texto, e.tono)}</p>
-      <p class="nota">${s.conectados} de ${s.equipos} conectado(s)${s.alertas ? ` · ${s.alertas} alerta(s)` : ''}<br>Último contacto ${esc(hace(s.visto_ultimo))}</p>
+      <p class="nota">${s.conectados} de ${pl(s.equipos, 'conectado', 'conectados')}${s.alertas ? ` · ${pl(s.alertas, 'alerta', 'alertas')}` : ''}<br>Último contacto ${esc(hace(s.visto_ultimo))}</p>
     </article>`;
   };
-  return `${sinSede ? `<p class="aviso">Hay ${sinSede} equipo(s) en Sites de Breeze sin sede del hub.
+  return `${sinSede ? `<p class="aviso">Hay ${pl(sinSede, 'equipo', 'equipos')} en Sites de Breeze sin sede del hub.
       <button class="btn secundario" data-action="moPestana" data-p0="emparejado">Emparejar</button></p>` : ''}
     ${filas.length ? `<div class="mo-sedes">${filas.map(tarjeta).join('')}</div>` : '<p class="vacio">Ninguna sede tiene todavía equipos con el agente de Breeze.</p>'}`;
 }

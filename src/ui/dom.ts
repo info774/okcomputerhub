@@ -14,6 +14,22 @@ export function fechaHora(v: string | null | undefined): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
 }
 
+// Fecha de calendario para enseñar («5 oct», o «5 oct 2025» si no es de este
+// año; `conAnio` lo pone siempre). Acepta 'AAAA-MM-DD' (sin pasar por UTC) o
+// un instante ISO. Lo que no se entienda sale tal cual.
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+export function fecha(v: string | null | undefined, conAnio = false): string {
+  if (!v) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(v);
+  if (Number.isNaN(d.getTime())) return v;
+  const anio = conAnio || d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : '';
+  return `${d.getDate()} ${MESES[d.getMonth()]}${anio}`;
+}
+
+// «1 alerta» / «3 alertas»: la cifra con su palabra en singular o plural.
+export const pl = (n: number | null | undefined, uno: string, varios: string): string => `${n ?? 0} ${n === 1 ? uno : varios}`;
+
 export function hace(v: string | null | undefined): string {
   if (!v) return 'nunca';
   const min = Math.round((Date.now() - new Date(v).getTime()) / 60000);

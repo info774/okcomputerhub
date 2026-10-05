@@ -111,7 +111,7 @@ try {
   await page.screenshot({ path: `${CAPTURAS}/embudo-ficha.png`, fullPage: true });
   // Volver a Propuesta desde Negociando: los presupuestos aún son de la app → solo se avisa.
   await page.click('[data-action="opEtapa"][data-p0="Negociando"]');
-  await toastCon('Negociando · próximo paso en 3 día(s)');
+  await toastCon('Negociando · próximo paso en 3 días');
   await page.waitForSelector('.op-flechas .op-etapa.activo[data-p0="Negociando"]');
   await page.click('[data-action="opEtapa"][data-p0="Propuesta"]');
   await toastCon('todavía en la app');

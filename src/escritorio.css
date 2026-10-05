@@ -699,3 +699,31 @@ body.os-modo .os-win-cuerpo .ma-mapa { height: 60vh; }
 /* Con el centro de avisos abierto, el chat de WhatsApp plegado se aparta (su
    botón flotante tapaba la esquina del panel); abierto, se queda. */
 body.os-modo:has(#os-avisos:not([hidden])) .wa.cerrado { visibility: hidden; }
+
+/* ---- Repaso de pantallas (2026-10-05): el contenido se adapta a su VENTANA ----
+   Los cortes de las pantallas son @media sobre la pantalla entera; dentro de una
+   ventana de 880 px se quedaban con la composición de escritorio. El cuerpo de
+   la ventana es un contenedor y aquí se repiten esos cortes contra él. */
+body.os-modo .os-win-cuerpo { container: ventana / inline-size; }
+@container ventana (max-width: 1000px) {
+  .di-cuerpo, .op-ficha { grid-template-columns: 1fr; }
+}
+@container ventana (max-width: 1150px) {
+  .ca-semana { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+}
+@container ventana (max-width: 900px) {
+  .wk-marco, .wk-dos { grid-template-columns: 1fr; }
+  .wk-lateral { position: static; max-height: none; }
+  .pr-idea-grid { grid-template-columns: 1fr; }
+}
+/* Chat en su ventana: la conversación llena la ventana y la caja de escribir queda abajo. */
+body.os-modo .os-win-cuerpo:has(.ch-marco) { display: flex; flex-direction: column; }
+body.os-modo .os-win-cuerpo:has(.ch-marco) > .os-pantalla { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+body.os-modo .os-pantalla > .ch-marco { flex: 1; min-height: 0; align-items: stretch; }
+body.os-modo .os-pantalla .ch-conversacion { min-height: 0; height: 100%; }
+body.os-modo .os-pantalla .ch-mensajes { max-height: none; min-height: 0; }
+/* Widgets: textos de los medidores legibles (eran de 7-8 px en pantalla). */
+.os-anillo-s { font-size: 14px; }
+/* En el medidor pequeño del widget solo cabe «SLA» (el rótulo largo no entraba en el hexágono). */
+.os-widget.ok-stats .ok-med-txt span { font-size: 0; }
+.os-widget.ok-stats .ok-med-txt span::after { content: 'SLA'; font-size: 10px; font-weight: 700; letter-spacing: .08em; }

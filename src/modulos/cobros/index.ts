@@ -9,12 +9,12 @@ import { API } from '../../core/api';
 import { usuario } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
-import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { esc, toast, hace, fechaHora, fecha } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { eur, telWhatsApp, enApp } from '../ventas/datos';
 
-interface Rec { id: string; invoice_id: string; numero: string; cliente_zoho_id: string | null; cliente_nombre: string | null; saldo: number;
-  vence: string; nivel: number; estado: string; texto: string; canal: string | null; enviado_at: string | null; created_at: string }
+interface Rec { id: string; invoice_id: string; numero: string | null; cliente_zoho_id: string | null; cliente_nombre: string | null; saldo: number;
+  vence: string | null; nivel: number | null; estado: string; texto: string | null; canal: string | null; enviado_at: string | null; created_at: string }
 
 const ZOHO = 'https://books.zoho.eu/app/20107733530#/invoices/';
 const hoy = () => new Date().toLocaleDateString('sv-SE');
@@ -43,15 +43,15 @@ async function pintar(el: HTMLElement) {
   const tarjetaRec = (r: Rec) => {
     const c = r.cliente_zoho_id ? porZoho.get(r.cliente_zoho_id) : null;
     const wa = telWhatsApp(c?.telefono);
-    const asunto = `Factura ${r.numero} pendiente de pago`;
+    const asunto = `Factura ${r.numero ?? ''} pendiente de pago`.replace('  ', ' ');
     return `<article class="tarjeta co-rec" data-id="${esc(r.id)}">
-      <div class="tarjeta-cab"><h3>${esc(r.cliente_nombre ?? '')} · <a href="${ZOHO}${esc(r.invoice_id)}" target="_blank" rel="noopener">${esc(r.numero)}</a></h3>
-        <span><span class="chip ${r.nivel === 3 ? 'mal' : 'aviso'}">${r.nivel}.º aviso</span> <strong>${eur(r.saldo, 2)}</strong></span></div>
-      <p class="nota">Venció el ${esc(r.vence)} (${dias(r.vence)} días)${c ? ` · <a href="#/clientes/${esc(c.id)}">ficha del cliente</a>` : ' · <span class="aviso">no se encuentra el cliente en la app</span>'}</p>
-      <textarea id="co-texto-${esc(r.id)}" rows="4" data-on-change="coTexto:${esc(r.id)},$value" aria-label="Texto del recordatorio">${esc(r.texto)}</textarea>
+      <div class="tarjeta-cab"><h3>${[r.cliente_nombre ? esc(r.cliente_nombre) : '', r.numero ? `<a href="${ZOHO}${esc(r.invoice_id)}" target="_blank" rel="noopener">${esc(r.numero)}</a>` : ''].filter(Boolean).join(' · ') || 'Factura sin número'}</h3>
+        <span>${r.nivel ? `<span class="chip ${r.nivel === 3 ? 'mal' : 'aviso'}">${r.nivel}.º aviso</span> ` : ''}<strong>${eur(r.saldo, 2)}</strong></span></div>
+      <p class="nota">${r.vence ? `Venció el ${esc(fecha(r.vence))} (${dias(r.vence)} días)` : 'Sin fecha de vencimiento'}${c ? ` · <a href="#/clientes/${esc(c.id)}">ficha del cliente</a>` : ' · <span class="g-aviso">no se encuentra el cliente en la app</span>'}</p>
+      <textarea id="co-texto-${esc(r.id)}" rows="4" data-on-change="coTexto:${esc(r.id)},$value" aria-label="Texto del recordatorio">${esc(r.texto ?? '')}</textarea>
       <div class="acciones">
-        ${wa ? `<a class="btn" href="https://wa.me/${wa}?text=${encodeURIComponent(r.texto)}" target="_blank" rel="noopener" data-action="coAbierto" data-p0="${esc(r.id)}" data-p1="whatsapp">${ico('mensaje')} WhatsApp</a>` : ''}
-        ${c?.email ? `<a class="btn secundario" href="mailto:${esc(c.email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(r.texto)}" data-action="coAbierto" data-p0="${esc(r.id)}" data-p1="email">${ico('correo')} Email</a>` : ''}
+        ${wa ? `<a class="btn" href="https://wa.me/${wa}?text=${encodeURIComponent(r.texto ?? '')}" target="_blank" rel="noopener" data-action="coAbierto" data-p0="${esc(r.id)}" data-p1="whatsapp">${ico('mensaje')} WhatsApp</a>` : ''}
+        ${c?.email ? `<a class="btn secundario" href="mailto:${esc(c.email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(r.texto ?? '')}" data-action="coAbierto" data-p0="${esc(r.id)}" data-p1="email">${ico('correo')} Email</a>` : ''}
         ${c?.telefono ? `<a class="btn secundario" href="tel:${esc(c.telefono)}">${ico('telefono')} ${esc(c.telefono)}</a>` : ''}
         <button class="btn secundario" data-action="coCopiar" data-p0="${esc(r.id)}">Copiar texto</button>
         <button class="btn secundario" data-action="coEnviado" data-p0="${esc(r.id)}" data-p1="otro">Marcar enviado</button>
@@ -61,8 +61,8 @@ async function pintar(el: HTMLElement) {
 
   el.innerHTML = `${sync.data?.ultima_ok ? '' : '<p class="aviso">Zoho Books aún no está conectado al hub: sin su copia no hay facturas que reclamar. <a href="#/datos">Conectarlo</a>.</p>'}
     <div class="di-cifras">
-      <article class="tarjeta di-cifra ${totalVencido ? 'mal' : ''}"><h3>Vencido</h3><p class="di-valor">${eur(totalVencido)}</p><p class="nota">${vencidas.data?.length ?? 0} factura(s)</p></article>
-      <article class="tarjeta di-cifra"><h3>Recordatorios listos</h3><p class="di-valor">${pendientes.length}</p><p class="nota">${eur(pendientes.reduce((s, r) => s + Number(r.saldo), 0))} por reclamar</p></article>
+      <article class="tarjeta di-cifra ${totalVencido ? 'mal' : ''}"><h3>Vencido</h3><p class="di-valor">${eur(totalVencido)}</p><p class="nota">${vencidas.data?.length ?? 0} ${vencidas.data?.length === 1 ? 'factura' : 'facturas'}</p></article>
+      <article class="tarjeta di-cifra"><h3>Recordatorios listos</h3><p class="di-valor">${pendientes.length}</p><p class="nota">${eur(pendientes.reduce((s, r) => s + Number(r.saldo), 0), 2)} por reclamar</p></article>
       <article class="tarjeta di-cifra"><h3>Mantenimiento</h3><p class="di-valor">${mant.data?.length ?? 0}</p><p class="nota">sedes con el cobro torcido (se gestiona en la app)</p></article>
     </div>
     <h2>Recordatorios listos para mandar</h2>
@@ -70,7 +70,7 @@ async function pintar(el: HTMLElement) {
     ${pendientes.length ? pendientes.map(tarjetaRec).join('') : `<p class="vacio">${ico('hecho')} Nada que reclamar ahora mismo.</p>`}
     ${sinRec.length ? `<h2>Vencidas que aún no llegan al primer aviso</h2><div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Factura</th><th>Cliente</th><th>Pendiente</th><th>Venció</th></tr></thead>
       <tbody>${sinRec.map(f => `<tr><td><a href="${ZOHO}${esc(f.invoice_id)}" target="_blank" rel="noopener">${esc(f.numero)}</a></td><td>${esc(f.cliente_nombre ?? '')}</td>
-        <td>${eur(f.saldo, 2)}</td><td>${esc(f.vence)} (${dias(f.vence)} d)</td></tr>`).join('')}</tbody></table></div>` : ''}
+        <td>${eur(f.saldo, 2)}</td><td>${esc(fecha(f.vence))} (${dias(f.vence)} d)</td></tr>`).join('')}</tbody></table></div>` : ''}
     ${(mant.data ?? []).length ? `<h2>Mantenimiento con el cobro torcido</h2><p class="nota">Stripe y Zoho Billing los gestiona la <a href="${esc(enApp())}" target="_blank" rel="noopener">app actual ${ico('externo')}</a> (Mantenimientos → Cobros).</p>
       <div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Sede</th><th>Estado</th><th>Cuota</th></tr></thead>
       <tbody>${(mant.data ?? []).map(l => `<tr><td>${l.cliente_id ? `<a href="#/clientes/${esc(l.cliente_id)}/sedes">${esc(l.nombre)}</a>` : esc(l.nombre)}</td>

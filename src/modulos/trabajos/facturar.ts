@@ -125,7 +125,7 @@ function tablaLineas(): string {
       <td><button type="button" class="btn secundario" data-action="ftQuitar" data-p0="${i}" aria-label="Quitar la línea">${ico('eliminar')}</button></td></tr>`).join('')
       || '<tr><td colspan="6" class="vacio">Sin líneas.</td></tr>'}</tbody>
     <tfoot><tr><th colspan="4">Total (sin impuestos)</th><th class="num" id="ft-total">${eur(_lineas.reduce((a, l) => a + sub(l), 0), 2)}</th><th></th></tr></tfoot></table>
-    <button type="button" class="btn secundario" data-action="ftAnadir">+ Línea</button>`;
+    <button type="button" class="btn secundario" data-action="ftAnadir">${ico('mas')} Línea</button>`;
 }
 
 const val = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value.trim() ?? '';

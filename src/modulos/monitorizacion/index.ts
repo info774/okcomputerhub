@@ -8,6 +8,7 @@ import type { Modulo, Contador } from '../../core/modulo';
 import { API } from '../../core/api';
 import { pintarMonitorizacion } from './lista';
 import { pintarEquipo } from './equipo';
+import { pl } from '../../ui/dom';
 
 async function contador(): Promise<Contador | null> {
   const [equipos, conectados, alertas] = await Promise.all([
@@ -18,7 +19,7 @@ async function contador(): Promise<Contador | null> {
   if (equipos == null) return null;
   return {
     valor: `${conectados ?? '?'}/${equipos}`,
-    subtitulo: alertas ? `${alertas} alerta(s) activa(s)` : 'equipos conectados',
+    subtitulo: alertas ? `${pl(alertas, 'alerta activa', 'alertas activas')}` : 'equipos conectados',
     tono: alertas ? 'mal' : conectados === equipos ? 'bien' : 'aviso',
   };
 }

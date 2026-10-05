@@ -12,7 +12,7 @@ import { esAdmin } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
-import { esc, toast } from '../../ui/dom';
+import { esc, toast, fecha } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { eur } from '../ventas/datos';
 
@@ -51,8 +51,8 @@ export async function vistaFacturas(): Promise<string> {
     <div class="acciones mo-barra"><div class="segmentado" role="tablist">${FILTROS.map(([k, t]) => `<button type="button" data-action="afcFiltro" data-p0="${k}" class="${k === _filtro ? 'activo' : ''}">${t}</button>`).join('')}</div>
       <a class="btn" href="#/almacen/facturas/nueva">${ico('mas')} Nueva factura</a></div>
     <div class="tarjeta mo-scroll"><table class="tabla" id="afc-lista"><thead><tr><th>Fecha</th><th>Proveedor</th><th>Número</th><th>Vence</th><th>Estado</th><th class="num">Importe</th></tr></thead><tbody>
-      ${lista.map(f => `<tr class="fila-clic" data-action="afcAbrir" data-p0="${esc(f.id)}"><td>${esc(f.fecha)}</td><td><strong>${esc(prov(f.proveedor_id))}</strong></td>
-        <td>${esc(f.numero ?? '')}${f.archivo_path ? ` <span title="Con adjunto">${ico('adjunto')}</span>` : ''}</td><td>${esc(f.vence ?? '')}</td>
+      ${lista.map(f => `<tr class="fila-clic" data-action="afcAbrir" data-p0="${esc(f.id)}"><td>${esc(fecha(f.fecha, true))}</td><td><strong>${esc(prov(f.proveedor_id))}</strong></td>
+        <td>${esc(f.numero ?? '')}${f.archivo_path ? ` <span title="Con adjunto">${ico('adjunto')}</span>` : ''}</td><td>${esc(fecha(f.vence, true))}</td>
         <td><span class="chip ${f.estado === 'Pagada' ? 'bien' : vencida(f) ? 'mal' : 'aviso'}">${f.estado === 'Pagada' ? 'Pagada' : vencida(f) ? 'Vencida' : 'Pendiente'}</span></td>
         <td class="num">${eur(f.importe, 2)}</td></tr>`).join('') || '<tr><td colspan="6" class="vacio">Nada por aquí.</td></tr>'}
       </tbody>${lista.length ? `<tfoot><tr><td colspan="5">Total</td><td class="num">${eur(suma(lista), 2)}</td></tr></tfoot>` : ''}</table></div>
@@ -76,7 +76,7 @@ export async function vistaFactura(id: string, pedidoId = ''): Promise<string> {
       <p id="afc-leido" class="nota">${f?.archivo_path ? `<button type="button" class="btn secundario" data-action="afcVer" data-p0="${esc(f.id)}">${ico('adjunto')} Ver el adjunto</button>` : 'Con el adjunto, Claude rellena lo que lea (proveedor, número, fechas e importes) y tú lo revisas.'}</p>
       <div class="in-campos">
         <label>Proveedor <select id="afc-proveedor" required><option value="">— Elige —</option>${provs.map(p => `<option value="${esc(p.id)}" ${p.id === provId ? 'selected' : ''}>${esc(p.nombre)}${p.activo ? '' : ' (inactivo)'}</option>`).join('')}</select></label>
-        <label>Pedido <select id="afc-pedido"><option value="">— Ninguno —</option>${(peds.data ?? []).map(p => `<option value="${esc(p.id)}" ${p.id === ped?.id ? 'selected' : ''}>#${p.numero} · ${esc(p.fecha)} · ${eur(p.total, 2)}</option>`).join('')}</select></label>
+        <label>Pedido <select id="afc-pedido"><option value="">— Ninguno —</option>${(peds.data ?? []).map(p => `<option value="${esc(p.id)}" ${p.id === ped?.id ? 'selected' : ''}>#${p.numero} · ${esc(fecha(p.fecha, true))} · ${eur(p.total, 2)}</option>`).join('')}</select></label>
         <label>Número <input id="afc-numero" value="${esc(f?.numero ?? '')}"></label>
         <label>Fecha <input id="afc-fecha" type="date" value="${esc(f?.fecha ?? hoy())}" required></label>
         <label>Vence <input id="afc-vence" type="date" value="${esc(f?.vence ?? '')}"></label>

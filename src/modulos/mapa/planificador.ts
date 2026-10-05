@@ -24,7 +24,7 @@ import { equipo } from '../../core/equipo';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir } from '../../core/router';
-import { esc, toast } from '../../ui/dom';
+import { esc, toast, pl } from '../../ui/dom';
 import { dejarBorrador } from '../../ui/borrador';
 import { ico } from '../../shell/linea';
 import { OFICINA, kmEntre, mismaPersona } from '../calendario/motor';
@@ -304,7 +304,7 @@ function pintarPanel() {
       <div class="acciones map-dia"><button class="btn secundario" data-action="maDia" data-p0="-1" aria-label="Día anterior">${ico('izquierda')}</button>
         <button class="btn secundario ${esHoy ? '' : 'otro'}" id="map-dia" data-action="maDia" data-p0="0" title="${esHoy ? 'Hoy' : 'Volver a hoy'}">${esHoy ? 'Hoy · ' : ''}${esc(fechaLarga(_dia))}</button>
         <button class="btn secundario" data-action="maDia" data-p0="1" aria-label="Día siguiente">${ico('derecha')}</button></div></div>
-    <p class="nota" id="map-resumen">${_trabajos.length} trabajo(s) ${esHoy ? 'hoy' : 'ese día'} · ${_tickets.length} ticket(s) abierto(s) · ${_tecnicos.length} técnico(s) fichado(s)
+    <p class="nota" id="map-resumen">${pl(_trabajos.length, 'trabajo', 'trabajos')} ${esHoy ? 'hoy' : 'ese día'} · ${pl(_tickets.length, 'ticket abierto', 'tickets abiertos')} · ${pl(_tecnicos.length, 'técnico fichado', 'técnicos fichados')}
       · <label class="check"><input type="checkbox" ${_verTecnicos ? 'checked' : ''} data-on-change="maVerTecnicos:$checked"> técnicos en el mapa</label></p>
     <div id="map-cuerpo">${_panel === 'dia' ? htmlDia() : _panel === 'semana' ? htmlSemana() : htmlRuta()}</div>`;
   pintarRutaEnMapa();

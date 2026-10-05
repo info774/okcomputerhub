@@ -34,7 +34,7 @@ function filaEstado(e: Fila, nombre: string): string {
     <td>${esc(nombre)}</td>
     <td>${e.ultima_ok ? `${esc(hace(e.ultima_ok))}<br><small>${esc(fechaHora(e.ultima_ok))}</small>` : 'nunca'}</td>
     <td>${esc(e.filas ?? '—')}${detalle ? `<br><small>${detalle}</small>` : ''}</td>
-    <td>${fallaAhora ? `<span class="chip mal">${esc(String(e.ultimo_error).slice(0, 200))}</span>` : '<span class="chip bien">bien</span>'}</td>
+    <td>${fallaAhora ? `<span class="chip mal">${esc(String(e.ultimo_error).slice(0, 200))}</span>` : e.ultima_ok ? '<span class="chip bien">bien</span>' : '<span class="chip">aún no ha pasado</span>'}</td>
   </tr>`;
 }
 
@@ -81,7 +81,7 @@ async function pintar(el: HTMLElement) {
           <td><span class="chip ${a.dueno === 'hub' ? 'bien' : 'neutro'}">${esc(a.dueno)}</span></td>
           <td>${(a.tablas as string[]).map(t => `${esc(t)} <small>(${esc(n.get(t) ?? '?')})</small>`).join(', ')}</td>
           <td>${esc(a.notas ?? '')}</td>
-        </tr>`).join('')}</tbody>
+        </tr>`).join('') || '<tr><td colspan="4" class="vacio">Sin áreas.</td></tr>'}</tbody>
       </table>
     </section>`;
   if (esAdmin()) void pintarZoho();

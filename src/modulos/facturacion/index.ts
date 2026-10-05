@@ -8,7 +8,7 @@ import type { Modulo, Contador } from '../../core/modulo';
 import { API } from '../../core/api';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
-import { esc, toast } from '../../ui/dom';
+import { esc, toast, fecha } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { buscarClientes, nombresClientes, eur } from '../ventas/datos';
 
@@ -41,11 +41,11 @@ async function series(): Promise<Serie[]> {
 async function vistaLista(): Promise<string> {
   const [activa, fs] = await Promise.all([estadoActivacion(), API.get<Factura[]>('facturas', { select: '*', order: 'created_at.desc', limit: '300' })]);
   const lista = fs.data ?? [];
-  return `${banner(activa)}<div class="acciones pr-barra"><button class="btn" data-action="faNueva">+ Factura</button><a class="btn secundario" href="#/facturacion/trabajos">Desde trabajos por facturar</a>
+  return `${banner(activa)}<div class="acciones pr-barra"><button class="btn" data-action="faNueva">${ico('mas')} Factura</button><a class="btn secundario" href="#/facturacion/trabajos">Desde trabajos por facturar</a>
       <a class="btn secundario" href="#/facturacion/ajustes">Datos del emisor</a></div>
     <div class="tarjeta mo-scroll">${lista.length ? `<table class="tabla"><thead><tr><th>Número</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Cobrado</th><th>Estado</th></tr></thead><tbody>
     ${lista.map(f => `<tr class="fila-clic" data-action="faAbrir" data-p0="${f.id}"><td>${f.codigo ? esc(f.codigo) : '<span class="nota">borrador</span>'}${f.serie === 'P' ? ' <span class="chip">PRUEBA</span>' : ''}${f.tipo === 'rectificativa' ? ' <span class="chip aviso">rectificativa</span>' : ''}</td>
-      <td>${esc(f.cliente_nombre ?? '')}</td><td>${esc(f.fecha_emision ?? '')}</td><td>${eur(f.total, 2)}</td><td>${f.estado === 'borrador' ? '' : eur(f.cobrado, 2)}</td>
+      <td>${esc(f.cliente_nombre ?? '')}</td><td>${esc(fecha(f.fecha_emision, true))}</td><td>${eur(f.total, 2)}</td><td>${f.estado === 'borrador' ? '' : eur(f.cobrado, 2)}</td>
       <td><span class="chip ${f.estado === 'emitida' ? (f.cobrado >= f.total ? 'bien' : 'aviso') : ''}">${esc(f.estado === 'emitida' && f.cobrado >= f.total ? 'cobrada' : f.estado)}</span></td></tr>`).join('')}</tbody></table>` : '<p class="vacio">Ninguna todavía.</p>'}</div>`;
 }
 
@@ -64,7 +64,7 @@ async function vistaTrabajos(): Promise<string> {
     ${[...por.entries()].map(([cid, lista]) => `<section class="tarjeta"><div class="tarjeta-cab"><h3>${esc(cid ? nombres.get(cid) ?? '¿?' : 'Sin cliente')}</h3>
       ${cid ? `<button class="btn" data-action="faDesdeTrabajos" data-p0="${esc(cid)}">Preparar factura</button>` : '<span class="nota">ponles cliente en la app</span>'}</div>
       <ul class="fa-trabajos">${lista.map(t => `<li><label class="check"><input type="checkbox" class="fa-tr" data-cli="${esc(cid)}" value="${t.id}" checked> #${t.numero} ${esc(t.titulo ?? t.descripcion?.slice(0, 80) ?? '')}
-        <small class="nota">${esc(t.estado)}${t.fecha_programada ? ` · ${esc(t.fecha_programada)}` : ''}</small></label></li>`).join('')}</ul></section>`).join('') || '<p class="vacio">No hay trabajos por facturar.</p>'}`;
+        <small class="nota">${esc(t.estado)}${t.fecha_programada ? ` · ${esc(fecha(t.fecha_programada, true))}` : ''}</small></label></li>`).join('')}</ul></section>`).join('') || '<p class="vacio">No hay trabajos por facturar.</p>'}`;
 }
 
 // ── Ficha ──────────────────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ function imprimible(f: Factura, ls: Linea[]): string {
   return `<article class="tarjeta fa-factura ${f.serie === 'P' ? 'fa-prueba' : ''}">
     ${f.serie === 'P' ? '<p class="fa-marca">PRUEBA — SIN VALOR FISCAL</p>' : ''}
     <header class="fa-cab"><div><strong>${esc(e.nombre ?? '')}</strong>${e.nombre_comercial ? `<br>${esc(e.nombre_comercial)}` : ''}<br>NIF ${esc(e.nif ?? '')}<br>${esc(e.direccion ?? '')} ${esc(e.cp ?? '')} ${esc(e.municipio ?? '')}</div>
-      <div class="fa-num"><h2>${f.tipo === 'rectificativa' ? 'Factura rectificativa' : 'Factura'} ${esc(f.codigo ?? '')}</h2>Fecha: ${esc(f.fecha_emision ?? '')}${f.fecha_operacion && f.fecha_operacion !== f.fecha_emision ? `<br>Operación: ${esc(f.fecha_operacion)}` : ''}<br>Vence: ${esc(f.vencimiento ?? '')}</div></header>
+      <div class="fa-num"><h2>${f.tipo === 'rectificativa' ? 'Factura rectificativa' : 'Factura'} ${esc(f.codigo ?? '')}</h2>Fecha: ${esc(fecha(f.fecha_emision, true))}${f.fecha_operacion && f.fecha_operacion !== f.fecha_emision ? `<br>Operación: ${esc(fecha(f.fecha_operacion, true))}` : ''}<br>Vence: ${esc(fecha(f.vencimiento, true))}</div></header>
     <section class="fa-cliente"><strong>${esc(f.cliente_nombre ?? '')}</strong><br>${f.cliente_nif ? `NIF ${esc(f.cliente_nif)}<br>` : ''}${esc(f.cliente_direccion ?? '')}</section>
     ${f.tipo === 'rectificativa' && f.motivo_rectificacion ? `<p>Motivo de la rectificación: ${esc(f.motivo_rectificacion)}</p>` : ''}
     <table class="tabla"><thead><tr><th>Concepto</th><th>Cant.</th><th>Precio</th><th>Dto.</th><th>IGIC</th><th>Importe</th></tr></thead><tbody>
@@ -100,7 +100,7 @@ async function vistaFicha(id: string): Promise<string> {
     return `${banner(activa)}<p class="no-imprimir"><a href="#/facturacion">← Facturación</a></p>${imprimible(f, lineas)}
       <div class="acciones no-imprimir"><button class="btn secundario" data-action="faImprimir">Imprimir o guardar en PDF</button>
         ${f.estado === 'emitida' ? '<button class="btn secundario" data-action="faRectificar">Rectificar</button>' : '<span class="chip">rectificada</span>'}</div>
-      <section class="tarjeta no-imprimir"><h3>Cobros · ${eur(f.cobrado, 2)} de ${eur(f.total, 2)}</h3><ul>${(cobros ?? []).map(c => `<li>${esc(c.fecha)} · ${eur(c.importe, 2)} · ${esc(c.medio)}${c.nota ? ` · ${esc(c.nota)}` : ''}</li>`).join('') || '<li class="nota">Nada cobrado.</li>'}</ul>
+      <section class="tarjeta no-imprimir"><h3>Cobros · ${eur(f.cobrado, 2)} de ${eur(f.total, 2)}</h3><ul>${(cobros ?? []).map(c => `<li>${esc(fecha(c.fecha, true))} · ${eur(c.importe, 2)} · ${esc(c.medio)}${c.nota ? ` · ${esc(c.nota)}` : ''}</li>`).join('') || '<li class="nota">Nada cobrado.</li>'}</ul>
         ${f.cobrado < f.total ? `<form class="acciones" data-on-submit="faCobrar" data-prevent="1"><input id="fa-cobro-imp" type="number" step="0.01" value="${(f.total - f.cobrado).toFixed(2)}" aria-label="Importe cobrado">
           <select id="fa-cobro-medio" aria-label="Medio"><option>Transferencia</option><option>Tarjeta</option><option>Efectivo</option><option>Bizum</option><option>Domiciliación</option></select>
           <button class="btn secundario" type="submit">Apuntar cobro</button></form>` : ''}</section>`;
@@ -122,7 +122,7 @@ async function vistaFicha(id: string): Promise<string> {
         <td><input type="number" step="0.01" value="${l.precio}" data-on-change="faLinea:${l.id},precio,$value" aria-label="Precio"></td>
         <td><input type="number" min="0" max="100" step="0.01" value="${l.descuento_pct}" data-on-change="faLinea:${l.id},descuento_pct,$value" aria-label="Descuento"></td>
         <td><select data-on-change="faLinea:${l.id},impuesto_pct,$value" aria-label="IGIC">${IGIC.map(p => `<option value="${p}" ${Number(l.impuesto_pct) === p ? 'selected' : ''}>${String(p).replace('.', ',')} %</option>`).join('')}</select></td>
-        <td>${n2(l.base)}</td><td><button class="btn secundario" data-action="faQuitarLinea" data-p0="${l.id}" aria-label="Quitar línea">✕</button></td></tr>`).join('') || '<tr><td colspan="7" class="vacio">Sin líneas.</td></tr>'}
+        <td>${n2(l.base)}</td><td><button class="btn secundario" data-action="faQuitarLinea" data-p0="${l.id}" aria-label="Quitar línea">${ico('cerrar')}</button></td></tr>`).join('') || '<tr><td colspan="7" class="vacio">Sin líneas.</td></tr>'}
       </tbody></table>
       <form class="acciones" data-on-submit="faAnadirLinea" data-prevent="1"><input id="fa-l-concepto" placeholder="Concepto" required aria-label="Concepto nuevo"><input id="fa-l-cant" type="number" step="any" value="1" aria-label="Cantidad">
         <input id="fa-l-precio" type="number" step="0.01" placeholder="Precio" aria-label="Precio"><button class="btn secundario" type="submit">Añadir línea</button></form>

@@ -46,7 +46,7 @@ async function vistaLista(): Promise<string> {
     ${escribe ? '' : avisoSoloLectura('La base de conocimiento')}
     <p class="nota">Los manuales y vídeos que la app guardaba como enlaces (${_todos.length} artículo${_todos.length === 1 ? '' : 's'}). Lo nuevo, mejor como página de la wiki.</p>
     <div class="acciones pr-barra"><div class="segmentado">${['', ...CATEGORIAS].map(c => `<button type="button" class="${c === _cat ? 'activo' : ''}" data-action="kcFiltro" data-p0="${esc(c)}">${c || 'Todas'}</button>`).join('')}</div>
-      <input id="kc-q" type="search" placeholder="Buscar título, descripción o palabras clave…" value="${esc(_q)}" data-on-input="kcBuscar:$value" aria-label="Buscar en la base de conocimiento"></div>
+      <input id="kc-q" type="search" placeholder="Buscar en la base de conocimiento…" value="${esc(_q)}" data-on-input="kcBuscar:$value" aria-label="Buscar en la base de conocimiento"></div>
     <div id="kc-cuerpo">${lista()}</div>`;
 }
 

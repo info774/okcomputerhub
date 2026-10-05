@@ -10,6 +10,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
 import { TIPOS } from './formulario';
+import { ico } from '../../shell/linea';
 
 export interface Plantilla { id: string; nombre: string; tipo: string; descripcion: string | null; duracion_teorica: number | null; checklist: { texto: string; completado: boolean }[] | null }
 
@@ -27,7 +28,7 @@ export async function pintarPlantillas(el: HTMLElement, cual?: string) {
   const escribe = await esDelHub('plantillas_trabajo');
   if (!cual) {
     const ps = await plantillasActivas();
-    el.innerHTML = `<p><a href="#/trabajos">← Trabajos</a></p><div class="tarjeta-cab"><h2>Plantillas de trabajo</h2>${escribe ? '<a class="btn" href="#/trabajos/plantillas/nueva">+ Nueva plantilla</a>' : ''}</div>
+    el.innerHTML = `<p><a href="#/trabajos">← Trabajos</a></p><div class="tarjeta-cab"><h2>Plantillas de trabajo</h2>${escribe ? `<a class="btn" href="#/trabajos/plantillas/nueva">${ico('mas')} Nueva plantilla</a>` : ''}</div>
       ${escribe ? '' : avisoSoloLectura('Las plantillas')}
       <p class="nota">Un trabajo que se repite (instalar un TPV, revisar una alarma…) con su tipo, su duración y lo que hay que hacer. Se eligen al dar de alta un trabajo.</p>
       <ul class="tarjeta tp-lista">${ps.map(p => `<li><a href="#/trabajos/plantillas/${esc(p.id)}"><strong>${esc(p.nombre)}</strong></a>
@@ -59,7 +60,7 @@ export async function pintarPlantillas(el: HTMLElement, cual?: string) {
 }
 
 function pasosHtml(escribe: boolean) {
-  return _pasos.map((x, i) => `<li>${esc(x.texto)}${escribe ? ` <button type="button" class="icono-btn pequeno" data-action="tpQuitarPaso" data-p0="${i}" aria-label="Quitar el paso">✕</button>` : ''}</li>`).join('') || '<li class="nota">Sin pasos.</li>';
+  return _pasos.map((x, i) => `<li>${esc(x.texto)}${escribe ? ` <button type="button" class="icono-btn pequeno" data-action="tpQuitarPaso" data-p0="${i}" aria-label="Quitar el paso">${ico('cerrar')}</button>` : ''}</li>`).join('') || '<li class="nota">Sin pasos.</li>';
 }
 
 const val = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value.trim() ?? '';

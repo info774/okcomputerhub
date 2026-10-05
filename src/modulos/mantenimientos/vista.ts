@@ -145,7 +145,7 @@ async function pintarResumen(el: HTMLElement, escribe: boolean) {
   const nombreSede = (id: string | null) => _lista.find(s => s.id === id)?.nombre ?? '';
   const alta = escribe && await esDelHub('mantenimientos_programados', 'clientes');
   el.innerHTML = `${escribe ? '' : avisoSoloLectura('Mantenimientos')}${navPestanas('')}
-    ${alta ? '<p class="acciones"><a class="btn" href="#/mantenimientos/alta">+ Contrato</a></p>' : ''}
+    ${alta ? `<p class="acciones"><a class="btn" href="#/mantenimientos/alta">${ico('mas')} Contrato</a></p>` : ''}
     <div class="pp-cabeza"><div class="di-cifras pp-cifras">
       ${cifra('Contratos activos', String(_lista.length), `${porPlan.size} ${porPlan.size === 1 ? 'plan' : 'planes'}`, '', '#/mantenimientos/locales')}
       ${admin ? cifra('Recurrente al mes', eur(mes), `sin impuestos · ${eur(mes * 12)} al año`) : cifra('Cobra Stripe', String(_lista.filter(s => pasarela(s) === 'stripe').length), 'sedes domiciliadas')}
@@ -214,7 +214,7 @@ function celdaContrato(s: Sede, escribe: boolean): string {
   const c = contratoDeSede(_contratos, s.id);
   if (c?.estado === 'pendiente') return `<a class="chip aviso" href="#/mantenimientos/contrato/${esc(c.id)}/enlace" title="Firmar el contrato">Sin firmar</a>`;
   if (c?.estado === 'firmado') return `<a class="chip bien" href="#/mantenimientos/contrato/${esc(c.id)}/ver" title="Ver el contrato firmado">Contrato firmado</a>`;
-  return escribe && _escribeContratos ? `<a class="mt-crear" href="#/mantenimientos/contrato/nuevo/${esc(s.id)}">+ Crear contrato</a>` : '<small class="nota">Sin contrato</small>';
+  return escribe && _escribeContratos ? `<a class="mt-crear" href="#/mantenimientos/contrato/nuevo/${esc(s.id)}">${ico('mas')} Crear contrato</a>` : '<small class="nota">Sin contrato</small>';
 }
 
 async function pintarLocales(el: HTMLElement, escribe: boolean) {
@@ -225,11 +225,11 @@ async function pintarLocales(el: HTMLElement, escribe: boolean) {
   const rev = (s: Sede) => ({ al_dia: '<span class="chip bien">Al día</span>', atrasada: '<span class="chip aviso">Atrasada</span>' } as Record<string, string>)[_revision.get(s.id) ?? ''] ?? '—';
   el.innerHTML = `${escribe ? '' : avisoSoloLectura('La ficha de mantenimiento de las sedes')}${navPestanas('locales')}
     <div class="acciones mo-barra">
-      <input id="mt-filtro" type="search" placeholder="Buscar por sede, cliente, plan, código o teléfono…" value="${esc(_q)}" data-on-input="mtFiltrar:$value" aria-label="Buscar sede">
+      <input id="mt-filtro" type="search" placeholder="Buscar sede, cliente, plan, teléfono…" value="${esc(_q)}" data-on-input="mtFiltrar:$value" aria-label="Buscar sede">
       <select id="mt-plan" data-on-change="mtPlan:$value" aria-label="Plan"><option value="">Todos los planes</option>
         ${planes.map(p => `<option ${p === _plan ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>
       <select id="mt-ficha" data-on-change="mtFicha:$value" aria-label="Ficha">${FICHA.map(([k, n]) => `<option value="${k}" ${k === _ficha ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
-      ${escribe && await esDelHub('mantenimientos_programados', 'clientes') ? '<a class="btn" href="#/mantenimientos/alta">+ Contrato</a>' : ''}
+      ${escribe && await esDelHub('mantenimientos_programados', 'clientes') ? `<a class="btn" href="#/mantenimientos/alta">${ico('mas')} Contrato</a>` : ''}
     </div>
     <div class="acciones mo-barra">${FILTROS.map(([k, n]) => `<button class="chip-boton ${_filtro === k ? 'activo' : ''}" data-action="mtFiltro" data-p0="${k}">${n}</button>`).join('')}</div>
     <p class="nota">Mostrando ${Math.min(lista.length, 300)} de ${lista.length}${admin ? ` · ${eur(lista.reduce((t, s) => t + netoMensual(s), 0), 2)} al mes sin impuestos` : ''}.</p>

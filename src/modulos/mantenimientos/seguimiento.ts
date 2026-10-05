@@ -40,7 +40,7 @@ export async function pintarSeguimiento(el: HTMLElement, id?: string) {
   const vistos = _segs.filter(s => !q || [cli.get(s.cliente_id ?? ''), loc.get(s.local_id ?? ''), s.notas, s.tipo_respuesta].some(x => sinAcentos(x).includes(q)));
   el.innerHTML = `${escribe ? '' : avisoSoloLectura('El seguimiento comercial')}${navPestanas('seguimiento')}
     <div class="acciones mo-barra"><input id="mse-q" type="search" placeholder="Buscar cliente, sede o nota…" value="${esc(_q)}" data-on-input="mseBuscar:$value" aria-label="Buscar">
-      ${escribe ? '<a class="btn" href="#/mantenimientos/seguimiento/nuevo">+ Seguimiento</a>' : ''}</div>
+      ${escribe ? `<a class="btn" href="#/mantenimientos/seguimiento/nuevo">${ico('mas')} Seguimiento</a>` : ''}</div>
     <div class="pr-kanban mse-kanban">${COLUMNAS.map(([k, n]) => {
       const col = vistos.filter(s => s.estado === k);
       return `<section class="pr-columna" data-estado="${k}" ${escribe ? `data-on-dragover="mseSobre:$this" data-prevent="1" data-on-dragleave="mseFuera:$this" data-on-drop="mseSoltar:${k}"` : ''}>

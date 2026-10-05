@@ -5,7 +5,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esAdmin } from '../../core/estado';
-import { esc, hace, fechaHora, toast } from '../../ui/dom';
+import { esc, hace, fechaHora, toast, fecha } from '../../ui/dom';
 import { enApp, telWhatsApp } from '../ventas/datos';
 import { esqueleto } from '../../ui/esqueleto';
 import { ico, type IconoLinea } from '../../shell/linea';
@@ -74,7 +74,7 @@ async function pintarLista(el: HTMLElement) {
       <input id="co-filtro" type="search" placeholder="Buscar por nombre, empresa, teléfono, email, cliente o sitio…" value="${esc(_q)}" data-on-input="coFiltrar:$value" aria-label="Buscar contacto">
       ${etiquetas.length ? `<select id="co-etiqueta" data-on-change="coEtiqueta:$value" aria-label="Etiqueta"><option value="">Todas las etiquetas</option>${etiquetas.map(e => `<option ${e === _etiqueta ? 'selected' : ''}>${esc(e)}</option>`).join('')}</select>` : ''}
       <button class="chip-boton ${_baja ? 'activo' : ''}" data-action="coBaja" aria-pressed="${_baja}">De baja</button>
-      ${escribe ? '<a class="btn" href="#/contactos/nuevo">+ Nuevo contacto</a>' : ''}
+      ${escribe ? `<a class="btn" href="#/contactos/nuevo">${ico('mas')} Nuevo contacto</a>` : ''}
     </div>
     <div class="acciones mo-barra">${TIPOS.map(([k, n, i]) => `<button class="chip-boton ${_tipo === k ? 'activo' : ''}" data-action="coTipo" data-p0="${k}">${i ? `${ico(i)} ` : ''}${n}</button>`).join('')}</div>
     <p class="nota">${_baja ? 'Contactos DE BAJA. ' : ''}Mostrando ${Math.min(filtrados.length, 200)} de ${filtrados.length}.</p>
@@ -109,7 +109,7 @@ async function tabTrabajos(c: Contacto): Promise<string> {
   if (!(data ?? []).length) return '<p class="vacio">No figura en ningún trabajo.</p>';
   return `<div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Nº</th><th>Trabajo</th><th>Estado</th><th>Fecha</th></tr></thead>
     <tbody>${(data ?? []).map(t => `<tr class="fila-clic" data-action="coTrabajo" data-p0="${esc(t.id)}"><td>#${esc(t.numero ?? '?')}</td>
-      <td>${esc(t.titulo || (t.descripcion ?? '').slice(0, 80))}</td><td>${esc(t.estado ?? '')}</td><td>${esc(t.fecha_programada ?? '')}</td></tr>`).join('')}</tbody></table></div>`;
+      <td>${esc(t.titulo || (t.descripcion ?? '').slice(0, 80))}</td><td>${esc(t.estado ?? '')}</td><td>${esc(fecha(t.fecha_programada))}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
 async function tabTickets(c: Contacto): Promise<string> {

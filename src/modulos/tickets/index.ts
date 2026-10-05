@@ -11,7 +11,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
 import { APP_ACTUAL_URL } from '../../core/config';
-import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { esc, toast, hace, fechaHora, fecha } from '../../ui/dom';
 import { markdown } from '../../ui/markdown';
 import { buscarClientes, nombresClientes, telWhatsApp } from '../ventas/datos';
 import { botonChatFicha } from '../../ui/chat-ficha';
@@ -81,7 +81,7 @@ async function pintarLista(el: HTMLElement) {
       <input id="tk-q" type="search" placeholder="Buscar número, cliente, texto…" value="${esc(_q)}" data-on-input="tkBuscar:$value" aria-label="Buscar tickets">
       <a class="btn secundario" href="#/tickets/bandeja">${ico('correo')} Bandeja${nBandeja ? ` <span class="chip aviso">${nBandeja}</span>` : ''}</a>
       <a class="btn secundario" href="#/tickets/ajustes">Plantillas y SLA</a>
-      <a class="btn" href="#/tickets/nuevo">+ Nuevo ticket</a>
+      <a class="btn" href="#/tickets/nuevo">${ico('mas')} Nuevo ticket</a>
       <a class="btn secundario" href="#/tickets/whatsapp" title="Pega o captura un chat de WhatsApp y sale el ticket o el trabajo relleno">${ico('mensaje')} Desde WhatsApp</a>
     </div>
     <div id="tk-lista">${tabla(lista)}</div>`;
@@ -93,8 +93,8 @@ function tabla(lista: Ticket[]): string {
   if (!lista.length) return '<p class="vacio">No hay tickets aquí.</p>';
   return `<div class="tarjeta mo-scroll"><table class="tabla tk-tabla"><thead><tr><th>#</th><th>Ticket</th><th>Cliente</th><th>Quién</th><th>Prioridad</th><th>Estado</th><th>SLA</th></tr></thead>
     <tbody>${lista.map(t => `<tr class="fila-clic" data-action="tkAbrir" data-p0="${t.numero}">
-      <td>${t.numero}</td><td><strong>${esc(t.titulo)}</strong><br><small class="nota">${iconoCanal(t.canal)}${esc(CANALES[t.canal ?? ''] ?? t.canal ?? '')} · ${esc(hace(t.created_at))}</small></td>
-      <td>${esc(_nombres.get(t.cliente_id ?? '') ?? '')}</td><td>${esc(t.tecnico_id ?? '—')}</td><td>${chipPrioridad(t.prioridad)}</td>
+      <td>${t.numero}</td><td><strong>${esc(t.titulo)}</strong><br><small class="nota">${t.canal ? `${iconoCanal(t.canal)}${esc(CANALES[t.canal] ?? t.canal)} · ` : ''}${esc(hace(t.created_at))}</small></td>
+      <td>${esc(_nombres.get(t.cliente_id ?? '') ?? '—')}</td><td>${esc(t.tecnico_id ?? '—')}</td><td>${chipPrioridad(t.prioridad)}</td>
       <td>${esc(t.estado)}</td><td>${t.estado === 'Cerrado' ? estrellas(t.valoracion) : chipSla(t)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
@@ -150,7 +150,7 @@ async function elegirCliente(id: string, nombre: string, local?: string | null, 
 // ── Ficha ──────────────────────────────────────────────────────────────────
 function burbuja(c: Comentario): string {
   const autor = c.autor_nombre ?? (c.autor_id ? nombreDe(c.autor_id) : '');
-  const envio = c.tipo !== 'respuesta' ? '' : c.enviado_at ? `<small class="nota">✓ enviada${c.canal ? ` por ${esc(CANALES[c.canal] ?? c.canal)}` : ''}</small>`
+  const envio = c.tipo !== 'respuesta' ? '' : c.enviado_at ? `<small class="nota">${ico('hecho')} enviada${c.canal ? ` por ${esc(CANALES[c.canal] ?? c.canal)}` : ''}</small>`
     : c.envio_error ? `<small class="mal">No se pudo enviar: ${esc(c.envio_error)}</small> <button class="btn secundario" data-action="tkReenviar" data-p0="${esc(c.id)}">Reintentar por correo</button>`
       : '<small class="nota">sin enviar</small>';
   return `<article class="tk-burbuja tk-${c.tipo}"><header><strong>${esc(autor || (c.tipo === 'cliente' ? 'Cliente' : ''))}</strong>
@@ -325,7 +325,7 @@ async function pintarAjustes(el: HTMLElement) {
     <div class="in-rejilla">
       <section class="tarjeta"><h3>Horario laboral</h3><ul>${(hor.data ?? []).map(x => `<li>${DIAS[x.dia_semana]}: ${esc(String(x.desde).slice(0, 5))}–${esc(String(x.hasta).slice(0, 5))}</li>`).join('')}</ul>
         <p class="nota">El reloj del SLA solo corre en este horario (hora de Canarias).</p></section>
-      <section class="tarjeta"><h3>Festivos</h3><ul class="tk-festivos">${(fes.data ?? []).map(f => `<li>${esc(f.fecha)} · ${esc(f.nombre)}${adm ? ` <button class="btn secundario" data-action="tkQuitarFestivo" data-p0="${esc(f.fecha)}" aria-label="Quitar ${esc(f.nombre)}">✕</button>` : ''}</li>`).join('') || '<li class="nota">Ninguno.</li>'}</ul>
+      <section class="tarjeta"><h3>Festivos</h3><ul class="tk-festivos">${(fes.data ?? []).map(f => `<li>${esc(fecha(f.fecha))} · ${esc(f.nombre)}${adm ? ` <button class="btn secundario" data-action="tkQuitarFestivo" data-p0="${esc(f.fecha)}" aria-label="Quitar ${esc(f.nombre)}">${ico('cerrar')}</button>` : ''}</li>`).join('') || '<li class="nota">Ninguno.</li>'}</ul>
         ${adm ? `<form class="acciones" data-on-submit="tkFestivo" data-prevent="1"><input id="tk-fes-fecha" type="date" required aria-label="Fecha"><input id="tk-fes-nombre" required placeholder="Nombre" aria-label="Nombre del festivo"><button class="btn secundario" type="submit">Añadir</button></form>` : ''}</section>
     </div>`;
 }

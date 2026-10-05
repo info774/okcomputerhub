@@ -92,8 +92,8 @@ export async function pintarFormulario(el: HTMLElement, numero?: string, desdeOp
       </div>
       <input type="hidden" id="tf-cliente" value="${esc(v?.cliente_id ?? '')}"><input type="hidden" id="tf-oportunidad" value="${esc(op?.id ?? '')}"><ul id="tf-cliente-res" class="resultados"></ul>
       ${escribeCli ? `<div class="acciones tf-rapido">
-        <button type="button" class="btn secundario" data-action="tfRapido" data-p0="nc" aria-expanded="false">+ Nuevo cliente</button>
-        <button type="button" class="btn secundario" data-action="tfRapido" data-p0="nl" aria-expanded="false">+ Nueva sede</button></div>
+        <button type="button" class="btn secundario" data-action="tfRapido" data-p0="nc" aria-expanded="false">${ico('mas')} Nuevo cliente</button>
+        <button type="button" class="btn secundario" data-action="tfRapido" data-p0="nl" aria-expanded="false">${ico('mas')} Nueva sede</button></div>
       <fieldset id="tf-nc" class="tf-rapida" hidden><legend>Cliente nuevo</legend>
         <div class="cf-nif"><input id="tf-nc-nif" autocomplete="off" placeholder="NIF / CIF" aria-label="NIF / CIF">
           <button type="button" class="btn secundario" data-action="tfNcNif">${ico('buscar')} Buscar el nombre</button></div>

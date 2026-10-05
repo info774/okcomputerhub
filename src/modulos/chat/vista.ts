@@ -27,7 +27,7 @@ const hora = (v: string) => { const d = new Date(v); return d.toDateString() ===
 function burbujas(ms: Mensaje[]): string {
   const yo = usuario()?.id;
   return ms.map(m => `<article class="ch-msg ${m.autor_id === yo ? 'ch-mio' : ''}"><header><strong>${esc(nombreDe(m.autor_id) || '—')}</strong> <small class="nota">${esc(hora(m.created_at))}${m.editado_at ? ' · editado' : ''}</small></header>
-    <div class="md">${markdown(m.texto)}</div>${m.autor_id === yo || esAdmin() ? `<button class="ch-borrar" data-action="chBorrar" data-p0="${m.id}" aria-label="Borrar mensaje">✕</button>` : ''}</article>`).join('') || '<p class="vacio">Aún no hay mensajes. ¡Empieza tú!</p>';
+    <div class="md">${markdown(m.texto)}</div>${m.autor_id === yo || esAdmin() ? `<button class="ch-borrar" data-action="chBorrar" data-p0="${m.id}" aria-label="Borrar mensaje">${ico('cerrar')}</button>` : ''}</article>`).join('') || '<p class="vacio">Aún no hay mensajes. ¡Empieza tú!</p>';
 }
 
 async function refrescar() {
@@ -61,7 +61,7 @@ export async function pintar(el: HTMLElement, params: string[]) {
         <small class="nota">${esc((c.ultimo_texto ?? '').slice(0, 50))}</small></a></li>`).join('') || '<li class="nota">Sin canales.</li>'}</ul>
       <form class="acciones" data-on-submit="chDirecto" data-prevent="1"><select id="ch-persona" aria-label="Persona"><option value="">Mensaje directo a…</option>${personas.filter(p => p.id !== usuario()?.id).map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}</select><button class="btn secundario" type="submit">Abrir</button></form>
       <form class="acciones" data-on-submit="chGrupo" data-prevent="1"><input id="ch-grupo" placeholder="Nuevo canal de grupo" maxlength="40" aria-label="Nombre del canal"><button class="btn secundario" type="submit">Crear</button></form></aside>
-    <section class="tarjeta ch-conversacion">${actual ? `<header class="ch-cab"><a href="#/chat" class="ch-volver" aria-label="Volver a la lista">‹</a><h3>${icoCanal(actual)}${esc(nombreCanal(actual))}</h3>${ruta && /^#\/[a-z-]+\/[A-Za-z0-9-]+$/.test(ruta) ? `<a class="ch-ficha" href="${esc(ruta)}">Abrir la ficha →</a>` : ''}
+    <section class="tarjeta ch-conversacion">${actual ? `<header class="ch-cab"><a href="#/chat" class="ch-volver" aria-label="Volver a la lista">${ico('izquierda')}</a><h3>${icoCanal(actual)}${esc(nombreCanal(actual))}</h3>${ruta && /^#\/[a-z-]+\/[A-Za-z0-9-]+$/.test(ruta) ? `<a class="ch-ficha" href="${esc(ruta)}">Abrir la ficha →</a>` : ''}
         <button type="button" class="btn secundario ch-avisos-btn" data-action="chAvisos" data-p0="$this" aria-expanded="false" title="Tono y silencio de esta conversación">${ico(silenciada(actual.id) ? 'prohibido' : 'campana')} Avisos</button></header>
       <div id="ch-avisos-panel" hidden></div>
       <div id="ch-mensajes" class="ch-mensajes" aria-live="polite"></div>

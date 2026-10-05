@@ -5,7 +5,7 @@ import { usuario } from '../../core/estado';
 import { equipo, nombreDe } from '../../core/equipo';
 import { ir } from '../../core/router';
 import { registrarAcciones } from '../../core/dispatcher';
-import { esc, toast } from '../../ui/dom';
+import { esc, toast, fecha } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { FASES, nombreFase, listarProyectos, crearProyecto, actualizarProyecto, type Proyecto, type TareaP } from './datos';
 
@@ -33,7 +33,7 @@ function tarjeta(p: Proyecto): string {
     <h4>${esc(p.titulo)}</h4>
     <div class="pr-tarjeta-pie">
       ${resp ? `<span>${ico('persona')} ${esc(resp)}</span>` : '<span class="nota">Sin responsable</span>'}
-      ${p.fecha_objetivo ? `<span class="${vencido(p.fecha_objetivo) && p.estado !== 'cerrado' ? 'mal' : ''}">${ico('calendario')} ${esc(p.fecha_objetivo)}</span>` : ''}
+      ${p.fecha_objetivo ? `<span class="${vencido(p.fecha_objetivo) && p.estado !== 'cerrado' ? 'mal' : ''}">${ico('calendario')} ${esc(fecha(p.fecha_objetivo))}</span>` : ''}
     </div>
   </article>`;
 }
@@ -59,7 +59,7 @@ function pintarLista(): string {
     <tbody>${_proyectos.map(p => `<tr class="fila-clic" data-action="abrirProyecto" data-p0="${p.numero}">
       <td>${p.numero}</td><td>${esc(p.titulo)}</td><td>${esc(nombreFase(p.estado))}</td>
       <td>${p.tipo === 'cliente' ? 'Cliente' : 'Interno'}</td><td>${esc(nombreDe(p.responsable_id))}</td>
-      <td class="${vencido(p.fecha_objetivo) && p.estado !== 'cerrado' ? 'mal' : ''}">${esc(p.fecha_objetivo ?? '')}</td></tr>`).join('')}
+      <td class="${vencido(p.fecha_objetivo) && p.estado !== 'cerrado' ? 'mal' : ''}">${esc(fecha(p.fecha_objetivo))}</td></tr>`).join('')}
     </tbody></table></div>`;
 }
 
@@ -85,7 +85,7 @@ async function pintarPersonas(): Promise<string> {
       return `<li class="fila-clic" data-action="abrirProyecto" data-p0="${p?.numero ?? ''}" data-p1="tareas">
         <span class="chip ${t.estado === 'en_curso' ? 'aviso' : 'neutro'}">${t.estado === 'en_curso' ? 'En curso' : 'Pendiente'}</span>
         ${esc(t.titulo)} <small>· #${p?.numero ?? '?'} ${esc(p?.titulo ?? '')}</small>
-        ${t.fecha_limite ? `<small class="${vencido(t.fecha_limite) ? 'mal' : ''}"> · ${ico('calendario')} ${esc(t.fecha_limite)}</small>` : ''}
+        ${t.fecha_limite ? `<small class="${vencido(t.fecha_limite) ? 'mal' : ''}"> · ${ico('calendario')} ${esc(fecha(t.fecha_limite))}</small>` : ''}
       </li>`;
     }).join('')}</ul></section>`).join('')}</div>`;
 }

@@ -14,7 +14,7 @@ import { esAdmin, usuario } from '../../core/estado';
 import { equipo, nombreDe } from '../../core/equipo';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
-import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { esc, toast, hace, fechaHora, fecha, pl } from '../../ui/dom';
 import { botonChatFicha } from '../../ui/chat-ficha';
 import { esDelHub } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
@@ -49,7 +49,7 @@ const iconoActividad = (tipo: string) => { const n = TIPOS_ACTIVIDAD[tipo]?.icon
 function paso(o: Oportunidad): string {
   if (o.cerrada_at) return '';
   if (!o.fecha_seguimiento) return `<span class="op-paso falta">${ico('atencion')} Sin próximo paso</span>`;
-  return `<span class="op-paso ${o.fecha_seguimiento < hoy() ? 'mal' : ''}">${ico('flecha')} ${esc(o.fecha_seguimiento)}${o.siguiente_texto ? ` · ${esc(o.siguiente_texto)}` : ''}</span>`;
+  return `<span class="op-paso ${o.fecha_seguimiento < hoy() ? 'mal' : ''}">${ico('flecha')} ${esc(fecha(o.fecha_seguimiento))}${o.siguiente_texto ? ` · ${esc(o.siguiente_texto)}` : ''}</span>`;
 }
 
 function tarjeta(o: Oportunidad): string {
@@ -63,7 +63,7 @@ function tarjeta(o: Oportunidad): string {
   </article>`;
 }
 
-const altaRapida = (e: Etapa) => `<details class="op-rapida"><summary>+ Alta rápida</summary>
+const altaRapida = (e: Etapa) => `<details class="op-rapida"><summary>${ico('mas')} Alta rápida</summary>
   <form data-on-submit="opRapida:$this" data-prevent="1" data-etapa="${esc(e.clave)}">
     <input name="titulo" required maxlength="200" placeholder="Qué se vende" aria-label="Título de la oportunidad en ${esc(e.nombre)}">
     <input name="valor" type="number" min="0" step="1" placeholder="Valor (€)" aria-label="Valor estimado (€)">
@@ -86,7 +86,7 @@ function vistaEmbudo(p: Pipeline): string {
       <header><h3>${esc(e.nombre)}</h3><span class="chip">${col.length}</span></header>
       <p class="nota">${eur(suma)} · ${e.probabilidad} %${sin ? ` · <span class="atento">${sin} sin próximo paso</span>` : ''}</p>
       ${e.tipo === 'abierta' ? altaRapida(e) : ''}
-      <div class="pr-col-cuerpo">${col.map(tarjeta).join('') || '<p class="vacio col-vacia">—</p>'}</div></section>`;
+      <div class="pr-col-cuerpo">${col.map(tarjeta).join('') || '<p class="vacio col-vacia">Suelta aquí</p>'}</div></section>`;
   }).join('')}</div>${zonas}`;
 }
 
@@ -96,7 +96,7 @@ function vistaLista(p: Pipeline): string {
   return `<div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Oportunidad</th><th>Cliente</th><th>Etapa</th><th>Valor</th><th>Próximo paso</th><th>Quién</th><th>Origen</th></tr></thead>
     <tbody>${ops.map(o => `<tr class="fila-clic" data-action="opAbrir" data-p0="${esc(o.id)}"><td>${esc(o.titulo)}</td>
       <td>${esc(o.cliente_id ? _nombres.get(o.cliente_id) ?? '' : '')}</td><td>${esc(etapaDe(o)?.nombre ?? o.estado)}</td><td>${eur(o.valor_estimado)}</td>
-      <td>${o.cerrada_at ? esc(o.fecha_seguimiento ?? '') : paso(o)}</td>
+      <td>${o.cerrada_at ? esc(fecha(o.fecha_seguimiento)) : paso(o)}</td>
       <td>${esc(o.tecnico_id ?? '')}</td><td>${esc(o.origen ?? '')}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
@@ -168,10 +168,10 @@ async function pintarLista(el: HTMLElement) {
   const cuerpo = vista === 'lista' ? vistaLista(p) : vista === 'prevision' ? vistaPrevision(p) : vista === 'embudos' ? vistaEmbudos() : vistaEmbudo(p);
   el.innerHTML = `<div class="acciones pr-barra">
       <div class="segmentado" role="tablist">${(['embudo', 'lista', 'prevision', ...(esAdmin() ? ['embudos'] : [])] as Vista[]).map(v =>
-        `<button role="tab" aria-selected="${v === vista}" class="${v === vista ? 'activo' : ''}" data-action="opVista" data-p0="${v}">${{ embudo: 'Embudo', lista: 'Lista', prevision: 'Previsión', embudos: 'Configurar embudos' }[v]}</button>`).join('')}</div>
+        `<button role="tab" aria-selected="${v === vista}" class="${v === vista ? 'activo' : ''}" data-action="opVista" data-p0="${v}">${{ embudo: 'Embudo', lista: 'Lista', prevision: 'Previsión', embudos: 'Configurar etapas' }[v]}</button>`).join('')}</div>
       ${_pipes.length > 1 ? `<select id="op-pipe" data-on-change="opPipe:$value" aria-label="Embudo">${_pipes.map(x => `<option value="${esc(x.id)}" ${x.id === p.id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select>` : ''}
       ${vista === 'embudo' || vista === 'lista' ? `<label class="check"><input type="checkbox" ${_verCerradas ? 'checked' : ''} data-on-change="opCerradas:$checked"> Ver ganadas y perdidas</label>` : ''}
-      <button class="btn" data-action="opNueva">+ Nueva oportunidad</button>
+      <button class="btn" data-action="opNueva">${ico('mas')} Nueva oportunidad</button>
     </div>${cuerpo}`;
 }
 
@@ -216,7 +216,7 @@ function proximoPaso(o: Oportunidad): string {
   const vencido = o.fecha_seguimiento && o.fecha_seguimiento < hoy();
   return `<section class="tarjeta"><h3>${ico('flecha')} Próximo paso</h3>
     ${!o.fecha_seguimiento ? '<p class="aviso">Sin próximo paso: toda oportunidad abierta necesita el siguiente. Ponle cuándo y qué.</p>'
-      : vencido ? `<p class="aviso g-mal">Tocaba el ${esc(o.fecha_seguimiento)}.</p>` : ''}
+      : vencido ? `<p class="aviso g-mal">Tocaba el ${esc(fecha(o.fecha_seguimiento))}.</p>` : ''}
     <form data-on-submit="opPaso" data-prevent="1">
       <div class="in-campos"><label>Cuándo <input id="op-paso-fecha" type="date" value="${esc(o.fecha_seguimiento ?? '')}"></label>
         <label>Qué <input id="op-paso-texto" maxlength="300" value="${esc(o.siguiente_texto ?? '')}" placeholder="p. ej. Llamar para ver si le llegó la propuesta"></label></div>
@@ -243,19 +243,19 @@ async function pintarFicha(el: HTMLElement, id: string) {
     ...(trab.data ?? []).map(t => `${ico('herramienta')} Trabajo #${t.numero} ${esc(t.titulo ?? '')} · ${esc(t.estado)}`),
     ...(tar.data ?? []).map(t => `${ico('hecho')} Tarea #${t.numero ?? ''} ${esc(t.titulo)} · ${esc(t.estado)}`)];
   el.innerHTML = `<p><a href="#/oportunidades">← Oportunidades</a>${o.cliente_id ? ` · <a href="#/clientes/${esc(o.cliente_id)}">Ficha del cliente</a>` : ''}</p>
-    <div class="tarjeta-cab"><h2>${ico('objetivo')} ${esc(o.titulo)}</h2><span class="nota">Creada ${esc(hace(o.created_at))}${o.origen ? ` · entró por ${esc(o.origen)}` : ''}</span>${botonChatFicha('oportunidad', o.id, o.titulo, `#/oportunidades/${o.id}`)}
-      ${presHub ? `<a class="btn secundario" href="#/presupuestos/nuevo/o/${esc(o.id)}">${ico('documento')} Crear presupuesto</a>` : ''}</div>
+    <div class="tarjeta-cab"><div><h2>${ico('objetivo')} ${esc(o.titulo)}</h2><span class="nota">Creada ${esc(hace(o.created_at))}${o.origen ? ` · entró por ${esc(o.origen)}` : ''}</span></div>
+      <div class="acciones">${presHub ? `<a class="btn secundario" href="#/presupuestos/nuevo/o/${esc(o.id)}">${ico('documento')} Crear presupuesto</a>` : ''}${botonChatFicha('oportunidad', o.id, o.titulo, `#/oportunidades/${o.id}`)}</div></div>
     ${barraEtapas(pipe, o)}
     ${o.estado === 'Perdido' || pipe.etapas.find(e => e.clave === o.estado)?.tipo === 'perdida' ? `<p class="aviso">Perdida${o.motivo_perdida ? `: ${esc(o.motivo_perdida)}` : ''}</p>` : ''}
     <div class="op-ficha">${await formulario(o, false)}
       <div>
         ${proximoPaso(o)}
         <section class="tarjeta"><h3>Apuntar</h3><form data-on-submit="opApuntar" data-prevent="1">
-          <select id="op-act-tipo" aria-label="Tipo">${Object.entries(TIPOS_ACTIVIDAD).map(([k, t]) => `<option value="${k}" ${k === 'llamada' ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('')}</select>
-          <textarea id="op-act-texto" rows="2" required placeholder="Qué pasó…"></textarea>
+          <label>Tipo <select id="op-act-tipo">${Object.entries(TIPOS_ACTIVIDAD).map(([k, t]) => `<option value="${k}" ${k === 'llamada' ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('')}</select></label>
+          <label>Qué pasó <textarea id="op-act-texto" rows="2" required placeholder="Llamé y…"></textarea></label>
           <div class="acciones"><button class="btn" type="submit">Apuntar</button></div></form>
           <ul class="di-ultimo">${(acts.data ?? []).map(a => `<li><small class="nota" title="${esc(fechaHora(a.fecha))}">${esc(hace(a.fecha))}</small>
-            <span>${iconoActividad(a.tipo)} ${esc(a.texto)} <small class="nota">· ${esc(nombreDe(a.usuario_id))}</small></span></li>`).join('') || '<li class="nota">Sin actividad todavía.</li>'}</ul></section>
+            <span>${iconoActividad(a.tipo)} ${esc(a.texto)} <small class="nota">· ${esc(nombreDe(a.usuario_id))}</small></span></li>`).join('') || ''}</ul>${(acts.data ?? []).length ? '' : '<p class="vacio">Sin actividad todavía.</p>'}</section>
         <section class="tarjeta"><h3>En la app</h3>${vinc.length ? `<ul>${vinc.map(v => `<li>${v}</li>`).join('')}</ul>` : '<p class="nota">Nada vinculado todavía.</p>'}
           <p class="nota">Presupuestos y trabajos se crean en la <a href="${esc(enApp())}" target="_blank" rel="noopener">app actual ${ico('externo')}</a> eligiendo esta oportunidad.</p></section>
         ${esAdmin() ? '<div class="acciones"><button class="btn peligro" data-action="opBorrar">Borrar oportunidad</button></div>' : ''}
@@ -305,7 +305,7 @@ async function proponer(o: Oportunidad, e: Etapa): Promise<boolean> {
     if (!texto?.trim()) return false;
     const r = await llamarFuncion<{ tareas: unknown[] }>('comandas', { accion: 'crear', texto: texto.trim() }, 120000);
     if (r.error || !r.data) toast(`No se pudo encargar: ${r.error}`, 'error');
-    else toast(`Comanda repartida en ${r.data.tareas?.length ?? 0} tarea(s)`);
+    else toast(`Comanda repartida en ${pl(r.data.tareas?.length ?? 0, 'tarea', 'tareas')}`);
   }
   return false;
 }
@@ -321,7 +321,7 @@ async function mover(o: Oportunidad, clave: string): Promise<boolean> {
   }
   const r = await API.patch('oportunidades', { id: `eq.${o.id}` }, { estado: clave, ...(e.tipo === 'perdida' ? { motivo_perdida: motivo || null } : {}) });
   if (r.error) { toast(`No se pudo mover: ${r.error.message}`, 'error'); return false; }
-  toast(e.tipo === 'ganada' ? 'Ganada' : `→ ${e.nombre}${e.tipo === 'abierta' && e.seguimiento_dias != null ? ` · próximo paso en ${e.seguimiento_dias} día(s)` : ''}`);
+  toast(e.tipo === 'ganada' ? 'Ganada' : `→ ${e.nombre}${e.tipo === 'abierta' && e.seguimiento_dias != null ? ` · próximo paso en ${pl(e.seguimiento_dias, 'día', 'días')}` : ''}`);
   return !(await proponer(o, e));
 }
 

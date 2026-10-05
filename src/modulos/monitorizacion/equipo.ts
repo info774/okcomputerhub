@@ -5,7 +5,7 @@
 import { API } from '../../core/api';
 import { ir, resolver } from '../../core/router';
 import { registrarAcciones } from '../../core/dispatcher';
-import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { esc, toast, hace, fechaHora, pl } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { tablaAlertas } from './lista';
 import {
@@ -55,7 +55,7 @@ async function tabResumen(e: Equipo): Promise<string> {
       ${dato('Agente', e.version_agente)}
     </dl></section>
     <section class="tarjeta"><h3>Hardware y sistema</h3><dl class="me-datos">
-      ${dato('Sistema', `${e.so_version ?? e.so}${e.so_build ? ` (${e.so_build})` : ''}`)}
+      ${dato('Sistema', [e.so_version ?? e.so, e.so_build ? `(${e.so_build})` : ''].filter(Boolean).join(' ') || null)}
       ${dato('Fabricante / modelo', [e.fabricante, e.modelo].filter(Boolean).join(' · '))}
       ${dato('Nº de serie', e.serie)}
       ${dato('Procesador', e.cpu ? `${e.cpu}${e.nucleos ? ` · ${e.nucleos} núcleos` : ''}` : null)}
@@ -232,7 +232,7 @@ export async function pintarEquipo(el: HTMLElement, id: string, pestana = 'resum
   el.innerHTML = `<p><a href="#/monitorizacion/equipos">← Equipos</a>${data.local_id ? ` · <a href="#/monitorizacion/sede/${esc(data.local_id)}">Su sede</a>` : ''}</p>
     <div class="tarjeta-cab"><h2>${ico('monitor')} ${esc(data.nombre)}</h2>
       <span>${data.conectado ? chip('Conectado', 'bien') : chip(`Sin conexión · ${hace(data.visto_ultimo)}`, 'mal')}
-      ${data.alertas_abiertas ? chip(`${data.alertas_abiertas} alerta(s)`, 'mal') : ''}${data.reinicio_pendiente ? chip('Reinicio pendiente', 'aviso') : ''}</span></div>
+      ${data.alertas_abiertas ? chip(`${pl(data.alertas_abiertas, 'alerta', 'alertas')}`, 'mal') : ''}${data.reinicio_pendiente ? chip('Reinicio pendiente', 'aviso') : ''}</span></div>
     <nav class="pestanas" role="tablist">${PESTANAS.map(([k, n]) =>
       `<button role="tab" aria-selected="${k === p}" class="${k === p ? 'activo' : ''}" data-action="mePestana" data-p0="${esc(id)}" data-p1="${k}">${n}</button>`).join('')}</nav>
     <div id="me-cuerpo"><p class="cargando">Cargando…</p></div>`;

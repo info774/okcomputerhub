@@ -20,7 +20,7 @@ export function pintarShell(raiz: HTMLElement) {
   raiz.innerHTML = `
     <header class="cabecera">
       <button class="icono-btn solo-movil" data-action="alternarMenu" aria-label="Menú">${svgLinea('menu')}</button>
-      <a class="marca" href="#/inicio"><span class="hex" aria-hidden="true">OK</span>Ok Computer <b>Hub</b></a>
+      <a class="marca" href="#/inicio"><span class="hex" aria-hidden="true">OK</span><span class="marca-txt">Ok Computer </span><b>Hub</b></a>
       <button id="buscador-btn" class="buscador-btn" data-action="abrirBuscador" aria-label="Buscar">${svgLinea('buscar')}<span class="btn-label">Buscar o pedir algo…</span><kbd>Ctrl K</kbd></button>
       <span class="hueco"></span>
       <button id="voz-btn" class="icono-btn" data-action="vozAbrir" aria-label="Asistente de voz" title="Asistente de voz: dime qué necesitas">${svgLinea('micro')}</button>
@@ -33,7 +33,7 @@ export function pintarShell(raiz: HTMLElement) {
       <nav id="menu" class="menu" aria-label="Pantallas"></nav>
       <main class="principal">
         <div class="pantalla-cab"><span id="pantalla-icono" aria-hidden="true"></span>
-          <div><h1 id="pantalla-titulo"></h1><p id="pantalla-explicacion" class="explicacion"></p></div></div>
+          <div class="pantalla-txt"><h1 id="pantalla-titulo"></h1><p id="pantalla-explicacion" class="explicacion"></p></div></div>
         <div id="pantalla"></div>
       </main>
     </div>

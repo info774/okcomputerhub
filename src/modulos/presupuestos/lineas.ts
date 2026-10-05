@@ -39,7 +39,7 @@ export function editorLineas(pre: string, lineas: LineaEd[], escribe = true): st
   return `<div class="pl-editor" id="${pre}-lin">${cuerpo(pre, escribe)}</div>
     ${escribe ? `<div class="acciones pl-anadir">
       <input id="${pre}-lin-cat" type="search" autocomplete="off" placeholder="Añadir del catálogo: nombre, referencia o categoría…" aria-label="Buscar en el catálogo" data-on-input="lnCatBuscar:${pre},$value">
-      <button type="button" class="btn secundario" data-action="lnAnadir" data-p0="${pre}">+ Línea a mano</button></div>
+      <button type="button" class="btn secundario" data-action="lnAnadir" data-p0="${pre}">${ico('mas')} Línea a mano</button></div>
     <ul id="${pre}-lin-res" class="resultados"></ul>` : ''}`;
 }
 

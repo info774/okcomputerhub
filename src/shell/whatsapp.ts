@@ -169,7 +169,7 @@ async function cargarHilo(primera = false) {
 function pintarCabConv() {
   const c = actual!;
   $id('wa-convcab')!.innerHTML = `
-    <button type="button" class="wa-volver" data-action="waVolver" aria-label="Volver a las conversaciones">‹</button>
+    <button type="button" class="wa-volver" data-action="waVolver" aria-label="Volver a las conversaciones">${ico('izquierda')}</button>
     <span class="wa-convcab-txt"><b>${esc(c.nombre)}</b><small>${esc([c.sede, '+' + c.telefono].filter(Boolean).join(' · '))}</small></span>
     <span class="wa-ventana ${c.ventana ? 'abierta' : 'cerrada'}"><span class="hex-punto" aria-hidden="true"></span>${c.ventana ? `Quedan ${restante(c.ultimo_entrante_at)}` : 'Fuera de 24 h'}</span>
     ${c.ticket ? `<a class="wa-ticket" href="#/tickets/${esc(c.ticket.numero)}">#${esc(c.ticket.numero)}</a>` : ''}`;
@@ -210,7 +210,7 @@ function pintarAtajos() {
 
 function abrirPanel(html: string) {
   const p = $id('wa-panel')!;
-  p.innerHTML = `${html}<button type="button" class="wa-panel-x" data-action="waCerrarPanel" aria-label="Cerrar">✕</button>`;
+  p.innerHTML = `${html}<button type="button" class="wa-panel-x" data-action="waCerrarPanel" aria-label="Cerrar">${ico('cerrar')}</button>`;
   p.hidden = false;
 }
 function cerrarPanel() {
@@ -403,7 +403,7 @@ registrarAcciones({
       : !r.registrado ? '<p class="wa-nota">El conector todavía no está dado de alta en el Agente de Meta.</p>'
         : `<p class="wa-nota">Apunta a <b>${enHub ? 'el hub' : 'la app'}</b>. Conexión: <b>${esc(r.conexion?.status ?? '—')}</b> · herramientas: <b>${esc(r.herramientas?.status ?? '—')}</b> (${esc(r.herramientas?.tool_count ?? 0)})</p>`;
     const skills = (r?.skills ?? []).map((x: any) => `<li><code>${esc(x.title)}</code> ${ETQ[x.status] ?? esc(x.status)}</li>`).join('');
-    el.innerHTML = `<div class="wa-agente"><button type="button" class="wa-volver" data-action="waAgenteVolver" aria-label="Volver a las conversaciones">‹</button>
+    el.innerHTML = `<div class="wa-agente"><button type="button" class="wa-volver" data-action="waAgenteVolver" aria-label="Volver a las conversaciones">${ico('izquierda')}</button>
       <h4>${ico('robot')} Agente de Meta</h4>${detalle}${skills ? `<p class="wa-nota">Skills:</p><ul>${skills}</ul>` : ''}
       <button type="button" class="btn secundario" data-action="waAgenteActualizar">${r?.registrado ? 'Actualizar conector y skills' : 'Dar de alta conector y skills'}</button>
       <p class="wa-nota">Solo se puede con el cambio de WhatsApp hecho: entonces el agente pasa a usar las herramientas del hub.</p></div>`;

@@ -10,7 +10,7 @@ import { esAdmin } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { APP_ACTUAL_URL } from '../../core/config';
-import { esc, toast, hace } from '../../ui/dom';
+import { esc, toast, hace, fecha } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { eur, limpio } from '../ventas/datos';
 import { vistaFacturas, vistaFactura } from './facturas';
@@ -105,11 +105,11 @@ async function vistaCompras(): Promise<string> {
 async function vistaPedidos(): Promise<string> {
   const [ps, provs] = await Promise.all([API.get<Pedido[]>('pedidos_compra', { select: '*', order: 'numero.desc', limit: '200' }), proveedores()]);
   const nom = new Map(provs.map(p => [p.id, p.nombre]));
-  return `<div class="acciones pr-barra"><button class="btn" data-action="alNuevoPedido">+ Pedido</button></div>
+  return `<div class="acciones pr-barra"><button class="btn" data-action="alNuevoPedido">${ico('mas')} Pedido</button></div>
     <div class="tarjeta mo-scroll">${(ps.data ?? []).length ? `<table class="tabla"><thead><tr><th>Nº</th><th>Proveedor</th><th>Fecha</th><th>Estado</th><th>Total</th><th>Llega</th></tr></thead><tbody>
     ${(ps.data ?? []).map(p => `<tr class="fila-clic" data-action="alAbrirPedido" data-p0="${p.numero}"><td>PC-${p.numero}</td><td>${esc(nom.get(p.proveedor_id ?? '') ?? '—')}</td>
-      <td>${esc(p.fecha)}</td><td><span class="chip ${TONO_PEDIDO[p.estado] ?? ''}">${esc(p.estado)}</span>${p.estado === 'Recibido' && !p.entrada_app_at ? ' <span class="chip aviso">falta la entrada</span>' : ''}</td>
-      <td>${eur(p.total, 2)}</td><td class="${p.esperado_para && p.esperado_para < new Date().toLocaleDateString('sv-SE') && ['Enviado', 'Confirmado'].includes(p.estado) ? 'mal' : ''}">${esc(p.esperado_para ?? '')}</td></tr>`).join('')}
+      <td>${esc(fecha(p.fecha))}</td><td><span class="chip ${TONO_PEDIDO[p.estado] ?? ''}">${esc(p.estado)}</span>${p.estado === 'Recibido' && !p.entrada_app_at ? ' <span class="chip aviso">falta la entrada</span>' : ''}</td>
+      <td>${eur(p.total, 2)}</td><td class="${p.esperado_para && p.esperado_para < new Date().toLocaleDateString('sv-SE') && ['Enviado', 'Confirmado'].includes(p.estado) ? 'mal' : ''}">${esc(fecha(p.esperado_para))}</td></tr>`).join('')}
     </tbody></table>` : '<p class="vacio">Sin pedidos. Mira «Qué pedir» o crea uno.</p>'}</div>`;
 }
 
@@ -139,7 +139,7 @@ async function vistaPedido(numero: string): Promise<string> {
       <section class="tarjeta mo-scroll"><h3>Líneas</h3><table class="tabla"><thead><tr><th>Material</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th>${editable ? '<th></th>' : ''}</tr></thead><tbody>
         ${lineas.map(l => `<tr><td>${esc(l.nombre)}</td><td>${editable ? `<input type="number" min="0.01" step="any" value="${l.cantidad}" data-on-change="alLinea:${l.id},cantidad,$value" aria-label="Cantidad">` : num(l.cantidad)}</td>
           <td>${editable ? `<input type="number" min="0" step="0.01" value="${l.precio}" data-on-change="alLinea:${l.id},precio,$value" aria-label="Precio">` : eur(l.precio, 2)}</td><td>${eur(l.subtotal, 2)}</td>
-          ${editable ? `<td><button class="btn secundario" data-action="alQuitarLinea" data-p0="${l.id}" aria-label="Quitar">✕</button></td>` : ''}</tr>`).join('') || `<tr><td colspan="5" class="vacio">Sin líneas.</td></tr>`}
+          ${editable ? `<td><button class="btn secundario" data-action="alQuitarLinea" data-p0="${l.id}" aria-label="Quitar">${ico('cerrar')}</button></td>` : ''}</tr>`).join('') || `<tr><td colspan="5" class="vacio">Sin líneas.</td></tr>`}
         </tbody><tfoot><tr><th colspan="3">Total (sin impuestos)</th><th>${eur(p.total, 2)}</th></tr></tfoot></table>
         ${editable ? `<form class="acciones" data-on-submit="alAnadirLinea" data-prevent="1"><input id="al-linea-q" placeholder="Material del catálogo o texto libre" autocomplete="off" data-on-input="alBuscarCat:$value" aria-label="Material">
           <input id="al-linea-cant" type="number" min="0.01" step="any" value="1" aria-label="Cantidad"><input id="al-linea-precio" type="number" min="0" step="0.01" placeholder="Precio" aria-label="Precio">
@@ -187,7 +187,7 @@ async function vistaProveedor(id: string): Promise<string> {
       <div class="mo-scroll"><table class="tabla"><thead><tr><th>Material</th><th>Su referencia</th><th>Precio</th><th>Plazo</th><th>Preferido</th><th></th></tr></thead><tbody>
       ${(mps.data ?? []).map(m => `<tr><td>${esc(cats.find(c => c.id === m.catalogo_id)?.nombre ?? '¿?')}</td><td>${esc(m.ref_proveedor ?? '')}</td><td>${m.precio_compra != null ? eur(m.precio_compra, 2) : '—'}</td>
         <td>${m.plazo_dias ?? `(${p.plazo_dias})`}</td><td><input type="checkbox" ${m.preferido ? 'checked' : ''} data-on-change="alPreferido:${m.id},${m.catalogo_id},$checked" aria-label="Preferido"></td>
-        <td><button class="btn secundario" data-action="alQuitarMaterial" data-p0="${m.id}" aria-label="Quitar">✕</button></td></tr>`).join('') || '<tr><td colspan="6" class="vacio">Ninguno todavía.</td></tr>'}
+        <td><button class="btn secundario" data-action="alQuitarMaterial" data-p0="${m.id}" aria-label="Quitar">${ico('cerrar')}</button></td></tr>`).join('') || '<tr><td colspan="6" class="vacio">Ninguno todavía.</td></tr>'}
       </tbody></table></div>
       <form class="acciones" data-on-submit="alAnadirMaterial" data-prevent="1"><input id="al-linea-q" placeholder="Material del catálogo…" autocomplete="off" data-on-input="alBuscarCat:$value" aria-label="Material">
         <input id="al-mat-ref" placeholder="Su referencia" aria-label="Referencia del proveedor"><input id="al-linea-precio" type="number" min="0" step="0.01" placeholder="Precio" aria-label="Precio de compra">
