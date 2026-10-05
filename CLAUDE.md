@@ -926,6 +926,19 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   mandando a la app hasta que Fran haga PENDIENTE_FRAN §2 quater. Aceptar un
   presupuesto en el portal lo pasa solo a «Aceptado» con el área
   `presupuestos` del hub. Arnés `verify-captacion.mjs`.
+- **Guía de instalación, escáner, catálogo y conocimiento** (paridad bloque 8,
+  tanda 4, 2026-10-05, PREPARADO para el corte, `20261105_guia_catalogo.sql`):
+  la guía del trabajo (`trabajos/guia.ts`, `gi-`; `#/trabajos/<n>/instalacion[/<id>[/paso/<i>[/r]]]`)
+  usa `GUIA_TIPOS` COPIADO de la app (`trabajos/guia-tipos.ts`: las claves de
+  `instalaciones.datos` son `<tipo>_<paso>_<campo>` y las opciones guardan el
+  MISMO valor que la app, «✅ OK», aunque se enseñen sin emoji con
+  `textoOpcion`); al finalizar, el resumen a las observaciones, «En progreso»
+  por `hub.trabajo_estado` y el equipo a la sede. Escáner: `abrirEscaner(fn)` de
+  `src/ui/escaner.ts` (`esc-`). Catálogo: Inventario → «Catálogo»
+  (`inventario/catalogo.ts`, `cat-`; RLS restrictiva: solo un admin lo
+  escribe, las altas del inventario van por `hub.inventario_catalogo`). Base de
+  conocimiento: Wiki → `#/wiki/conocimiento` (`wiki/conocimiento.ts`, `kc-`).
+  Arnés `verify-guia-catalogo.mjs`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

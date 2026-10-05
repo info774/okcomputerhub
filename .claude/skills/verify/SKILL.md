@@ -299,6 +299,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   validaciones, envío sin claves, «Otro servicio», agencia recordada, 401 →
   vuelta a la puerta, sin emojis ni manejadores en línea).
 
+- `verify-guia-catalogo.mjs`: bloque 8, tanda 4: guía de instalación del
+  trabajo (tipos, pasos, finalizar con observaciones, `trabajo_estado`
+  SIMULADA y el equipo a la sede, resumen con contraseñas tapadas), escáner del
+  material (sin cámara: el campo), catálogo (filtros, alta, categoría en
+  bloque) y base de conocimiento; con las áreas de la app, solo lectura.
+
 `npm run verify` pasa todos los de la lista.
 
 ## Pantalla nueva
