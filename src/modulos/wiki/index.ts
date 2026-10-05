@@ -50,6 +50,7 @@ function marco(cuerpo: string): string {
       <div class="acciones"><button class="btn" data-action="wkNueva">+ Página</button>
         <label class="check"><input type="checkbox" ${_verArchivadas ? 'checked' : ''} data-on-change="wkArchivadas:$checked"> Archivadas</label></div>
       ${arbol() || '<p class="vacio">Todavía no hay páginas.</p>'}
+      <p class="wk-conocimiento"><a href="#/wiki/conocimiento">${ico('libro')} Base de conocimiento (de la app)</a></p>
     </aside>
     <div class="wk-principal">${cuerpo}</div></div>`;
 }
@@ -131,7 +132,8 @@ async function pintar(el: HTMLElement, params: string[]) {
   await cargarArbol();
   const [a, b] = params;
   let cuerpo: string;
-  if (a === 'nueva') cuerpo = await vistaEditor(null, b);
+  if (a === 'conocimiento') { _actual = null; cuerpo = await (await import('./conocimiento')).vistaConocimiento(b); }
+  else if (a === 'nueva') cuerpo = await vistaEditor(null, b);
   else if (a && b === 'editar') cuerpo = await vistaEditor(a);
   else if (a && b === 'historial') cuerpo = await vistaHistorial(a);
   else if (a) cuerpo = await vistaPagina(a);

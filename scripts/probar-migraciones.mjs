@@ -639,6 +639,13 @@ try {
   psql(`update hub.areas set dueno = 'app' where area = 'tareas'`);
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.tareas (id, titulo, estado, ticket_id) values (gen_random_uuid(), 'Llamar', 'pendiente', gen_random_uuid());`), { esperaError: true }).ok, 'tickets: sin el corte de tareas, las tareas del ticket no se crean');
   psql(`update hub.areas set dueno = 'hub' where area = 'tareas'`);
+  // Guía y catálogo (20261105): el catálogo, con el corte, solo lo edita un admin; la guía espera al corte de trabajos.
+  psql(`update hub.areas set dueno = 'hub' where area = 'inventario'`);
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.catalogo (nombre, categoria) values ('Router técnico', 'Hardware');`), { esperaError: true }).ok, 'catálogo: con el corte, un técnico no lo edita');
+  psql(como('authenticated', 'ana@ok.test', `insert into hub.catalogo (nombre, categoria) values ('Router nuevo', 'Hardware');`));
+  ok(psql(`select count(*) from hub.catalogo where nombre = 'Router nuevo'`) === '1', 'catálogo: con el corte, un admin sí');
+  psql(`update hub.areas set dueno = 'app' where area = 'inventario'`);
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.instalaciones (tipo) values ('tpv');`), { esperaError: true }).ok, 'instalaciones: sin el corte de trabajos, la guía no escribe');
   psql(`insert into hub.trabajos (id, numero, titulo, estado, fecha_programada) values ('00000000-0000-0000-0000-0000000000e2', 699, 'Copia de la app', 'Pendiente', current_date)`);
   ok(psql(`select count(*) from hub.agenda where trabajo_id = '00000000-0000-0000-0000-0000000000e2'`) === '0', 'paridad: sin el corte, una fecha en el trabajo no crea bloque (la agenda la trae el espejo)');
   // Chat

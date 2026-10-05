@@ -99,7 +99,7 @@ function cifra(titulo: string, valor: string, sub: string, tono = '') {
   return `<article class="tarjeta di-cifra ${tono}"><h3>${esc(titulo)}</h3><p class="di-valor">${valor}</p><p class="nota">${sub}</p></article>`;
 }
 
-const pestanas = (activa: string) => `<nav class="segmentado in-pestanas" aria-label="Inventario">${[['', 'Stock'], ['movimientos', 'Movimientos']].map(([k, t]) =>
+export const pestanas = (activa: string) => `<nav class="segmentado in-pestanas" aria-label="Inventario">${[['', 'Stock'], ['movimientos', 'Movimientos'], ['catalogo', 'Catálogo']].map(([k, t]) =>
   `<a class="${k === activa ? 'activo' : ''}" href="#/inventario${k ? '/' + k : ''}" ${k === activa ? 'aria-current="page"' : ''}>${t}</a>`).join('')}</nav>`;
 
 // ── Stock ───────────────────────────────────────────────────────────────────
@@ -259,6 +259,7 @@ async function pintarFicha(el: HTMLElement, id: string) {
 export async function pintarInventario(el: HTMLElement, params: string[]) {
   const [a, b] = params;
   if (a === 'movimientos') await pintarMovimientos(el);
+  else if (a === 'catalogo') await (await import('./catalogo')).pintarCatalogo(el, params.slice(1));
   else if (a === 'nuevo') await pintarProducto(el, null, b ?? _ubicSel);
   else if (a === 'vehiculo') await pintarVehiculo(el);
   else if (a === 'albaran' || a === 'importar') await pintarAlbaran(el, a === 'albaran' ? 'albaran' : 'excel');

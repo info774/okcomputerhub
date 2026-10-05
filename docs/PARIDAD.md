@@ -127,7 +127,10 @@ Fran, 2026-10-03).
    fichados). Tanda 3 HECHA (2026-10-05): formulario de las webs y captación
    de comerciales, preparados sin conectar (funciones `formulario-web` y
    `captar-lead`, `captacion.html`, snippets en `docs/formularios-web/`), y la
-   aceptación del presupuesto en el portal, preparada para el corte.
+   aceptación del presupuesto en el portal, preparada para el corte. Tanda 4
+   HECHA (2026-10-05): guía de instalación del trabajo y escáner de códigos en
+   el material, catálogo y base de conocimiento con escritura, todo preparado
+   para el corte de su área (`20261105_guia_catalogo.sql`).
 
 ## El mapa
 
@@ -164,11 +167,11 @@ Fran, 2026-10-03).
 | Lista de trabajos, filtros, kanban, Excel (`modules/trabajos.js`) | Preparado | `#/trabajos` (lista, kanban y Excel ya hoy; arrastrar en el kanban cambia el estado tras el corte) | Corte. |
 | Crear y editar trabajo (Simple/Completa), duplicar, continuación | Preparado | `#/trabajos/nuevo`, `#/trabajos/<n>/editar`, `trabajos/formulario.ts`; espejo trabajo ⇄ agenda en `20261017_trabajos_paridad.sql`; «+ Nuevo cliente» y «+ Nueva sede» al vuelo (con el área `clientes` cortada) | — |
 | Ficha: estado, comentarios, material con stock (`saveWdLineas`); completar cierra sus tickets y propone «Para facturar» | Preparado | `#/trabajos`, `hub.trabajo_estado`, `hub.trabajo_guardar_lineas` | Se enciende con el corte. |
-| Material con escáner de código de barras | Falta | — | Escáner. |
+| Material con escáner de código de barras | Preparado | Ficha del trabajo → Material → «Escanear» (`src/ui/escaner.ts`: cámara con BarcodeDetector o lector de mano) | El material se toca con el corte de `trabajos`. |
 | Fichajes del trabajo con edición en línea | Solo lectura | `#/trabajos` | Correcciones por `hub.jornada_ajustes`. |
 | Fotos del trabajo (a Drive con descripción) | Preparado | `#/trabajos`, `trabajo-foto` | Va a Storage, no a Drive. |
 | Firma del cliente y PDF del parte (`saveFirma`, `generatePDF`) | Preparado | `trabajos/firma.ts` (lienzo a pantalla completa → `firma_cliente`), `#/trabajos/<n>/parte` (`parte.ts`, imprimir o guardar en PDF) | El parte no se guarda en Drive (la app lo sube si hay sesión de Google). |
-| Guía de instalación de cámaras | Falta | — | — |
+| Guía de instalación de cámaras | Preparado | Ficha del trabajo → «Instalaciones» y `#/trabajos/<n>/instalacion` (los cinco tipos de la app, `trabajos/guia-tipos.ts`); espejo `hub.instalaciones` | Rellenarla: corte de `trabajos` (el equipo a la sede, con el de `clientes`). |
 | Plantillas de trabajo (`modules/plantillas.js`) | Preparado | `#/trabajos/plantillas`, selector en el alta; espejo en `20261019_plantillas_trabajo.sql` (área `trabajos`) | Los pasos se guardan pero, como en la app, no pasan al trabajo. |
 | Chat de grupo por trabajo/ticket/tarea | Hecho | «💬 Chat» en las fichas de trabajo, ticket, tarea, presupuesto y oportunidad → `hub.chat_ficha` (`20261020_tablero_chat_ficha.sql`, `ui/chat-ficha.ts`); en `#/chat`, «Abrir la ficha» | Las salas de la app no se traen: el chat del hub empieza vacío. |
 | Borrar trabajo devolviendo el material | Preparado | trigger de `20261016_final.sql` | — |
@@ -249,7 +252,7 @@ Fran, 2026-10-03).
 | Historial de una furgoneta | Hecho | `#/inventario/movimientos` filtrado por la ubicación (y los de cada producto en su ficha) | — |
 | Albaranes, importar/exportar Excel | Preparado | «Excel» de la lista (vale ya, CSV como el resto del hub); «Escanear albarán» (Claude lee en `gastos-ocr`, acción `albaran`; lo ya existente suma) e «Importar» (CSV de Excel) por `hub.inventario_entradas` | Corte; el albarán necesita la clave de Claude (en la app llamaba a Anthropic sin clave). Excel nativo (.xlsx): se guarda como CSV. |
 | Pedidos internos de reposición | Hecho | `#/almacen` (MRP, qué pedir) | — |
-| Catálogo (editar, categorías, sync de Zoho) | Solo lectura | espejo `hub.catalogo` | — |
+| Catálogo (editar, categorías, sync de Zoho) | Preparado | Inventario → «Catálogo» (`#/inventario/catalogo`): por categoría, buscar; alta, edición, ocultar, categoría en bloque y eliminar, solo admin | Corte del área `inventario`. La sincronización de artículos de Zoho (`sync-zoho-items`) sigue en la app. |
 | Inventario → catálogo | Preparado | `hub.inventario_catalogo` (busca por nombre o referencia; si no está, crea la ficha como Hardware y la enlaza), en todo alta, trasvase o entrada | Corte. |
 | Proveedores | Hecho | `#/almacen` | — |
 | Pedidos de compra | Hecho | `#/almacen` | La entrada se da en la app. |
@@ -295,7 +298,7 @@ Fran, 2026-10-03).
 
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
-| Base de conocimiento (`conocimiento.js`) | Solo lectura | `#/buscar` | Se edita en la app; la wiki es lo nuevo. |
+| Base de conocimiento (`conocimiento.js`) | Preparado | Wiki → «Base de conocimiento» (`#/wiki/conocimiento`) y `#/buscar` | Alta y edición: corte del área `conocimiento`. Lo nuevo, mejor en la wiki. |
 | Google Drive | Preparado | «Drive» en las fichas de cliente y sede: la carpeta del cliente (y la de la sede dentro) en la carpeta compartida de la empresa, buscada o creada por nombre como la app (función `google`, acción `carpeta`); Buscar indexa una carpeta | Compartir la carpeta con la cuenta de servicio (PENDIENTE_FRAN §2 ter). Las fotos y adjuntos van al almacén privado del hub, no a Drive (decidido en el bloque 1). |
 
 ### 12. Sistema

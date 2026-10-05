@@ -73,6 +73,8 @@ export const TABLAS_APP: Record<string, TablaApp> = {
   mant_seguimiento: { auditada: false, columnas: c('id cliente_id local_id contacto_id estado tipo_respuesta notas recordatorio_fecha dias_recordatorio created_at updated_at') },
   checklist_plantillas: { auditada: false, columnas: c('id plan nombre items activa created_at') },
   checklist_respuestas: { auditada: false, columnas: c('id trabajo_id plantilla_id plantilla_nombre respuestas completado tecnico_id created_at') },
+  // Guía de instalación del trabajo (bloque 8, tanda 4): la app no la audita.
+  instalaciones: { auditada: false, columnas: c('id created_at trabajo_id local_id tipo datos completada tecnico_id') },
   mantenimientos_programados: { auditada: true, columnas: c('id created_at cliente_id local_id plan proxima_fecha ultimo_generado activo contacto_id') },
   // Motor de cobro del mantenimiento (paridad bloque 4, tanda 3): ninguna está en
   // el audit_log de la app. Los CONTADORES de las series van también, para que el

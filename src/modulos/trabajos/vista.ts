@@ -117,7 +117,8 @@ function editorLineas(): string {
     </tbody></table>
     <form class="acciones" data-on-submit="trAnadirLinea" data-prevent="1"><input id="tr-l-q" placeholder="Material del inventario o texto libre" autocomplete="off" data-on-input="trBuscarInv:$value" aria-label="Material">
       <input id="tr-l-cant" type="number" min="0" step="any" value="1" aria-label="Cantidad"><input type="hidden" id="tr-l-inv"><input type="hidden" id="tr-l-furgo"><input type="hidden" id="tr-l-precio">
-      <button class="btn secundario" type="submit">Añadir</button></form><ul id="tr-inv-res" class="resultados"></ul>
+      <button class="btn secundario" type="submit">Añadir</button>
+      <button class="btn secundario" type="button" data-action="trEscanear" title="Buscar en el inventario por su código de barras">${ico('camara')} Escanear</button></form><ul id="tr-inv-res" class="resultados"></ul>
     <div class="acciones"><button class="btn" data-action="trGuardarLineas">Guardar material</button><span class="nota">Lo que se añade del inventario se descuenta del stock; lo que se quita, vuelve.</span></div>`;
 }
 
@@ -138,7 +139,8 @@ async function vistaFicha(numero: string): Promise<string> {
     API.get<any[]>('trabajo_comentarios', { select: '*', trabajo_id: `eq.${t.id}`, order: 'created_at' }),
     API.get<any[]>('trabajo_fotos', { select: 'id,created_at,descripcion,drive_url,archivo_path,tecnico_id', trabajo_id: `eq.${t.id}`, order: 'created_at' }),
     API.get<any[]>('tickets', { select: 'numero,titulo,estado', trabajo_id: `eq.${t.id}` }), equipo(), esDelHub('trabajos', 'documento_lineas', 'furgoneta_inventario')]);
-  const [escribeAgenda, checklist] = await Promise.all([esDelHub('agenda'), esDelHub('checklist_respuestas').then(e => seccionChecklist(t.id, loc.data?.plan ?? null, e))]);
+  const [escribeAgenda, checklist, instalaciones] = await Promise.all([esDelHub('agenda'), esDelHub('checklist_respuestas').then(e => seccionChecklist(t.id, loc.data?.plan ?? null, e)),
+    Promise.all([import('./guia'), esDelHub('instalaciones', 'trabajos')]).then(([g, e]) => g.seccionInstalaciones(t, e))]);
   _lineas = (lin.data ?? []).map(l => ({ ...l, cantidad: Number(l.cantidad), precio: Number(l.precio), descuento: Number(l.descuento ?? 0) }));
   const tel = con.data?.telefono ?? cli.data?.telefono, wa = telWhatsApp(tel);
   const mapa = loc.data?.lat && loc.data?.lng ? `https://www.google.com/maps/dir/?api=1&destination=${loc.data.lat},${loc.data.lng}` : loc.data?.direccion ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc.data.direccion)}` : null;
@@ -164,6 +166,7 @@ async function vistaFicha(numero: string): Promise<string> {
         ${t.observaciones ? `<h4>Lo que se hizo</h4><div class="md">${markdown(t.observaciones)}</div>` : ''}</section>
       <section class="tarjeta mo-scroll"><h3>Material · ${eur(total, 2)}</h3>${escribe ? editorLineas() : `<table class="tabla"><tbody>${_lineas.map(l => `<tr><td>${esc(l.nombre)}</td><td>${l.cantidad}</td><td>${eur(l.precio, 2)}</td></tr>`).join('') || '<tr><td class="vacio">Sin material.</td></tr>'}</tbody></table>`}</section>
       ${checklist}
+      ${instalaciones}
       <section class="tarjeta"><h3>Comentarios</h3><ul class="di-ultimo">${(coms.data ?? []).map(c => `<li><small class="nota" title="${esc(fechaHora(c.created_at))}">${esc(hace(c.created_at))}</small><span><strong>${esc(c.autor_nombre ?? '')}</strong> ${esc(c.texto)}</span></li>`).join('') || '<li class="nota">Ninguno.</li>'}</ul>
         ${escribe ? '<form class="acciones" data-on-submit="trComentar" data-prevent="1"><input id="tr-com" required placeholder="Escribe un comentario…" aria-label="Comentario"><button class="btn secundario" type="submit">Añadir</button></form>' : ''}</section>
     </div><div>
@@ -187,6 +190,7 @@ export async function pintar(el: HTMLElement, params: string[]) {
   if (params[0] === 'plantillas') { await (await import('./plantillas')).pintarPlantillas(el, params[1]); return; }
   if (params[0] === 'facturar') { await (await import('./facturar')).pintarFacturar(el, params[1]); return; }
   if (params[0] && params[1] === 'parte') { await (await import('./parte')).pintarParte(el, params[0]); return; }
+  if (params[0] && params[1] === 'instalacion') { await (await import('./guia')).pintarGuia(el, params[0], params.slice(2)); return; }
   el.innerHTML = params[0] ? await vistaFicha(params[0]) : await vistaLista();
 }
 
@@ -290,6 +294,32 @@ registrarAcciones({
       inventario_id: val('tr-l-inv') || null, furgoneta_id: val('tr-l-furgo') || null, categoria: null });
     const s = document.querySelector('.tr-lineas')?.closest('section');
     if (s) s.innerHTML = `<h3>Material</h3>${editorLineas()}`;
+  },
+  // Escáner (la app: _wdLookupBarcode): el código contra codigo_barra o codigo_principal del
+  // inventario; uno → se añade al momento; en varias ubicaciones → se elige en la lista.
+  async trEscanear() {
+    const { abrirEscaner } = await import('../../ui/escaner');
+    void abrirEscaner(async codigo => {
+      const c = codigo.replace(/[,()"\\]/g, '');
+      const { data } = await API.get<any[]>('furgoneta_inventario', { select: 'id,nombre,cantidad,furgoneta_id,precio,categoria', or: `(codigo_barra.eq.${c},codigo_principal.eq.${c})` });
+      const lista = data ?? [];
+      if (!lista.length) { toast(`Código «${c}» no encontrado en el inventario`, 'error'); return; }
+      if (lista.length === 1) {
+        const p = lista[0];
+        const ya = _lineas.find(l => l.inventario_id === p.id);
+        if (ya) ya.cantidad++;
+        else _lineas.push({ nombre: p.nombre, cantidad: 1, precio: Number(p.precio ?? 0), descuento: 0, inventario_id: p.id, furgoneta_id: p.furgoneta_id ?? null, categoria: p.categoria ?? null });
+        const s = document.querySelector('.tr-lineas')?.closest('section');
+        if (s) s.innerHTML = `<h3>Material</h3>${editorLineas()}`;
+        toast(`${p.nombre}: añadido (falta «Guardar material»)`);
+        return;
+      }
+      const { data: fs } = await API.get<any[]>('furgonetas', { select: 'id,nombre' });
+      const ul = document.getElementById('tr-inv-res');
+      if (ul) ul.innerHTML = lista.map(p => `<li><button type="button" class="btn secundario" data-action="trElegirInv" data-p0="${p.id}" data-p1="${esc(p.nombre)}" data-p2="${esc(p.furgoneta_id ?? '')}" data-p3="${p.precio ?? 0}">${esc(p.nombre)}
+        <small class="nota">${esc((fs ?? []).find(f => f.id === p.furgoneta_id)?.nombre ?? '')} · quedan ${p.cantidad}</small></button></li>`).join('');
+      toast('Ese código está en varias ubicaciones: elige de dónde sale');
+    });
   },
   async trGuardarLineas() {
     if (!_t) return;
