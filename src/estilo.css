@@ -1137,3 +1137,11 @@ body.os-modo .sis { bottom: 108px; }
 .baldosa[data-tono="aviso"] .baldosa-hex .os-ico-hex { fill: var(--aviso-fondo); }
 .baldosa[data-tono="mal"] .baldosa-hex .os-ico-hex { fill: var(--mal-fondo); }
 .bus-ico { width: 26px; height: auto; flex: none; display: block; }
+
+/* ---- Inventario: escritura (bloque 7, inw-) ---- */
+#inw-dest-wrap[hidden], #inw-paso2[hidden], #inw-estado[hidden] { display: none; }
+.inw-cat { list-style: none; margin: .25rem 0 .5rem; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem; }
+#inw-lineas input { width: 100%; min-width: 4rem; }
+#inw-lineas td.num input { max-width: 6rem; text-align: right; }
+#inw-lineas tr.apagado { opacity: .5; }
+.in-escribir { margin-top: -.25rem; }

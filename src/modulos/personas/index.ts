@@ -1,5 +1,6 @@
 // Personas (fase 10): #/personas (registro de jornada, RD-ley 8/2019),
-// #/personas/ausencias, #/personas/gastos (tickets leídos por Claude) y
+// #/personas/ausencias, #/personas/gastos (tickets leídos por Claude y, desde la
+// paridad del bloque 7, los gastos y cobros de la app: movimientos.ts) y
 // #/personas/cierre (el mes con la gestoría, solo admins). La jornada se
 // calcula sobre los fichajes de la app (hub.jornada); las correcciones van con
 // motivo a hub.jornada_ajustes. Prefijo de ids: pe-.
@@ -13,6 +14,7 @@ import { llamarFuncion } from '../../core/funciones';
 import { esc, toast, hace } from '../../ui/dom';
 import { ico, type IconoLinea } from '../../shell/linea';
 import { eur } from '../ventas/datos';
+import { seccionMovimientos, vistaMovimiento } from './movimientos';
 
 interface Dia { usuario_id: string; nombre: string; fecha: string; entrada: string | null; salida: string | null; trabajado_min: number | null;
   pausas_min: number | null; sesiones: number; ajustado: boolean; motivo_ajuste: string | null; ausencia: string | null }
@@ -137,6 +139,7 @@ async function vistaGastos(): Promise<string> {
   const { desde, hasta } = limites(mes);
   const { data } = await API.get<Gasto[]>('tickets_gasto', { select: '*', or: `(fecha.gte.${desde},fecha.is.null,estado.in.(leyendo,revisar,error))`, order: 'created_at.desc', limit: '300' });
   const lista = (data ?? []).filter(g => !g.fecha || (g.fecha >= desde && g.fecha <= hasta) || g.estado !== 'ok');
+  const movimientos = await seccionMovimientos(desde, hasta);
   const total = lista.filter(g => g.estado === 'ok').reduce((s, g) => s + Number(g.total ?? 0), 0);
   return `<form class="tarjeta pe-subir" data-on-submit="peSubir" data-prevent="1"><h3>Subir un ticket de gasto</h3>
       <p class="nota">Una foto del ticket o la factura en PDF: Claude lee la fecha, el proveedor, el NIF, la base, el IGIC y el total. Lo revisas y queda para la gestoría.</p>
@@ -148,7 +151,8 @@ async function vistaGastos(): Promise<string> {
       ${lista.map(g => `<tr class="fila-clic" data-action="peAbrirGasto" data-p0="${g.id}"><td>${esc(g.fecha ?? '—')}</td><td>${esc(g.proveedor ?? '')}</td><td>${esc(g.concepto ?? g.categoria ?? '')}</td>
         <td>${g.total != null ? eur(g.total, 2) : '—'}</td><td><span class="chip ${g.estado === 'ok' ? 'bien' : g.estado === 'error' ? 'mal' : 'aviso'}">${esc({ ok: 'confirmado', revisar: 'por revisar', leyendo: 'leyendo…', error: 'revisar a mano' }[g.estado] ?? g.estado)}</span></td>
         ${esAdmin() ? `<td>${esc(nombreDe(g.subido_por))}</td>` : ''}</tr>`).join('')}</tbody></table>` : '<p class="vacio">Sin gastos este mes.</p>'}</div>
-    <p class="nota">Los gastos que apuntan los técnicos en la app (con su foto) siguen allí; la gestoría ve los dos.</p>`;
+    ${movimientos}
+    <p class="nota">La gestoría ve los dos: los tickets leídos y los gastos y cobros de los técnicos.</p>`;
 }
 
 // ── Cierre del mes ─────────────────────────────────────────────────────────
@@ -172,8 +176,11 @@ async function vistaCierre(): Promise<string> {
 
 async function pintar(el: HTMLElement, params: string[]) {
   el.innerHTML = '<p class="cargando">Cargando…</p>';
-  const [a] = params;
-  const cuerpo = a === 'ausencias' ? await vistaAusencias() : a === 'gastos' ? await vistaGastos() : a === 'cierre' ? await vistaCierre() : await vistaJornada();
+  const [a, b, c, d] = params;
+  const cuerpo = a === 'ausencias' ? await vistaAusencias()
+    : a === 'gastos' && (b === 'gasto' || b === 'cobro') ? await vistaMovimiento(b, '', c === 't' ? d ?? '' : '')
+    : a === 'gastos' && b === 'mov' && c ? await vistaMovimiento('mov', c)
+    : a === 'gastos' ? await vistaGastos() : a === 'cierre' ? await vistaCierre() : await vistaJornada();
   el.innerHTML = pestanas(a && PESTANAS.some(([k]) => k === a) ? a : '') + cuerpo;
 }
 
@@ -295,7 +302,7 @@ export const moduloPersonas: Modulo = {
   titulo: 'Personas',
   grupo: 'Organizar',
   icono: '👥',
-  explicacion: 'El registro de jornada de cada persona (sale de los fichajes de la app), las vacaciones y ausencias, los tickets de gasto (una foto y Claude los lee) y el cierre de cada mes con la gestoría.',
+  explicacion: 'El registro de jornada de cada persona (sale de los fichajes de la app), las vacaciones y ausencias, los gastos (tickets que lee Claude y los gastos y cobros en efectivo de los técnicos) y el cierre de cada mes con la gestoría.',
   pintar,
   contador,
 };

@@ -3,6 +3,8 @@
 // (el libro de entradas, salidas y trasvases) y #/inventario/<id> (ficha del
 // producto en una ubicación, con sus movimientos y dónde más lo hay). ESPEJO
 // de la app (área `inventario`): el stock se mueve allí, siempre con su apunte.
+// La escritura (alta, mover, albarán, importar, ubicación nueva) está PREPARADA
+// para el corte en escritura.ts, sobre las funciones de 20261031_inventario.sql.
 // No repite Almacén: «qué pedir», proveedores y pedidos viven en #/almacen.
 // Vista bajo demanda. Prefijo de ids: in-.
 import type { Modulo, Contador } from '../../core/modulo';
@@ -22,7 +24,7 @@ export const moduloInventario: Modulo = {
   titulo: 'Inventario',
   grupo: 'Operaciones',
   icono: '📦',
-  explicacion: 'Qué hay en cada furgoneta y en la tienda, lo que está por debajo del mínimo y el libro de movimientos: cada entrada, salida o trasvase con quién lo hizo y de qué trabajo viene. Es la copia de la app (el stock cada 15 min, los movimientos cada noche): el stock se mueve allí. Lo que hay que pedir está en Almacén.',
+  explicacion: 'Qué hay en cada furgoneta y en la tienda, lo que está por debajo del mínimo y el libro de movimientos: cada entrada, salida o trasvase con quién lo hizo y de qué trabajo viene. Hasta el cambio es la copia de la app (el stock cada 15 min, los movimientos cada noche) y el stock se mueve allí; después, aquí: añadir, mover, escanear un albarán o importar un Excel, siempre con su apunte. Lo que hay que pedir está en Almacén.',
   async pintar(el, params) {
     const { pintarInventario } = await import('./vista');
     await pintarInventario(el, params);

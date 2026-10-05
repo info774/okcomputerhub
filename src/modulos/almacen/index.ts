@@ -2,7 +2,8 @@
 // (MRP: qué pedir y a quién → pedido en borrador), #/almacen/pedidos[/<n>],
 // #/almacen/proveedores[/<id>] y #/almacen/envios. El stock se sigue moviendo
 // en la app (lo gastan los trabajos): aquí se LEE; proveedores, pedidos y
-// envíos son del hub. Prefijo de ids: al-.
+// envíos son del hub. #/almacen/facturas[/…]: facturas de compra (facturas.ts,
+// propias del hub desde la paridad del bloque 7). Prefijo de ids: al-.
 import type { Modulo, Contador } from '../../core/modulo';
 import { API } from '../../core/api';
 import { esAdmin } from '../../core/estado';
@@ -12,6 +13,7 @@ import { APP_ACTUAL_URL } from '../../core/config';
 import { esc, toast, hace } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { eur, limpio } from '../ventas/datos';
+import { vistaFacturas, vistaFactura } from './facturas';
 
 interface Mrp { clave: string; catalogo_id: string | null; nombre: string; categoria: string | null; stock: number; minimo: number; consumo_90: number;
   consumo_dia: number; cobertura_dias: number | null; en_camino: number; proveedor_id: string | null; proveedor: string | null; plazo_dias: number | null;
@@ -22,7 +24,7 @@ interface Pedido { id: string; numero: number; created_at: string; proveedor_id:
   enviado_at: string | null; recibido_at: string | null; entrada_app_at: string | null; notas: string | null; total: number }
 interface Linea { id: string; pedido_compra_id: string; catalogo_id: string | null; nombre: string; cantidad: number; precio: number; subtotal: number; cantidad_recibida: number; orden: number }
 
-const PESTANAS: [string, string][] = [['', 'Stock'], ['compras', 'Qué pedir'], ['pedidos', 'Pedidos'], ['proveedores', 'Proveedores'], ['envios', 'Envíos']];
+const PESTANAS: [string, string][] = [['', 'Stock'], ['compras', 'Qué pedir'], ['pedidos', 'Pedidos'], ['proveedores', 'Proveedores'], ['facturas', 'Facturas de compra'], ['envios', 'Envíos']];
 const TONO_PEDIDO: Record<string, string> = { Borrador: '', Enviado: 'aviso', Confirmado: 'aviso', Recibido: 'bien', Cancelado: '' };
 const AGENCIAS: Record<string, (n: string) => string> = {
   'Correos': n => `https://www.correos.es/es/es/herramientas/localizador/envios/detalle?tracking-number=${encodeURIComponent(n)}`,
@@ -128,6 +130,7 @@ async function vistaPedido(numero: string): Promise<string> {
     Confirmado: [['Recibido', 'Recibido']], Recibido: [], Cancelado: [['Borrador', 'Recuperar']] };
   return `<p><a href="#/almacen/pedidos">← Pedidos</a></p>
     <div class="tarjeta-cab"><h2>PC-${p.numero} · ${esc(prov?.nombre ?? 'sin proveedor')}</h2><span class="chip ${TONO_PEDIDO[p.estado] ?? ''}">${esc(p.estado)}</span></div>
+    <p class="acciones"><a class="btn secundario" href="#/almacen/facturas/nueva/p/${esc(p.id)}">${ico('recibo')} Registrar su factura</a></p>
     <p class="nota">Creado ${esc(hace(p.created_at))}${p.enviado_at ? ` · enviado ${esc(hace(p.enviado_at))}` : ''}${p.esperado_para ? ` · se espera el ${esc(p.esperado_para)}` : ''}${p.recibido_at ? ` · recibido ${esc(hace(p.recibido_at))}` : ''}</p>
     ${p.estado === 'Recibido' ? `<p class="aviso ${p.entrada_app_at ? '' : 'mal'}">${p.entrada_app_at ? `Entrada dada en el inventario de la app ${esc(hace(p.entrada_app_at))}.`
       : `Da la entrada del material en el <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">Inventario de la app ${ico('externo')}</a> y márcalo:
@@ -217,8 +220,8 @@ async function vistaEnvios(): Promise<string> {
 
 async function pintar(el: HTMLElement, params: string[]) {
   el.innerHTML = '<p class="cargando">Cargando…</p>';
-  const [a, b] = params;
-  const cuerpo = a === 'compras' ? await vistaCompras() : a === 'pedidos' && b ? await vistaPedido(b) : a === 'pedidos' ? await vistaPedidos()
+  const [a, b, c, d] = params;
+  const cuerpo = a === 'facturas' && b ? await vistaFactura(b, c === 'p' ? d ?? '' : '') : a === 'facturas' ? await vistaFacturas() : a === 'compras' ? await vistaCompras() : a === 'pedidos' && b ? await vistaPedido(b) : a === 'pedidos' ? await vistaPedidos()
     : a === 'proveedores' && b ? await vistaProveedor(b) : a === 'proveedores' ? await vistaProveedores() : a === 'envios' ? await vistaEnvios() : await vistaStock();
   el.innerHTML = pestanas(a && PESTANAS.some(([k]) => k === a) ? a : '') + cuerpo;
 }

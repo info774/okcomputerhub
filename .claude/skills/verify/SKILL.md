@@ -252,6 +252,18 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   `PushManager` y un `navigator.serviceWorker` falso; `push` interceptada) y
   Feedback (técnico: pantalla de antes y errores; admin: «Pasar a Claude»).
 
+- `verify-inventario-escritura.mjs`: bloque 7, tanda 1: inventario con
+  escritura preparada (área de la app: todo apagado; del hub: alta con el
+  buscador del catálogo, editar, mover con trasvase, ubicación nueva, albarán
+  con `gastos-ocr` SIMULADA, importar CSV y el «Excel» de la lista; las
+  funciones `inventario_*` simuladas).
+
+- `verify-compras-gastos.mjs`: bloque 7, tanda 2: facturas de compra de
+  Almacén (adjunto leído con `gastos-ocr` SIMULADA, proveedor por NIF, desde un
+  pedido, pagada, eliminar solo admin) y los gastos y cobros de la app en
+  Personas → Gastos (área de la app: solo se ven; del hub: gasto con trabajo y
+  foto, cobro con descripción obligatoria, editar).
+
 `npm run verify` pasa todos los de la lista.
 
 ## Pantalla nueva

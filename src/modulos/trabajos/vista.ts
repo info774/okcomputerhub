@@ -152,6 +152,8 @@ async function vistaFicha(numero: string): Promise<string> {
     <div class="acciones">${tel ? `<a class="btn secundario" href="tel:${esc(tel)}">${ico('telefono')} Llamar</a>` : ''}${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">${ico('mensaje')} WhatsApp</a>` : ''}
       ${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">${ico('mapa')} Cómo llegar</a>` : ''}
       <a class="btn secundario" href="#/trabajos/${t.numero}/parte">${ico('imprimir')} Parte (PDF)</a>
+      <a class="btn secundario" href="#/personas/gastos/gasto/t/${esc(t.id)}" title="Un gasto de este trabajo (Personas → Gastos)">${ico('recibo')} Gasto</a>
+      <a class="btn secundario" href="#/personas/gastos/cobro/t/${esc(t.id)}" title="Un cobro en efectivo de este trabajo">${ico('dinero')} Cobro</a>
       ${botonChatFicha('trabajo', t.id, `#${t.numero} ${t.titulo ?? ''}`.trim(), `#/trabajos/${t.numero}`)}${enlaceHistorial('trabajos', t.id)}
       ${escribe ? `<a class="btn secundario" href="#/trabajos/${t.numero}/editar">${ico('editar')} Editar</a>
         <button class="btn secundario" data-action="trDuplicar">⧉ Duplicar</button>
