@@ -71,12 +71,15 @@ try {
   ok((await page.inputValue('#al-texto')).includes('25 x Cable RJ45') && await page.locator('a[href^="mailto:pedidos@dc.test"]').count() === 1, 'pedido: texto para el proveedor y correo');
 
   // Ficha: añadir línea del catálogo, cambiar cantidad
-  await page.fill('#al-linea-q', 'tón');
-  await page.click(`[data-action="alElegirCat"][data-p0="${CAT2}"]`);
-  await page.fill('#al-linea-cant', '3');
-  await page.fill('#al-linea-precio', '40');
-  await page.click('form[data-on-submit="alAnadirLinea"] button[type=submit]');
-  await page.waitForFunction(() => document.querySelectorAll('input[aria-label="Cantidad"]').length === 2);
+  // La ficha del pedido puede repintarse aún (lo de antes) y llevarse lo tecleado: se repite sobre la nueva.
+  for (let i = 0; i < 3; i++) {
+    await page.fill('#al-linea-q', 'tón');
+    await page.click(`[data-action="alElegirCat"][data-p0="${CAT2}"]`);
+    await page.fill('#al-linea-cant', '3');
+    await page.fill('#al-linea-precio', '40');
+    await page.click('form[data-on-submit="alAnadirLinea"] button[type=submit]');
+    if (await page.waitForFunction(() => document.querySelectorAll('input[aria-label="Cantidad"]').length === 2, null, { timeout: 8000 }).then(() => true, () => false)) break;
+  }
   ok(base.db.pedido_compra_lineas.some(l => l.catalogo_id === CAT2 && l.cantidad === 3 && l.precio === 40), 'pedido: añadir un material del catálogo');
   const primera = base.db.pedido_compra_lineas.find(l => l.catalogo_id === CAT1);
   // La ficha puede estar repintándose tras añadir la línea: se reintenta sobre la que haya.

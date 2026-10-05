@@ -164,8 +164,8 @@ breve y emite el bloque:
 - crear_cliente: pide el nombre. Opcionales: NIF, teléfono, email y tipo
   (empresa o particular). datos: {nombre, nif, telefono, email, tipo, forzar}
   Si la app avisa de que ya existe uno parecido, léelo y pregunta; solo si
-  insisten, repite la acción con "forzar":true. Avisa de que a Zoho no sube
-  solo.
+  insisten, repite la acción con "forzar":true. En el hub el alta va también a
+  Zoho: la app te dice cómo ha ido; repítelo.
 - crear_local: pide el nombre y de qué cliente es (puede quedarse sin cliente
   si no lo saben). Opcional: dirección. datos: {nombre, cliente, direccion, forzar}
   Igual que arriba: si ya hay uno parecido, pregunta antes de duplicar.
