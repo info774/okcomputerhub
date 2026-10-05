@@ -323,6 +323,17 @@ Hoy el hub vive en `okhub-tenerife.web.app` y el portal en
    aparte, con tu OK (docs/FASE11.md).
 6. **Registro de jornada**: revisa los días en rojo («más de 12 h: ¿se quedó
    un fichaje abierto?») en Personas → Jornada y corrígelos con su motivo.
+7. **Avisos en el móvil** (no hace falta ninguna clave, ya están puestas):
+   que cada uno abra el hub en su móvil (`okhub-tenerife.web.app`), toque el
+   menú (☰) y, abajo del todo, **«🔔 Activar avisos en este dispositivo»** →
+   **Permitir**. En el iPhone, antes: compartir (□↑) → **«Añadir a pantalla de
+   inicio»** y abrir el hub desde ese icono. Para comprobarlo, tú en
+   **Configuración → «Mandarme una prueba»**. Les llegarán las comandas que les
+   pasen y los mensajes del chat (además de Telegram).
+8. **Feedback**: el equipo cuenta fallos, mejoras e ideas en **Sistema →
+   Feedback**. Tú lo ves todo ahí; lo que quieras que arregle Claude, escríbele
+   una nota si hace falta y pulsa **«🤖 Pasar a Claude»**: el trabajador de
+   Claude lo recoge en su pasada de cada hora y deja ahí mismo lo que hizo.
 
 ## 8 bis · Stripe del mantenimiento (SOLO el día del cambio del mantenimiento)
 

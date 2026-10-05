@@ -95,7 +95,10 @@ Fran, 2026-10-03).
    Tanda 1 HECHA (2026-10-04): usuarios, modo empleado y registro de cambios.
    Tanda 2 HECHA (2026-10-04): aviso de versión, F5, tamaño del texto,
    privacidad y configuración. Tanda 3 HECHA (2026-10-04): deshacer, cola sin
-   red (también el fichaje) y la última copia de las lecturas.
+   red (también el fichaje) y la última copia de las lecturas. Tanda 4 HECHA
+   (2026-10-05): avisos push en el dispositivo y Feedback con cola para Claude
+   (decisión de Fran: pantalla + cola en el hub, sin GitHub). **Bloque 6
+   HECHO** (2026-10-05); la APK, en el corte final.
 7. **Resto**: inventario completo (albaranes, historial, Excel), VeriFactu,
    facturas de compra, gastos y cobros de la app, control de equipos, Google
    (Calendar, Contactos, Drive).
@@ -242,7 +245,7 @@ Fran, 2026-10-03).
 |---|---|---|---|
 | Chat interno en tiempo real (`chat.js`) | Hecho | `#/chat` | Tiempo real, adjuntos, historial de la app. |
 | Tonos y avisos del chat | Falta | — | — |
-| Push web y FCM (`push.js`, `send-*-push`) | Falta | — | El hub avisa por Telegram. |
+| Push web y FCM (`push.js`, `send-*-push`) | Hecho | Web Push con VAPID propio: `core/push.ts`, «Avisos en este dispositivo» (pie del menú y Configuración, con prueba e «Instalar como app»), función `push` (`registrar`, `quitar`, `probar`, `chat`, `proximos`), `hub.push_suscripciones`; avisan comandas, chat y los avisos de WhatsApp, además de Telegram | FCM de la APK (corte final). Los trabajos en ~1 h: el cron ya llama, pero no avisa mientras la agenda sea de la app (avisa la app). |
 | Bandeja de notificaciones (`inbox.js`) | Falta | (campana de avisos) | — |
 | Bandeja de WhatsApp: leer y contestar (`wa-bandeja.js`) | Hecho | `shell/whatsapp.ts`, función `whatsapp`: plantilla fuera de 24 h, documentos de Zoho, fotos en la conversación y «Ver foto» pedida a Meta, enlaces rápidos (Cliente, Sede, Remoto, Ticket, Presupuesto) y chip del plan (2026-10-04) | Vincular un teléfono a una ficha (en la app). |
 | Webhook de WhatsApp: menú, horario, ticket u oportunidad, órdenes del equipo, adjuntos | Preparado | Función `whatsapp-webhook` (SIN_JWT, firma de Meta) + `equipo.ts`, espejos `hub.wa_*` y `ticket_adjuntos` (`20261028_whatsapp.sql`); la ventana fija cambia sola de fuente con el área `whatsapp` | El cambio de WhatsApp (`supabase/cortes/corte_whatsapp.sql` + la URL en Meta, PENDIENTE_FRAN §1 quinquies). Avisos por Telegram en vez de push. Las órdenes del equipo que tocan trabajos, tareas o fichajes esperan a su corte (lo dicen y no escriben). |
@@ -279,7 +282,7 @@ Fran, 2026-10-03).
 | Deshacer (Ctrl+Z) | Hecho | `core/deshacer.ts` (observador del cliente de datos, un gesto = una acción), chip «↩ Deshacer» con su panel y Ctrl+Z | — |
 | Cola offline | Hecho | `core/cola.ts` (IndexedDB, FIFO, id del móvil, lista blanca) y chip «☁ sin enviar»; el fichaje (`hub.fichar`) sale con la hora de la pulsación (`20261029_fichar_cuando.sql`) | Background Sync del service worker (aquí sale al volver la red, al entrar y cada minuto). |
 | Caché de arranque | Hecho | `core/lecturas.ts`: sin red, la última copia de las lecturas de la calle (por persona) con lo pendiente encima | Pintar al instante con la copia ANTES de que llegue la red (aquí la copia solo entra si la red falla). |
-| Feedback a Claude Code (`report-to-claude`) | Falta | — | — |
+| Feedback a Claude Code (`report-to-claude`) | Hecho | `#/feedback` (todos; el técnico ve lo suyo): fallo/mejora/idea con la pantalla de antes, versión, entorno y últimos errores (`core/errores.ts`); el admin lo gestiona y lo «Pasa a Claude» → `hub.feedback` en estado `claude` → el trabajador lo toma por el conector MCP (`feedback_*`) y lo cierra con lo hecho | Sin issues de GitHub (decisión de Fran). |
 | Capa de repaso visual | No aplica | — | Herramienta de desarrollo de la app. |
 | Modo escritorio | Hecho | `shell/escritorio.ts` | — |
 | Paleta Ctrl+K con acciones | Hecho | `shell/buscador.ts` | Acciones sobre lo encontrado. |
@@ -302,7 +305,7 @@ Fran, 2026-10-03).
 | OAuth y token de Google | Falta | — | — |
 | Backup diario de la base | Falta | — | Backup propio del hub. |
 | Refresco de suscripciones de Zoho | Falta | — | — |
-| Push cada 15 min | Falta | — | — |
+| Push cada 15 min | Preparado | `hub-push-proximos` (pg_cron) → función `push` `proximos` | Se enciende solo con el corte de la agenda. |
 | Control de equipos a diario | Falta | — | — |
 | Repaso y cierre programados | Hecho | `hub-informes` | — |
 | Repaso visual nocturno y `/repaso` | No aplica | — | El hub tiene su trabajador de Claude. |

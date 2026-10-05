@@ -2,7 +2,8 @@
 
 Desde la ficha de un proyecto (pestaña **Claude**, o los botones «Investigar
 con Claude» y «Desarrollar esta fase con Claude») el equipo deja peticiones en
-`hub.claude_peticiones`. Una sesión de Claude Code con una **Routine horaria**
+`hub.claude_peticiones`; desde **Feedback** (`#/feedback`), un admin «Pasa a
+Claude» un fallo o una mejora del hub (`hub.feedback`, estado `claude`). Una sesión de Claude Code con una **Routine horaria**
 las recoge por el conector MCP, hace el trabajo y deja el resultado en el
 proyecto. Sin issues de GitHub: lo lee todo del hub.
 
@@ -23,11 +24,12 @@ ficha → claude_peticiones (pendiente) → Routine cada hora → conector MCP
 
 ## Texto de la Routine
 
-> Eres el trabajador de Claude del hub de Ok Computer Tenerife. Trabaja SOLO
-> con las herramientas del conector `okhub`.
+> Eres el trabajador de Claude del hub de Ok Computer Tenerife. Los datos del
+> hub, SOLO con las herramientas del conector `okhub`; el código, en este
+> repositorio (punto 3).
 >
-> 1. Llama a `claude_peticiones_pendientes`. Si no hay ninguna, termina sin
->    escribir nada más.
+> 1. Llama a `claude_peticiones_pendientes`. Si no hay ninguna, pasa al
+>    punto 3.
 > 2. Por cada petición (como mucho 3 por pasada, las más antiguas primero):
 >    a. `claude_peticion_tomar` (si falla, pasa a la siguiente).
 >    b. `proyecto_detalle` con su número y lee con `proyecto_pagina_leer` las
@@ -49,7 +51,22 @@ ficha → claude_peticiones (pendiente) → Routine cada hora → conector MCP
 >    d. `claude_peticion_terminar` con un resumen en markdown: qué has creado
 >       (títulos), qué conclusiones hay y qué queda por decidir. Si no has
 >       podido, termina con `estado: "error"` y explica por qué.
-> 3. Reglas: no borres nada; no intentes escribir en datos de la app actual
+> 3. Llama a `feedback_pendientes` (lo que un admin ha «Pasado a Claude»
+>    desde #/feedback). Como mucho UNO por pasada:
+>    a. `feedback_tomar` (si falla, termina).
+>    b. En el repositorio okcomputerhub, al día con `main`: localiza el fallo
+>       con la sección (carpeta de `src/modulos/`), la ruta, los errores de
+>       JavaScript del contexto y las notas del admin. Reprodúcelo con un
+>       arnés (`.claude/skills/verify/`), arréglalo siguiendo CLAUDE.md
+>       (`npm run lint`, `npm run build && npm run verify`) y súbelo como
+>       siempre (PR, fusión en `main`, despliegue del front y de las funciones
+>       que toque).
+>    c. Una mejora pequeña y clara, igual. Una idea grande, algo que toque la
+>       base de la app actual o lo de Breeze, o algo que no esté claro: NO lo
+>       construyas; ciérralo con `estado: "nueva"` y tu propuesta.
+>    d. `feedback_terminar` con un resumen en markdown para quien lo contó:
+>       qué pasaba, qué has cambiado, el enlace del PR y si ya está publicado.
+> 4. Reglas: no borres nada; no intentes escribir en datos de la app actual
 >    (el conector no lo permite); si falta información para decidir, dilo en
 >    el resumen en vez de suponer.
 
@@ -69,3 +86,9 @@ este repo, modo auto) y la Routine «Trabajador de Claude (hub) — cada hora»
 (`trig_0193sEVZJvuuAHD8TGAguv9M`, minuto 18 de cada hora) que le manda el texto
 de arriba. Pausarla o cambiar el texto: lista de Routines de claude.ai (o
 `update_trigger` desde una sesión).
+
+**OJO (2026-10-05)**: la Routine está PAUSADA desde el 2026-09-28 (se apagó a
+mano) y su texto guardado es el de ANTES del punto 3 (Feedback): el texto de
+una Routine solo se cambia desde su propia conversación. Para encenderla con
+feedback: abrir la sesión «Trabajador de Claude (hub)» y pedirle «actualiza el
+texto de tu Routine con el de docs/CLAUDE_TRABAJADOR.md y actívala».

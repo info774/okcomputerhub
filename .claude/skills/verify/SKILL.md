@@ -247,7 +247,10 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   una ficha y su enlace, solo admin; `historial` SIMULADA) y modo empleado
   (menú del técnico y entrada a «Hoy» en el móvil); aviso de versión, F5
   guarda, tamaño del texto, privacidad y configuración; deshacer (chip,
-  Ctrl+Z, panel) y la cola sin red (fichar sin conexión con `setOffline`).
+  Ctrl+Z, panel) y la cola sin red (fichar sin conexión con `setOffline`);
+  avisos push (el navegador SIMULADO con `addInitScript`: `Notification`,
+  `PushManager` y un `navigator.serviceWorker` falso; `push` interceptada) y
+  Feedback (técnico: pantalla de antes y errores; admin: «Pasar a Claude»).
 
 `npm run verify` pasa todos los de la lista.
 

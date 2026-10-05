@@ -35,3 +35,35 @@ self.addEventListener('fetch', e => {
     })));
   }
 });
+
+// Avisos push (función `push`, claves VAPID del hub). Un mensaje de chat no se
+// enseña si el hub está a la vista: ya se ve en pantalla.
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = { title: e.data ? e.data.text() : 'Ok Computer Hub' }; }
+  e.waitUntil((async () => {
+    if (d.data && d.data.chat) {
+      const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      if (ventanas.some(w => w.visibilityState === 'visible')) return;
+    }
+    await self.registration.showNotification(d.title || 'Ok Computer Hub', {
+      body: d.body || '', tag: d.tag || 'hub', data: d.data || {},
+      icon: '/iconos/icono-192.png', badge: '/iconos/icono-192.png',
+    });
+  })());
+});
+
+// Tocar el aviso: a la pantalla que dice, en el hub ya abierto si lo hay.
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(lista => {
+    for (const c of lista) {
+      if (new URL(c.url).origin === location.origin && 'focus' in c) {
+        c.postMessage({ tipo: 'hub-ir', url });
+        return c.focus();
+      }
+    }
+    return self.clients.openWindow(url);
+  }));
+});

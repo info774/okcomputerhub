@@ -12,6 +12,7 @@ import { pintarWhatsapp } from './whatsapp';
 import { iconoHex } from './iconos';
 import { svgLinea } from './linea';
 import { controlTexto } from './texto';
+import { controlAvisos, pintarAvisos } from './avisos-dispositivo';
 
 export function pintarShell(raiz: HTMLElement) {
   const u = usuario();
@@ -58,7 +59,8 @@ function pintarMenu() {
           ${iconoHex(m.id === 'inicio' ? 'panel' : m.id, m.titulo, 'menu-ico')}<span class="menu-txt">${esc(m.titulo)}</span>${m.enlaceExterno ? svgLinea('externo', 'menu-ext') : ''}
         </a>`).join('')}
     </div>`).join('')
-    + `<button class="menu-escritorio" data-action="osEntrar">${svgLinea('escritorio')}Modo escritorio</button>` + controlTexto();
+    + `<button class="menu-escritorio" data-action="osEntrar">${svgLinea('escritorio')}Modo escritorio</button>` + controlAvisos() + controlTexto();
+  void pintarAvisos();
 }
 
 export async function mostrarModulo(m: Modulo, params: string[]) {

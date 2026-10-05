@@ -22,3 +22,7 @@ export const BREEZE_URL = 'https://breeze.oksistemas.online';
 // la protege la lista de webs permitidas de la clave en Google Cloud, que tiene
 // que incluir okhub-tenerife.web.app (docs/PENDIENTE_FRAN.md §2 bis).
 export const PLACES_API_KEY = 'AIzaSyCVo9d6iECPX2L5zzgQ7Azo2TXyaOLQ09U';
+
+// Avisos push (Web Push): la clave PÚBLICA VAPID del hub (la privada es el
+// secret VAPID_PRIVATE_KEY de las funciones). No es secreta.
+export const VAPID_PUBLIC_KEY = 'BCkbQ3WWi4wo2CKKih-D0dhx6_iirjfwgYFgDb2KB_0R2qg0m37KnurAITPMl970_MHuFtcAYsKFKJ1tc4fiXLA';

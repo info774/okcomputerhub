@@ -6,6 +6,7 @@
 //   · Tarifas del servicio técnico presencial: las de cada plan salen de su
 //     plantilla de mantenimiento (coste_presencial_*, se cambian allí); aquí
 //     solo la de «Sin mantenimiento» (`tarifa_sin_mantenimiento`).
+//   · Avisos en este dispositivo e instalar la app (shell/avisos-dispositivo.ts).
 //   · Sesión, accesos a Usuarios / Registro / Datos y la política de privacidad.
 // No se portan (decisión del bloque 6): los colores de estado (los fija la
 // marca del hub) ni la contraseña para borrar (los borrados son de admin y los
@@ -16,6 +17,7 @@ import { usuario } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { esc, toast } from '../../ui/dom';
 import { eur } from '../ventas/datos';
+import { tarjetaAvisos, pintarAvisos } from '../../shell/avisos-dispositivo';
 
 const CAMPOS: [string, string, string?][] = [['nombre', 'Razón social'], ['nif', 'CIF / NIF'], ['telefono', 'Teléfono', 'tel'], ['email', 'Correo', 'email'],
   ['direccion', 'Dirección'], ['cp', 'Código postal'], ['municipio', 'Municipio'], ['provincia', 'Provincia']];
@@ -48,11 +50,13 @@ async function pintar(el: HTMLElement) {
       <div class="acciones"><button class="btn" data-action="cfgTarifas">Guardar la de «Sin mantenimiento»</button>
         <a class="btn secundario" href="#/mantenimientos/plantillas">Las de los planes, en sus plantillas</a></div>
     </section>
+    ${tarjetaAvisos()}
     <section class="tarjeta"><h3>🔐 Sesión actual</h3>
       <p><b>${esc(u?.nombre ?? '')}</b> · ${esc(u?.email ?? '')} · ${u?.rol === 'admin' ? 'Administrador' : 'Técnico'}</p>
       <div class="acciones"><a class="btn secundario" href="#/usuarios">🔑 Usuarios</a><a class="btn secundario" href="#/registro">🕘 Registro de cambios</a>
         <a class="btn secundario" href="#/datos">🔄 Datos y sincronización</a><a class="btn secundario" href="/privacidad.html" target="_blank" rel="noopener">Política de privacidad ↗</a></div>
     </section>`;
+  void pintarAvisos();
 }
 
 registrarAcciones({

@@ -481,6 +481,46 @@ const escritura: Herramienta[] = [
       return { ok: true, estado }
     },
   },
+  // ── Feedback del equipo que un admin ha «Pasado a Claude» (#/feedback) ──
+  {
+    name: 'feedback_pendientes', alcance: 'escritura', tabla: 'feedback',
+    description: 'Fallos, mejoras e ideas del hub que un administrador ha pasado a Claude desde #/feedback, los más antiguos primero, con su contexto (pantalla, versión desplegada, entorno, últimos errores de JavaScript) y las notas del admin. Incluye los «en curso» atascados más de 3 horas.',
+    inputSchema: obj({ limite: N('Máximo (3 por defecto)') }),
+    async ejecutar(a, { db }) {
+      const atascada = new Date(Date.now() - 3 * 3600_000).toISOString()
+      const filas = await db.get(`feedback?select=id,numero,created_at,tipo,descripcion,seccion,ruta,estado,autor_nombre,contexto,notas,pasada_at,tomada_at` +
+        `&or=${encodeURIComponent(`(estado.eq.claude,and(estado.eq.en_curso,tomada_at.lt.${atascada}))`)}&order=pasada_at.nullsfirst,created_at&limit=${lim(a.limite, 3, 10)}`)
+      if (!filas.length) return { pendientes: [], nota: 'No hay feedback pendiente.' }
+      return { pendientes: filas,
+        como_trabajar: 'Tómalo (feedback_tomar), reprodúcelo en el repositorio okcomputerhub (la sección es la carpeta de src/modulos/; ruta y errores dicen dónde), arréglalo siguiendo CLAUDE.md (lint, verify con su arnés, PR, fusión y despliegue) y ciérralo (feedback_terminar) con lo que hiciste. Si es una idea grande o no está claro, no la construyas: ciérralo con estado «nueva» y una propuesta para que el equipo decida.' }
+    },
+  },
+  {
+    name: 'feedback_tomar', alcance: 'escritura', tabla: 'feedback',
+    description: 'Marca un feedback como «en curso» (lo toma el trabajador). Falla si ya no está para Claude.',
+    inputSchema: obj({ id: S('UUID del feedback') }, ['id']),
+    async ejecutar(a, { db }) {
+      if (!esUuid(a.id)) throw new Error('id no válido')
+      const atascada = new Date(Date.now() - 3 * 3600_000).toISOString()
+      const filas = await db.patch(`feedback?id=eq.${a.id}&or=${encodeURIComponent(`(estado.eq.claude,and(estado.eq.en_curso,tomada_at.lt.${atascada}))`)}`,
+        { estado: 'en_curso', tomada_at: new Date().toISOString() })
+      if (!filas.length) throw new Error('Ese feedback ya no está para Claude (lo tomó otro, se lo quitaron o se cerró)')
+      return { ok: true, numero: filas[0].numero }
+    },
+  },
+  {
+    name: 'feedback_terminar', alcance: 'escritura', tabla: 'feedback',
+    description: 'Cierra un feedback en curso con un resumen en markdown de lo hecho (qué se cambió, PR, si está desplegado). Estado «hecha»; «nueva» si se devuelve al equipo para decidir (con la propuesta en el resumen).',
+    inputSchema: obj({ id: S('UUID del feedback'), resultado: S('Resumen en markdown'), estado: S('hecha | nueva') }, ['id', 'resultado']),
+    async ejecutar(a, { db }) {
+      if (!esUuid(a.id)) throw new Error('id no válido')
+      const estado = a.estado === 'nueva' ? 'nueva' : 'hecha'
+      const filas = await db.patch(`feedback?id=eq.${a.id}&estado=eq.en_curso`, {
+        estado, resultado: String(a.resultado ?? '').slice(0, 20000), terminada_at: new Date().toISOString() })
+      if (!filas.length) throw new Error('Ese feedback no está en curso: tómalo antes con feedback_tomar')
+      return { ok: true, estado }
+    },
+  },
   // Escrituras sobre áreas que hoy manda la app: se ofrecen solas el día que el
   // área se corte (hub.areas.dueno = 'hub'). Mismas columnas que la app.
   {

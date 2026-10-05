@@ -38,6 +38,7 @@ import { modulosAppActual } from './app-actual';
 import { moduloUsuarios } from './usuarios';
 import { moduloRegistro } from './registro';
 import { moduloConfiguracion } from './configuracion';
+import { moduloFeedback } from './feedback';
 
 export const MODULOS: Modulo[] = [
   moduloInicio,
@@ -75,6 +76,7 @@ export const MODULOS: Modulo[] = [
   moduloUsuarios,
   moduloRegistro,
   moduloConfiguracion,
+  moduloFeedback,
   moduloConector,
   moduloReloj,
 ];
