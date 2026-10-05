@@ -1157,3 +1157,4 @@ body.os-modo .sis { bottom: 108px; }
 .vf-mover { margin-top: .4rem; width: 100%; }
 .vf-checklist { display: grid; gap: .35rem; margin-bottom: .75rem; }
 .vf-cifras { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.mce-cifras { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }

@@ -12,9 +12,10 @@ import {
   ESTADOS_SEDE, SEVERIDAD, ESTADO_ALERTA, enBreeze,
   listarEquipos, estadosLocales, listarAlertas, listarSites, nombresLocales, emparejarSite, pedirABreeze, estadoBreeze,
 } from './datos';
+import { tabControl, seccionControlSede } from './control';
 
 export const PESTANAS = [
-  ['sedes', 'Sedes'], ['equipos', 'Equipos'], ['alertas', 'Alertas'], ['emparejado', 'Emparejado'], ['acciones', 'Acciones'],
+  ['sedes', 'Sedes'], ['equipos', 'Equipos'], ['alertas', 'Alertas'], ['emparejado', 'Emparejado'], ['control', 'Software obligatorio'], ['acciones', 'Acciones'],
 ] as const;
 
 let _el: HTMLElement | null = null;
@@ -161,17 +162,19 @@ async function tabAcciones(): Promise<string> {
 }
 
 async function vistaSede(localId: string): Promise<string> {
-  const [eq, al, nombres, est] = await Promise.all([
+  const [eq, al, nombres, est, control] = await Promise.all([
     listarEquipos({ local_id: `eq.${localId}` }),
     listarAlertas({ local_id: `eq.${localId}`, estado: 'in.(active,acknowledged)' }),
     nombresLocales([localId]),
     API.single<EstadoLocal>('rmm_estado_local', { select: '*', local_id: `eq.${localId}` }),
+    seccionControlSede(localId),
   ]);
   const e = est.data ? ESTADOS_SEDE[est.data.estado] : null;
   return `<p><a href="#/monitorizacion/sedes">← Todas las sedes</a></p>
     <div class="tarjeta-cab"><h2>${esc(nombres.get(localId) ?? 'Sede')}</h2>${e ? chip(e.texto, e.tono) : ''}</div>
     ${eq.error ? `<p class="aviso mal">${esc(eq.error.message)}</p>` : tablaEquipos(eq.data ?? [], nombres, false)}
-    <h3>Alertas abiertas</h3>${tablaAlertas(al.data ?? [], nombres)}`;
+    <h3>Alertas abiertas</h3>${tablaAlertas(al.data ?? [], nombres)}
+    ${control}`;
 }
 
 // ── Pintar ─────────────────────────────────────────────────────────────────
@@ -192,7 +195,7 @@ export async function pintarMonitorizacion(el: HTMLElement, params: string[]) {
     const a = document.getElementById('mo-aviso-breeze');
     if (a && s && !s.configurado) a.innerHTML = '<p class="aviso">Las acciones sobre Breeze (acusar alertas, comandos, scripts) están apagadas: falta el usuario de servicio del hub en Breeze. Todo lo demás se ve igual.</p>';
   });
-  const cuerpo = await ({ sedes: tabSedes, equipos: tabEquipos, alertas: tabAlertas, emparejado: tabEmparejado, acciones: tabAcciones }[pestana]!)();
+  const cuerpo = await ({ sedes: tabSedes, equipos: tabEquipos, alertas: tabAlertas, emparejado: tabEmparejado, control: tabControl, acciones: tabAcciones }[pestana]!)();
   const c = document.getElementById('mo-cuerpo');
   if (c && _el === el) c.innerHTML = cuerpo;
 }

@@ -267,8 +267,8 @@ Fran, 2026-10-03).
 | Pestaña «Monitor.» de la sede (`rmm.js`) | Hecho | `#/monitorizacion` | Usuario de servicio de Breeze. |
 | Réplica de Breeze (`breeze-sync`, `breeze-hook`) | No aplica | vistas `hub.rmm_*` | El hub lee Breeze directamente. |
 | Agente OKRMM y sonda de red (`rmm-agente`) | No aplica | — | OKRMM se retira. |
-| Control de equipos (`control-equipos`) | Falta | — | — |
-| AnyDesk de una sede | Falta | — | — |
+| Control de equipos (`control-equipos`) | Hecho (lectura) · Preparado (pasada) | Monitorización → «Software obligatorio» (`monitorizacion/control.ts`, `mce-`: cifras, incompletos, sin sede, ignorados, IDs) y la sección de cada sede; espejo `hub.equipos_control` (`20261103_control_equipos.sql`, área `equipos`), copiado a las 6:40 UTC tras la comprobación de la app; ignorar, asignar sede y «Comprobar ahora» con el corte. Función `control-equipos` del hub (lee Breeze por las vistas `hub.rmm_*` y Action1 por API) | Corte del área `equipos` y las claves de Action1 (decisión de Fran: la pasada propia preparada sin encender). Columna «Equipos» en la tabla maestra de Mantenimientos. |
+| AnyDesk de una sede | Hecho | Ficha del sitio → «Remoto» (AnyDesk de su hardware y software; RustDesk de Breeze con la contraseña al portapapeles) y en la ventana de WhatsApp | — |
 
 ### 11. Documentos
 
@@ -311,7 +311,7 @@ Fran, 2026-10-03).
 | Backup diario de la base | Falta | — | Backup propio del hub. |
 | Refresco de suscripciones de Zoho | Falta | — | — |
 | Push cada 15 min | Preparado | `hub-push-proximos` (pg_cron) → función `push` `proximos` | Se enciende solo con el corte de la agenda. |
-| Control de equipos a diario | Falta | — | — |
+| Control de equipos a diario | Preparado | `hub-equipos-control` copia la comprobación de la app cada mañana; la pasada propia, función `control-equipos` | El cron propio, con el corte del área `equipos`. |
 | Repaso y cierre programados | Hecho | `hub-informes` | — |
 | Repaso visual nocturno y `/repaso` | No aplica | — | El hub tiene su trabajador de Claude. |
 | Despliegues y lint | Hecho | `.github/workflows/` | — |
