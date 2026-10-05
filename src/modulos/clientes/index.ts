@@ -23,6 +23,7 @@ import {
   TIPOS_ACTIVIDAD, ICONO_EVENTO, CLASE_TONO, eur, clases, olvidarClases, telWhatsApp, enApp,
 } from '../ventas/datos';
 import { enlaceHistorial } from '../../ui/historial';
+import { botonDrive } from '../../ui/drive';
 import { ico } from '../../shell/linea';
 
 // Icono de un evento de la línea de tiempo (el mapa de ventas/datos.ts); sin él, un punto.
@@ -236,7 +237,7 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
       <div class="acciones">${c.telefono ? `<a class="btn secundario" href="tel:${esc(c.telefono)}">${ico('telefono')} ${esc(c.telefono)}</a>` : ''}
         ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener" aria-label="WhatsApp" title="WhatsApp">${ico('mensaje')}</a>` : ''}
         ${c.email ? `<a class="btn secundario" href="mailto:${esc(c.email)}" aria-label="Correo" title="Correo">${ico('correo')}</a>` : ''}
-        ${botones}${enlaceHistorial('clientes', c.id)}</div></div>
+        ${botones}${botonDrive('cliente', c.id)}${enlaceHistorial('clientes', c.id)}</div></div>
     ${deBaja ? '<p class="aviso">Este cliente está <strong>de baja</strong>: no sale en listados ni buscadores, pero no se ha borrado nada.</p>' : ''}
     ${escribe ? '' : avisoSoloLectura('Los datos del cliente')}
     <p class="nota">${[c.nif, c.direccion].filter(Boolean).map(x => esc(x)).join(' · ')}</p>

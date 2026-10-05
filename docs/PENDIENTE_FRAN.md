@@ -184,6 +184,34 @@ persona del equipo. Nada sale solo hacia un cliente.
 4. En el hub: **Buscar** → abajo, «Carpeta de Google Drive» → pega el enlace
    → **Guardar** → **Leer Drive ahora**.
 
+## 2 ter · Google Calendar y la carpeta de Drive en el hub (una vez, ~5 minutos)
+
+**Desbloquea**: la casilla «Google» del Calendario (los eventos del calendario
+de la empresa, y el de cada uno si tiene correo de la empresa, solo para ver) y
+el botón «Drive» de las fichas de cliente y sede.
+
+### Calendar: un permiso más en la delegación
+
+1. Entra en **https://admin.google.com** con `info@okcomputertenerife.com`.
+2. Menú ☰ → **Seguridad** → **Acceso y control de datos** → **Controles de API**.
+3. Abajo, **Gestionar la delegación de todo el dominio**.
+4. Busca en la lista la fila con **ID de cliente** `117092961908352521785` (ya
+   existe: tiene el permiso de contactos) → pulsa encima → **Editar**.
+5. En **Permisos de OAuth**, al FINAL de lo que ya haya, añade una coma y pega:
+   `https://www.googleapis.com/auth/calendar.readonly`
+   (si aún no está el de Gmail del paso 2b, añade también
+   `,https://www.googleapis.com/auth/gmail.modify`).
+6. **Autorizar**. Tarda unos minutos en valer.
+
+### Drive: compartir la carpeta de la empresa
+
+1. Abre en Google Drive la carpeta compartida donde la app guarda todo:
+   **https://drive.google.com/drive/folders/1on0v4QuHJHzC_33TmmS8kg--V4d-utH7**
+2. Botón **Compartir** (arriba a la derecha).
+3. Añade `firebase-adminsdk-fbsvc@okcomputerclaude.iam.gserviceaccount.com`
+   como **Editor** (tiene que poder crear la carpeta de un cliente nuevo) y
+   **desmarca «Notificar a las personas»** → **Compartir**.
+
 ## 2 bis · Google Maps en el hub (una vez, ~2 minutos)
 
 **Desbloquea**: el botón «🔎 Buscar en Google Maps» del alta de sede, de su
@@ -366,3 +394,10 @@ el hub).
 La redirección de la app al hub, la URL de la APK y apagar el sync esperan a
 tu OK. Los pasos están en `docs/FASE_FINAL.md`; el corte en sí está preparado
 y probado (`supabase/cortes/corte_final.sql`).
+
+El mismo día del cambio, para que el **control de equipos** lo haga el hub
+(hoy lo hace la app y el hub solo enseña su resultado): copia en las variables
+del entorno cloud (menú del entorno → Edit → variables) las mismas claves de
+Action1 que tiene la app, una por línea: `ACTION1_CLIENT_ID=…`,
+`ACTION1_CLIENT_SECRET=…` y `ACTION1_REGION=eu`. Claude las pasa a la función
+`control-equipos` del hub y programa su pasada diaria.
