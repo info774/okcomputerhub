@@ -916,6 +916,16 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   (`moTicketAlerta`): el enlace vive en `hub.tickets.rmm_alerta_id` (único: una
   alerta, un ticket), porque a Breeze no se le escribe. Código en
   `tickets/extra.ts` (`tkx-`). Arnés `verify-tickets-completos.mjs`.
+- **Entrada de ventas** (paridad bloque 8, tanda 3, 2026-10-05, PREPARADA SIN
+  CONECTAR, decisión de Fran): funciones `formulario-web` (webs públicas; cada
+  web una entrada de `SITIOS` con sus chips, que cuadran al carácter con su
+  snippet de `docs/formularios-web/`) y `captar-lead` (comerciales desde
+  `public/captacion.html`, con el ID token de Google del cliente OAuth de la
+  app), las dos SIN_JWT, portadas literal y que insertan en
+  `hub.oportunidades` («Detectado»). Las webs y los comerciales siguen
+  mandando a la app hasta que Fran haga PENDIENTE_FRAN §2 quater. Aceptar un
+  presupuesto en el portal lo pasa solo a «Aceptado» con el área
+  `presupuestos` del hub. Arnés `verify-captacion.mjs`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

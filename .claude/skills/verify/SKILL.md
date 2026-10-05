@@ -294,6 +294,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   Playwright no arranca el arrastre de un bloque dentro del panel con scroll
   (con el ratón de verdad sí).
 
+- `verify-captacion.mjs`: bloque 8, tanda 3: `public/captacion.html` con
+  Google Identity Services y `captar-lead` SIMULADOS (puerta de Google,
+  validaciones, envío sin claves, «Otro servicio», agencia recordada, 401 →
+  vuelta a la puerta, sin emojis ni manejadores en línea).
+
 `npm run verify` pasa todos los de la lista.
 
 ## Pantalla nueva

@@ -124,7 +124,10 @@ Fran, 2026-10-03).
    resolución a la wiki y ticket desde una alerta de Breeze
    (`20261104_tickets_completos.sql`). Tanda 2 HECHA (2026-10-05): el
    planificador del Mapa (Día, Semana con arrastrar y soltar, Ruta y técnicos
-   fichados).
+   fichados). Tanda 3 HECHA (2026-10-05): formulario de las webs y captación
+   de comerciales, preparados sin conectar (funciones `formulario-web` y
+   `captar-lead`, `captacion.html`, snippets en `docs/formularios-web/`), y la
+   aceptación del presupuesto en el portal, preparada para el corte.
 
 ## El mapa
 
@@ -198,15 +201,15 @@ Fran, 2026-10-03).
 |---|---|---|---|
 | Oportunidades: embudo, lista, ficha | Hecho | `#/oportunidades` | — |
 | Oportunidad a presupuesto, trabajo o tarea | Preparado (presupuesto) | Ficha de la oportunidad → «📄 Crear presupuesto» (`#/presupuestos/nuevo/o/<id>`) | A trabajo o tarea. |
-| Formulario de las webs (`formulario-web`) | Falta | — | Entra por la app y se importa. |
-| Captación de leads de comerciales (`captacion.html`, `captar-lead`) | Falta | — | — |
+| Formulario de las webs (`formulario-web`) | Preparado | Función `formulario-web` del hub (SIN_JWT) y los snippets en `docs/formularios-web/` | Conectar: pegar el snippet del hub en cada web (PENDIENTE_FRAN §2 quater). Hasta entonces entra por la app y se importa. |
+| Captación de leads de comerciales (`captacion.html`, `captar-lead`) | Preparado | `captacion.html` + función `captar-lead` del hub (SIN_JWT, ID token de Google) | Añadir el origen del hub al cliente OAuth y pasar el enlace a los comerciales (PENDIENTE_FRAN §2 quater). |
 | Lista de presupuestos | Preparado | `#/presupuestos` (+ Nuevo presupuesto, Plantillas) | Corte del área. |
 | Crear y editar presupuesto con catálogo | Preparado | `#/presupuestos/nuevo[/c/<cliente>|/o/<oportunidad>]`, `#/presupuestos/<id>/editar` (`presupuestos/formulario.ts`, editor `lineas.ts`); líneas por `hub.presupuesto_guardar_lineas` (pone el total); duplicar; eliminar solo admin | Corte. |
 | Plantillas de presupuesto | Preparado | `#/presupuestos/plantillas` (espejo `presupuesto_plantillas`; varias se juntan al crear) | Corte. |
 | PDF del presupuesto | Hecho | `#/presupuestos/<id>/pdf` (imprimible con IGIC y condiciones; vale ya) | — |
 | Presupuesto a Zoho (`send-to-zoho-estimate`) | Preparado | Ficha → «📤 Enviar a Zoho» (función `zoho-ventas`, acción `presupuesto`) | Corte y permisos de Zoho (PENDIENTE_FRAN §5). |
 | Presupuesto a trabajo | Preparado | Ficha (aceptado) → «🛠 Convertir en trabajo» (`hub.trabajo_desde_presupuesto`, copia las líneas) | Corte de `trabajos`. |
-| Aceptación por el cliente | Falta | `portal` | En el portal se acepta, pero hay que pasarlo a la app a mano. |
+| Aceptación por el cliente | Preparado | `portal` (`presupuesto_aceptar`) | Con el corte de `presupuestos`, aceptar en el portal lo pasa solo a «Aceptado»; hasta entonces se pasa a mano en la app. |
 
 ### 5. Mantenimiento y cobros
 

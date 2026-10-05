@@ -1,0 +1,129 @@
+<!--
+  Formulario de presupuesto de tenerifetpv.es (Tenerife TPV) → entra en el HUB
+  (Oportunidades, estado «Detectado», origen «Formulario web»).
+  Pegar este bloque ENTERO donde vaya el formulario. No lleva claves.
+  Colores y tipografía: cambiar las variables --okcf-* de la primera regla.
+  Versión del HUB (función formulario-web del hub): pegar el día que se conecte
+  (paridad bloque 8, tanda 3; hasta entonces las webs llevan el de la app).
+-->
+<div id="okc-form">
+<style>
+#okc-form{--okcf-acento:#16c25a;--okcf-texto:#111;--okcf-borde:#cfd4d9;--okcf-fondo:#fff;--okcf-radio:10px;
+  font-family:inherit;color:var(--okcf-texto);background:var(--okcf-fondo);border-radius:22px;padding:32px;box-sizing:border-box}
+#okc-form *{box-sizing:border-box}
+#okc-form .okcf-fila{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+#okc-form .okcf-campo{margin-bottom:18px}
+#okc-form label.okcf-lbl,#okc-form .okcf-lbl{display:block;font-weight:600;font-size:14px;margin-bottom:8px}
+#okc-form input[type=text],#okc-form input[type=tel],#okc-form input[type=email],#okc-form textarea{
+  width:100%;font:inherit;font-size:16px;padding:14px;border:1px solid var(--okcf-borde);border-radius:var(--okcf-radio);background:#fff;color:inherit}
+#okc-form textarea{min-height:100px;resize:vertical}
+#okc-form input:focus,#okc-form textarea:focus{outline:2px solid var(--okcf-acento);outline-offset:0;border-color:transparent}
+#okc-form .okcf-chips{display:flex;flex-wrap:wrap;gap:8px}
+#okc-form .okcf-chip{font:inherit;font-size:14px;font-weight:600;padding:10px 13px;border:1px solid var(--okcf-borde);border-radius:6px;background:#fff;color:inherit;cursor:pointer}
+#okc-form .okcf-chip[aria-pressed=true]{background:var(--okcf-acento);border-color:var(--okcf-acento);color:#fff}
+#okc-form .okcf-check{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin:4px 0 16px}
+#okc-form .okcf-check input{width:18px;height:18px;margin:1px 0 0}
+#okc-form .okcf-check a{color:#0a7d3a}
+#okc-form .okcf-rgpd{border:1px solid #e3e6e9;border-radius:8px;padding:12px 14px;font-size:12px;line-height:1.5;margin-bottom:18px}
+#okc-form .okcf-rgpd b{display:block;margin-bottom:4px}
+#okc-form .okcf-rgpd dl{display:grid;grid-template-columns:auto 1fr;gap:2px 14px;margin:0}
+#okc-form .okcf-rgpd dt{font-weight:600}#okc-form .okcf-rgpd dd{margin:0;color:#444}
+#okc-form .okcf-enviar{width:100%;font:inherit;font-size:16px;font-weight:700;padding:15px;border:0;border-radius:var(--okcf-radio);background:var(--okcf-acento);color:#fff;cursor:pointer}
+#okc-form .okcf-enviar:disabled{opacity:.6;cursor:wait}
+#okc-form .okcf-msg{margin-top:12px;font-size:14px;min-height:1em}
+#okc-form .okcf-msg.err{color:#c62828}
+#okc-form .okcf-ok{text-align:center;padding:30px 10px}
+#okc-form .okcf-ok h3{margin:0 0 8px;font-size:22px}
+#okc-form .okcf-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+@media (max-width:600px){#okc-form{padding:20px}#okc-form .okcf-fila{grid-template-columns:1fr;gap:0}}
+</style>
+
+<form novalidate>
+  <div class="okcf-fila">
+    <div class="okcf-campo"><label class="okcf-lbl" for="okcf-nombre">Nombre</label>
+      <input type="text" id="okcf-nombre" name="nombre" autocomplete="name" maxlength="120" required></div>
+    <div class="okcf-campo"><label class="okcf-lbl" for="okcf-negocio">Negocio</label>
+      <input type="text" id="okcf-negocio" name="negocio" autocomplete="organization" maxlength="160"></div>
+  </div>
+  <div class="okcf-fila">
+    <div class="okcf-campo"><label class="okcf-lbl" for="okcf-telefono">Teléfono</label>
+      <input type="tel" id="okcf-telefono" name="telefono" autocomplete="tel" maxlength="40"></div>
+    <div class="okcf-campo"><label class="okcf-lbl" for="okcf-email">Email</label>
+      <input type="email" id="okcf-email" name="email" autocomplete="email" maxlength="160"></div>
+  </div>
+  <div class="okcf-campo"><span class="okcf-lbl">Qué necesitas</span>
+    <div class="okcf-chips">
+      <button type="button" class="okcf-chip" aria-pressed="false">Un TPV nuevo</button>
+      <button type="button" class="okcf-chip" aria-pressed="false">Poner mi TPV al día con VeriFactu</button>
+      <button type="button" class="okcf-chip" aria-pressed="false">Cobro automático de efectivo</button>
+      <button type="button" class="okcf-chip" aria-pressed="false">Impresora, lector o báscula</button>
+      <button type="button" class="okcf-chip" aria-pressed="false">Wi-Fi y cableado del local</button>
+      <button type="button" class="okcf-chip" aria-pressed="false">Soporte y mantenimiento</button>
+    </div></div>
+  <div class="okcf-campo"><label class="okcf-lbl" for="okcf-mensaje">Cuéntanos tu caso</label>
+    <textarea id="okcf-mensaje" name="mensaje" maxlength="3000" placeholder="Número de mesas o de cajas, programa que usas hoy, si hay terraza o báscula…"></textarea></div>
+  <div class="okcf-hp" aria-hidden="true"><label>Web <input type="text" name="web" tabindex="-1" autocomplete="off"></label></div>
+  <label class="okcf-check"><input type="checkbox" name="privacidad">
+    <span>Acepto la <a href="/politica-de-privacidad" target="_blank" rel="noopener">política de privacidad</a> de Tenerife TPV.</span></label>
+  <div class="okcf-rgpd"><b>Tus datos, en resumen</b>
+    <dl>
+      <dt>Responsable</dt><dd>Dalmon Sistemas S.L., que opera como Tenerife TPV y OK Computer</dd>
+      <dt>Finalidad</dt><dd>Contestar tu consulta y prepararte el presupuesto que pides</dd>
+      <dt>Legitimación</dt><dd>Tu consentimiento y, si lo pides, los pasos previos a un contrato</dd>
+      <dt>Destinatarios</dt><dd>Solo las empresas que nos dan el alojamiento y las herramientas de gestión, como encargadas del tratamiento. Nunca los vendemos ni los cedemos para publicidad</dd>
+      <dt>Derechos</dt><dd>Puedes pedir acceso, rectificación, supresión, oposición, limitación o portabilidad, y retirar tu consentimiento, escribiendo a info@okcomputertenerife.com</dd>
+    </dl></div>
+  <button type="submit" class="okcf-enviar">Pedir presupuesto</button>
+  <div class="okcf-msg" role="status" aria-live="polite"></div>
+</form>
+
+<script>
+(function () {
+  var ENDPOINT = 'https://adomalsxsymxzuozksmt.supabase.co/functions/v1/formulario-web';
+  var SITIO = 'tenerifetpv.es';
+  var raiz = document.getElementById('okc-form');
+  var form = raiz.querySelector('form');
+  var msg = raiz.querySelector('.okcf-msg');
+  var boton = raiz.querySelector('.okcf-enviar');
+  var inicio = Date.now();
+
+  raiz.querySelectorAll('.okcf-chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+    });
+  });
+
+  function error(t) { msg.className = 'okcf-msg err'; msg.textContent = t; }
+  form.addEventListener('input', function () { if (msg.className.indexOf('err') > -1) msg.textContent = ''; });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = function (n) { return (form.elements[n].value || '').trim(); };
+    var datos = {
+      sitio: SITIO,
+      nombre: v('nombre'), negocio: v('negocio'), telefono: v('telefono'), email: v('email'),
+      mensaje: v('mensaje'), web: v('web'),
+      intereses: Array.prototype.map.call(raiz.querySelectorAll('.okcf-chip[aria-pressed=true]'), function (c) { return c.textContent.trim(); }),
+      privacidad: form.elements.privacidad.checked,
+      pagina: location.href.slice(0, 300),
+      t: Date.now() - inicio
+    };
+    if (datos.nombre.length < 2) return error('Indica tu nombre.');
+    if (!datos.telefono && !datos.email) return error('Déjanos un teléfono o un email para responderte.');
+    if (!datos.privacidad) return error('Tienes que aceptar la política de privacidad.');
+
+    boton.disabled = true; msg.className = 'okcf-msg'; msg.textContent = 'Enviando…';
+    fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (r) {
+        if (!r.ok || !r.j.ok) throw new Error(r.j.error || 'No se pudo enviar.');
+        form.outerHTML = '<div class="okcf-ok"><h3>¡Recibido!</h3><p>Te contestamos en horario de tienda, de lunes a viernes. Si corre prisa, llámanos al <a href="tel:+34922717390">922 71 73 90</a>.</p></div>';
+      })
+      .catch(function (err) {
+        boton.disabled = false;
+        error(err && err.message && err.message !== 'Failed to fetch' ? err.message : 'No se pudo enviar. Llámanos al 922 71 73 90.');
+      });
+  });
+})();
+</script>
+</div>

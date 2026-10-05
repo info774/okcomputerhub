@@ -244,6 +244,39 @@ usarla. No hay que copiar ni pegar ninguna clave.
 > Ojo: el botón de crear sedes en el hub está preparado pero apagado hasta el
 > cambio de clientes; la búsqueda en Maps ya se puede probar en el formulario.
 
+## 2 quater · Formulario de las webs y captación en el hub (SOLO cuando decidas pasarlos; ~10 minutos)
+
+**Desbloquea**: que las solicitudes de okcomputertenerife.com y tenerifetpv.es,
+y los clientes que apuntan las agencias comerciales, entren DIRECTAMENTE en el
+hub en vez de pasar por la app (hoy entran por la app y el hub las copia cada
+15 minutos, así que no se pierde nada si no lo haces). Están preparados y sin
+conectar (decisión tuya, 2026-10-05).
+
+**Las webs** (una vez por web):
+1. Abre el editor de la web (donde está ahora el formulario de presupuesto).
+2. Borra el bloque del formulario que hay ahora (empieza por
+   `<div id="okc-form">` y acaba en su `</script>` y `</div>`).
+3. Pega en su lugar el bloque ENTERO del fichero del repo del hub
+   `docs/formularios-web/okcomputertenerife.com.html` (o
+   `docs/formularios-web/tenerifetpv.es.html` para la de TPV). No lleva claves.
+4. Guarda y publica. Prueba: manda una solicitud de prueba y mira que sale en
+   el hub en **Oportunidades** → columna **Detectado** (al momento).
+
+**La página de captación de los comerciales**:
+1. Entra en **https://console.cloud.google.com** con `info@okcomputertenerife.com`
+   y elige el proyecto **okcomputerclaude** (número `508620194342`).
+2. Menú ☰ → **APIs y servicios** → **Credenciales**.
+3. En **IDs de clientes de OAuth 2.0**, pulsa el **nombre** del cliente cuyo ID
+   empieza por **`508620194342-dahlc0`**.
+4. En **Orígenes de JavaScript autorizados** pulsa **AÑADIR URI** y pega
+   exactamente:
+   ```
+   https://okhub-tenerife.web.app
+   ```
+   → **GUARDAR**.
+5. A los comerciales, el enlace nuevo:
+   `https://okhub-tenerife.web.app/captacion.html?ref=<NombreDeLaAgencia>`.
+
 ## 3 · Clave de Groq (notas de voz → comandas, WhatsApp → ticket)
 
 **Desbloquea**: dictar comandas en #/comandas y mandarle notas de voz al bot, y
