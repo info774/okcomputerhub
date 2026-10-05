@@ -3,6 +3,8 @@
 // cobro (mantenimiento y, para admins, facturas vencidas de Zoho), clase A/B/C
 // del cliente u oportunidades abiertas. Leaflet se carga solo al abrir esta
 // pantalla. Mosaicos de OpenStreetMap, como en la app. Prefijo de ids: ma-.
+// A la derecha, el planificador de la app (Día · Semana · Ruta, técnicos
+// fichados): `planificador.ts`, cargado bajo demanda con Leaflet.
 import type { Modulo, Contador } from '../../core/modulo';
 import type * as Leaflet from 'leaflet';
 import { API } from '../../core/api';
@@ -13,6 +15,7 @@ import { clases, eur } from '../ventas/datos';
 
 type Capa = 'rmm' | 'cobro' | 'clase' | 'oportunidades';
 interface Sede { id: string; nombre: string; cliente_id: string | null; lat: number; lng: number; direccion: string | null; estado_pago: string | null; plan: string | null }
+type Planificador = typeof import('./planificador');
 interface Punto { color: string; radio: number; texto: string; valor: number }
 
 const CLAVE = 'hub_mapa_capa';
@@ -25,6 +28,8 @@ let _mapa: Leaflet.Map | null = null;
 let _grupo: Leaflet.LayerGroup | null = null;
 let _L: typeof Leaflet | null = null;
 let _sedes: Sede[] = [];
+let _marcas = new Map<string, Leaflet.CircleMarker>();
+let _plan: Planificador | null = null;
 let _datos: { rmm: Map<string, any>; clase: Map<string, string>; vencido: Map<string, number>; opor: Map<string, { n: number; valor: number }>; clientes: Map<string, string> } | null = null;
 
 async function cargarDatos() {
@@ -86,14 +91,17 @@ function pintarCapa(capa: Capa) {
   if (!_mapa || !_L || !_datos) return;
   _grupo?.remove();
   _grupo = _L.layerGroup().addTo(_mapa);
-  // Lo importante se pinta encima.
+  _marcas = new Map();
+  // Lo importante se pinta encima; una sede con trabajo ese día lleva el borde de acción.
   const conPunto = _sedes.map(s => ({ s, p: punto(s, capa) })).sort((a, b) => a.p.valor - b.p.valor);
   for (const { s, p } of conPunto) {
     const cli = s.cliente_id ? _datos.clientes.get(s.cliente_id) : null;
-    _L.circleMarker([Number(s.lat), Number(s.lng)], { radius: p.radio, color: color('--superficie'), weight: 2, fillColor: color(p.color), fillOpacity: 0.9 })
+    const hoy = _plan?.tieneTrabajo(s.id) ?? false;
+    const m = _L.circleMarker([Number(s.lat), Number(s.lng)], { radius: p.radio + (hoy ? 2 : 0), color: color(hoy ? '--accion' : '--superficie'), weight: hoy ? 3 : 2, fillColor: color(p.color), fillOpacity: 0.9 })
       .bindPopup(`<strong>${esc(s.nombre)}</strong>${cli ? `<br>${esc(cli)}` : ''}<br>${esc(p.texto)}
-        <br>${s.cliente_id ? `<a href="#/clientes/${esc(s.cliente_id)}">Ficha del cliente</a> · ` : ''}<a href="#/monitorizacion/sede/${esc(s.id)}">Equipos</a>`)
+        <br>${s.cliente_id ? `<a href="#/clientes/${esc(s.cliente_id)}">Ficha del cliente</a> · ` : ''}<a href="#/monitorizacion/sede/${esc(s.id)}">Equipos</a>${_plan?.extraPopup(s) ?? ''}`, { maxWidth: 320 })
       .addTo(_grupo);
+    _marcas.set(s.id, m);
   }
   const ley = document.getElementById('ma-leyenda');
   if (ley) ley.innerHTML = LEYENDAS[capa].map(([c, t]) => `<span><i style="background:var(${c})"></i>${esc(t)} (${conPunto.filter(x => x.p.color === c).length})</span>`).join('');
@@ -105,10 +113,12 @@ async function pintar(el: HTMLElement) {
   el.innerHTML = `<div class="acciones mo-barra"><div class="segmentado" role="tablist">${capas.map(([k, n]) =>
       `<button role="tab" aria-selected="${k === capa}" class="${k === capa ? 'activo' : ''}" data-action="maCapa" data-p0="${k}">${n}</button>`).join('')}</div>
       <span class="nota" id="ma-cuenta"></span></div>
-    <div id="ma-mapa" class="ma-mapa" role="region" aria-label="Mapa de sedes"></div>
-    <div id="ma-leyenda" class="di-leyenda ma-leyenda"></div>
+    <div class="ma-caja"><div class="ma-rejilla"><div><div id="ma-mapa" class="ma-mapa" role="region" aria-label="Mapa de sedes"></div>
+      <div id="ma-leyenda" class="di-leyenda ma-leyenda"></div></div>
+      <aside id="map-panel" class="tarjeta map-panel" aria-label="Planificador"><p class="cargando">Cargando…</p></aside></div></div>
     ${!esAdmin() ? '<p class="nota">En la capa «Cobro» solo ves el estado del mantenimiento; las facturas vencidas las ven los administradores.</p>' : ''}`;
-  const [mod] = await Promise.all([import('leaflet'), import('leaflet/dist/leaflet.css'), cargarDatos()]);
+  const [mod, plan] = await Promise.all([import('leaflet'), import('./planificador'), import('leaflet/dist/leaflet.css'), cargarDatos()]);
+  _plan = plan;
   _L = (mod as any).default ?? mod;
   const caja = document.getElementById('ma-mapa');
   if (!caja || !_L) return;
@@ -118,6 +128,16 @@ async function pintar(el: HTMLElement) {
   const cuenta = document.getElementById('ma-cuenta');
   if (cuenta) cuenta.textContent = `${_sedes.length} sedes con ubicación`;
   pintarCapa(capa);
+  const mapa = _mapa;
+  await plan.iniciarPanel({ L: _L, mapa, sedes: _sedes, clientes: _datos?.clientes ?? new Map(),
+    centrar(id) {
+      const m = _marcas.get(id);
+      if (!m || _mapa !== mapa) return false;
+      mapa.setView(m.getLatLng(), Math.max(mapa.getZoom(), 15), { animate: true });
+      m.openPopup();
+      return true;
+    },
+    repintar: () => { if (_mapa === mapa) pintarCapa(leer()); } });
 }
 
 registrarAcciones({
@@ -133,7 +153,7 @@ export const moduloMapa: Modulo = {
   titulo: 'Mapa',
   grupo: 'Clientes',
   icono: '🗺',
-  explicacion: 'Las sedes de los clientes en el mapa. Cambia de capa para ver dónde hay equipos con problemas, dónde se debe dinero, dónde están los clientes grandes o dónde hay ventas en marcha. Pulsa un punto para ir a su ficha.',
+  explicacion: 'Las sedes de los clientes en el mapa. Cambia de capa para ver dónde hay equipos con problemas, dónde se debe dinero, dónde están los clientes grandes o dónde hay ventas en marcha. A la derecha, el día (técnicos fichados, trabajos y tickets), la semana para planificar arrastrando y la ruta del día con los kilómetros.',
   pintar,
   async contador(): Promise<Contador | null> {
     const n = await API.contar('locales', { activo: 'neq.false', lat: 'not.is.null' });

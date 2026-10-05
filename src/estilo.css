@@ -496,6 +496,47 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .ma-mapa { height: min(70vh, 640px); border-radius: 12px; border: 1px solid var(--borde); z-index: 0; }
 .ma-leyenda { margin-top: .5rem; }
 .ma-leyenda i { display: inline-block; width: .8rem; height: .8rem; border-radius: 50%; margin-right: .35rem; vertical-align: -1px; }
+/* Mapa → planificador (Día · Semana · Ruta), prefijo map- */
+.ma-caja { container-type: inline-size; }
+.ma-rejilla { display: grid; gap: 1rem; }
+@container (min-width: 900px) { .ma-rejilla { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; } }
+.map-panel { max-height: min(78vh, 760px); overflow: auto; min-width: 0; }
+.map-panel h4 { margin: .9rem 0 .35rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-suave); }
+.map-cab { justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
+.map-dia, .map-nav { gap: .25rem; flex-wrap: nowrap; }
+.map-nav .btn:nth-child(2) { flex: 1; }
+.map-dia .otro { color: var(--primario); }
+.map-fila { display: flex; align-items: center; gap: .6rem; width: 100%; padding: .45rem .5rem; border: 0; border-radius: 8px; background: none; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.map-fila:hover { background: var(--primario-suave); }
+.map-fila.apagado { opacity: .6; }
+.map-txt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.map-txt strong, .map-txt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-txt small { color: var(--texto-suave); }
+.map-hora { font-variant-numeric: tabular-nums; font-size: .85rem; color: var(--texto-suave); min-width: 3rem; }
+.map-tec { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--accion); color: var(--superficie); font-weight: 700; font-size: .75rem; border: 2px solid var(--superficie); box-shadow: 0 1px 4px rgb(0 0 0 / .25); }
+.map-tec.traslado { background: var(--serie-2); }
+.map-fila .map-tec { width: 26px; height: 26px; }
+.map-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--serie-1); color: var(--superficie); font-weight: 700; font-size: .72rem; flex: none; border: 2px solid var(--superficie); }
+.map-num.casa { background: var(--tinta, var(--texto)); }
+.map-ini { display: inline-grid; place-items: center; min-width: 1.4rem; height: 1.4rem; padding: 0 .2rem; border-radius: 99px; background: var(--primario-suave); color: var(--primario); font-size: .65rem; font-weight: 700; margin-left: .15rem; }
+.map-asignar { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .5rem 0; }
+.map-sem { display: flex; flex-direction: column; gap: .3rem; }
+.map-sem-fila { display: grid; grid-template-columns: 3.2rem minmax(0, 1fr); gap: .4rem; padding: .3rem; border: 1px solid var(--borde); border-radius: 10px; min-height: 2.6rem; }
+.map-sem-fila.hoy { border-color: var(--accion); }
+.map-sem-fila.sel { background: var(--primario-suave); }
+.map-sem-fila.sobre, .map-bandeja.sobre { outline: 2px dashed var(--accion); outline-offset: 2px; }
+.map-sem-cab { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 0; background: none; color: inherit; cursor: pointer; font: inherit; line-height: 1.1; }
+.map-sem-cab b { font-size: .72rem; text-transform: uppercase; color: var(--texto-suave); }
+.map-sem-cab i { font-style: normal; font-size: .7rem; color: var(--primario); }
+.map-sem-bloques { display: flex; flex-direction: column; gap: .25rem; min-width: 0; justify-content: center; }
+.map-bloque { display: flex; align-items: center; gap: .4rem; padding: .25rem .45rem; border-radius: 8px; background: var(--fondo); border: 1px solid var(--borde); color: inherit; text-decoration: none; font-size: .85rem; min-width: 0; }
+.map-bloque[draggable="true"] { cursor: grab; }
+.map-bloque .map-txt { flex-direction: row; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.map-bloque .map-hora { min-width: 2.6rem; font-size: .78rem; }
+.map-bandeja { margin-top: .8rem; padding: .5rem; border: 1px dashed var(--borde); border-radius: 10px; display: flex; flex-direction: column; gap: .3rem; }
+.map-bandeja h4 { margin-top: 0; }
+.map-ruta-tec { flex-wrap: wrap; margin-bottom: .5rem; }
+.map-total { justify-content: space-between; margin-top: .6rem; }
 @media (max-width: 1023px) { .op-ficha { grid-template-columns: 1fr; } }
 
 /* ── Wiki (wk-) y Buscar (bu-) ───────────────────────────────────────── */

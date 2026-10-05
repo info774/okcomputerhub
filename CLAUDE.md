@@ -406,6 +406,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
 - El shell pinta cada navegación en un contenedor nuevo (`.vista`): un
   `pintar()` lento que acaba tarde escribe en el suyo, ya fuera del documento.
 - Leaflet se importa de forma diferida (`import('leaflet')`) solo en `#/mapa`.
+  Desde el 2026-10-05 (paridad bloque 8, tanda 2) el mapa lleva a la derecha
+  el planificador de la app (`mapa/planificador.ts`, `map-`): Día (técnicos
+  fichados con el GPS del fichaje o al lado de su sede, trabajos del día por
+  `fecha_programada` Y por bloque de agenda, tickets), Semana (arrastrar y
+  soltar: un pendiente se planifica a las 9:00 escribiendo la fecha en el
+  trabajo, como el calendario; un bloque se mueve con `hub.agenda_mover` o se
+  quita soltándolo en la bandeja; solo con `trabajos` y `agenda` del hub) y
+  Ruta (vecino más cercano desde `OFICINA` de `calendario/motor.ts`, km en
+  línea recta, enlace a Google Maps). Arnés `verify-mapa-planificador.mjs`.
 - Al entrar se busca el correo de la sesión en `hub.usuarios` (activo): sin
   fila, se cierra la sesión y se avisa. La RLS usa la misma regla
   (`hub.es_usuario()`, `hub.es_admin()`).
