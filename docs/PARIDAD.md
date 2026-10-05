@@ -6,7 +6,7 @@ en que la sustituya. Mientras tanto las dos avanzan en paralelo y la app sigue
 siendo la de uso diario: el hub no la interrumpe ni la molesta (decisión de
 Fran, 2026-10-03).
 
-**Revisado hasta**: `73b8ff6` (2026-10-02) — «WhatsApp: fotos y vídeos del cliente al ticket, con descripción de la IA (#161)».
+**Revisado hasta**: `73b8ff6` (2026-10-02) — «WhatsApp: fotos y vídeos del cliente al ticket, con descripción de la IA (#161)». Comprobado de nuevo el 2026-10-05: la app no tiene commits nuevos en `main` desde entonces.
 
 ## Cómo se usa
 
