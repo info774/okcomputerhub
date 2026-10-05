@@ -1,14 +1,15 @@
-// Los dos chips de abajo a la izquierda (paridad bloque 6; en la app, «↩
-// Deshacer» y «Cambios sin enviar» de la barra): salen solo cuando hay algo.
-//   · ↩ Deshacer: el historial de la sesión (core/deshacer.ts); Ctrl+Z deshace
+// Los dos chips de abajo a la izquierda (paridad bloque 6; en la app,
+// «Deshacer» y «Cambios sin enviar» de la barra): salen solo cuando hay algo.
+//   · Deshacer: el historial de la sesión (core/deshacer.ts); Ctrl+Z deshace
 //     lo último (shell/atajos.ts).
-//   · ☁ N sin enviar: lo guardado sin red (core/cola.ts), con «Reintentar» y
+//   · N sin enviar (icono de nube): lo guardado sin red (core/cola.ts), con «Reintentar» y
 //     «Descartar» para lo que el servidor rechazó. La cola sale sola al volver
 //     la red, al entrar y cada minuto.
 // Valen igual en el shell clásico y en el modo escritorio (van fijos).
 import { registrarAcciones } from '../core/dispatcher';
 import { resolver } from '../core/router';
 import { esc, toast } from '../ui/dom';
+import { ico } from './linea';
 import { historial, deshacer, bloqueadoPor, hayDeshacer } from '../core/deshacer';
 import { operaciones, enviarCola, reintentar, descartar, contarPendientes, refrescar } from '../core/cola';
 
@@ -20,7 +21,7 @@ export function pintarPendientes(raiz: HTMLElement) {
   const caja = document.createElement('div');
   caja.id = 'sis';
   caja.className = 'sis';
-  caja.innerHTML = '<div class="sis-panel" id="sis-panel" hidden></div><div class="sis-chips"><button type="button" class="sis-chip" id="sis-deshacer" data-action="sisDeshacer" hidden>↩ <span>Deshacer</span></button><button type="button" class="sis-chip" id="sis-cola" data-action="sisCola" hidden></button></div>';
+  caja.innerHTML = `<div class="sis-panel" id="sis-panel" hidden></div><div class="sis-chips"><button type="button" class="sis-chip" id="sis-deshacer" data-action="sisDeshacer" aria-label="Deshacer" hidden>${ico('volver')} <span>Deshacer</span></button><button type="button" class="sis-chip" id="sis-cola" data-action="sisCola" hidden></button></div>`;
   raiz.appendChild(caja);
   void refrescar();
   pintarChips();
@@ -34,7 +35,7 @@ function pintarChips() {
   if (hayDeshacer()) d.title = `Deshacer: ${historial()[0].etiqueta} (Ctrl+Z)`;
   c.hidden = !ops.length;
   c.className = `sis-chip ${errores ? 'mal' : 'aviso'}`;
-  c.innerHTML = `☁ <span>${pend ? `${pend} sin enviar` : ''}${pend && errores ? ' · ' : ''}${errores ? `${errores} con fallo` : ''}</span>`;
+  c.innerHTML = `${ico('nube')} <span>${pend ? `${pend} sin enviar` : ''}${pend && errores ? ' · ' : ''}${errores ? `${errores} con fallo` : ''}</span>`;
   c.title = navigator.onLine === false ? 'Sin conexión: se enviará solo al volver la red' : 'Cambios guardados en el móvil';
   if (_panel) pintarPanel();
 }
@@ -67,8 +68,8 @@ export async function deshacerConAviso(id?: number) {
 
 async function enviar(manual = false) {
   const r = await enviarCola();
-  if (r.enviadas) { toast(`☁ ${r.enviadas === 1 ? 'Enviado el cambio' : `Enviados ${r.enviadas} cambios`} guardado${r.enviadas === 1 ? '' : 's'} sin conexión`); resolver(); }
-  if (r.fallidas) toast(`${r.fallidas} cambio${r.fallidas === 1 ? '' : 's'} no se pudo aplicar: míralo en «☁»`, 'error');
+  if (r.enviadas) { toast(`${r.enviadas === 1 ? 'Enviado el cambio' : `Enviados ${r.enviadas} cambios`} guardado${r.enviadas === 1 ? '' : 's'} sin conexión`); resolver(); }
+  if (r.fallidas) toast(`${r.fallidas} cambio${r.fallidas === 1 ? '' : 's'} no se pudo aplicar: míralo en «Cambios sin enviar»`, 'error');
   if (manual && !r.enviadas && !r.fallidas && r.pendientes) toast('Sigue sin haber conexión', 'error');
 }
 

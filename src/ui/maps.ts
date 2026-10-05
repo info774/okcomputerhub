@@ -12,6 +12,7 @@
 import { PLACES_API_KEY } from '../core/config';
 import { registrarAcciones } from '../core/dispatcher';
 import { esc, toast } from './dom';
+import { ico } from '../shell/linea';
 
 export interface Lugar { nombre: string; direccion: string; telefono: string; horario: string; mapsUrl: string; lat?: number; lng?: number; fueraDeTenerife: boolean }
 interface Prediccion { placeId: string; nombre: string; direccion: string }
@@ -88,7 +89,7 @@ export const alElegirLugar = (prefijo: string, fn: (l: Lugar) => void) => { _des
 export const buscadorMaps = (prefijo: string) => `<div class="maps-buscar">
     <input id="${prefijo}-maps-q" type="search" autocomplete="off" placeholder="Nombre del negocio…" aria-label="Buscar en Google Maps"
       data-on-keydown="mapsBuscar:${prefijo}" data-key="Enter" data-prevent="1">
-    <button type="button" class="btn secundario" data-action="mapsBuscar" data-p0="${prefijo}">🔎 Buscar en Google Maps</button></div>
+    <button type="button" class="btn secundario" data-action="mapsBuscar" data-p0="${prefijo}">${ico('buscar')} Buscar en Google Maps</button></div>
   <ul id="${prefijo}-maps-res" class="resultados" aria-live="polite"></ul>`;
 
 registrarAcciones({
@@ -102,8 +103,8 @@ registrarAcciones({
     try { lugares = await buscarLugares(q); }
     catch { ul.innerHTML = '<li class="nota">No se ha podido consultar Google Maps. Inténtalo de nuevo en un momento.</li>'; return; }
     ul.innerHTML = lugares.length
-      ? lugares.map(l => `<li><button type="button" data-action="mapsElegir" data-p0="${esc(prefijo)}" data-p1="${esc(l.placeId)}"><strong>${esc(l.nombre)}</strong> <small class="nota">📍 ${esc(l.direccion)}</small></button></li>`).join('')
-      : `<li class="nota">Sin resultados en Tenerife. Prueba con otro nombre o <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}" target="_blank" rel="noopener">búscalo en Google Maps ↗</a>.</li>`;
+      ? lugares.map(l => `<li><button type="button" data-action="mapsElegir" data-p0="${esc(prefijo)}" data-p1="${esc(l.placeId)}"><strong>${esc(l.nombre)}</strong> <small class="nota">${ico('ubicacion')} ${esc(l.direccion)}</small></button></li>`).join('')
+      : `<li class="nota">Sin resultados en Tenerife. Prueba con otro nombre o <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}" target="_blank" rel="noopener">búscalo en Google Maps ${ico('externo')}</a>.</li>`;
   },
   async mapsElegir(prefijo: string, placeId: string) {
     const l = await detalleLugar(placeId);

@@ -3,6 +3,7 @@
 // Cubre lo que se usa en fichas: títulos, listas, negrita, cursiva, código,
 // enlaces http(s) y párrafos.
 import { esc } from './dom';
+import { ico } from '../shell/linea';
 
 function enLinea(t: string): string {
   return t
@@ -35,7 +36,7 @@ export function markdown(fuente: string | null | undefined): string {
       const tipo = /^\d/.test(t) ? 'ol' : 'ul';
       if (lista !== tipo) { cerrarLista(); out.push(`<${tipo}>`); lista = tipo; }
       const tarea = m[1].match(/^\[( |x)\]\s+(.*)$/i);
-      out.push(tarea ? `<li>${tarea[1].toLowerCase() === 'x' ? '☑' : '☐'} ${enLinea(tarea[2])}</li>` : `<li>${enLinea(m[1])}</li>`);
+      out.push(tarea ? `<li>${ico(tarea[1].toLowerCase() === 'x' ? 'casillaHecha' : 'casilla')} ${enLinea(tarea[2])}</li>` : `<li>${enLinea(m[1])}</li>`);
     } else if (t.startsWith('&gt;')) {
       cerrarParrafo(); cerrarLista();
       out.push(`<blockquote>${enLinea(t.replace(/^&gt;\s?/, ''))}</blockquote>`);

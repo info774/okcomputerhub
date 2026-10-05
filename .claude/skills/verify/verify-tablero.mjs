@@ -3,7 +3,7 @@
 //   · Tablero con corte: nueva (título sacado de la nota), editar y borrar
 //     SOLO las propias, y la nota de voz (graba, `comandas` → transcribir, y
 //     el texto entra en la nota). Micrófono de mentira: un oscilador.
-//   · Chat por ficha: «💬 Chat» en la ficha del trabajo → hub.chat_ficha →
+//   · Chat por ficha: «Chat» en la ficha del trabajo → hub.chat_ficha →
 //     #/chat/<canal> con su nombre y «Abrir la ficha».
 //   npm run build && node .claude/skills/verify/verify-tablero.mjs
 import { servidor, navegador, baseMemoria, preparar, contador, CAPTURAS } from './comun.mjs';
@@ -75,8 +75,8 @@ try {
   await A.page.click('[data-action="chatFicha"]');
   await A.page.waitForSelector('.ch-ficha');
   const rpc = escr(A.base, 'RPC', 'chat_ficha').at(-1)?.cuerpo;
-  ok(rpc?.p_tipo === 'trabajo' && rpc?.p_id === T1 && rpc?.p_nombre === '🔧 Trabajo · #151 Cambiar router' && rpc?.p_ruta === '#/trabajos/151', 'chat por ficha: pide el canal del trabajo con su nombre y su ruta');
-  ok(A.page.url().endsWith('#/chat/cf000000-0000-0000-0000-000000000001') && (await A.page.textContent('.ch-cab h3')).includes('🔧 Trabajo · #151 Cambiar router'), 'chat por ficha: abre la conversación del canal');
+  ok(rpc?.p_tipo === 'trabajo' && rpc?.p_id === T1 && rpc?.p_nombre === 'Trabajo · #151 Cambiar router' && rpc?.p_ruta === '#/trabajos/151', 'chat por ficha: pide el canal del trabajo con su nombre y su ruta');
+  ok(A.page.url().endsWith('#/chat/cf000000-0000-0000-0000-000000000001') && (await A.page.textContent('.ch-cab h3')).includes('Trabajo · #151 Cambiar router'), 'chat por ficha: abre la conversación del canal');
   ok(await A.page.getAttribute('.ch-ficha', 'href') === '#/trabajos/151', 'chat por ficha: «Abrir la ficha» vuelve al trabajo');
   await A.page.fill('#ch-texto', 'Llevo yo el router');
   await A.page.click('.ch-escribir button[type=submit]');

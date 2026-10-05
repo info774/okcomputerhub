@@ -4,7 +4,7 @@ import { esc } from '../ui/dom';
 
 const CLAVE = 'hub_tour_visto';
 const PASOS: { sel: string; texto: string }[] = [
-  { sel: '#menu', texto: 'El menú, por grupos. Lo marcado con ↗ sigue en la app actual y se abre en otra pestaña.' },
+  { sel: '#menu', texto: 'El menú, por grupos. Lo marcado con la flecha de salida sigue en la app actual y se abre en otra pestaña.' },
   { sel: '#buscador-btn', texto: 'Ctrl+K: busca pantallas o datos, pregunta a los documentos o pide algo a Claude (Tab cambia de modo).' },
   { sel: '#pantalla-explicacion', texto: 'Cada pantalla empieza con un párrafo que explica qué es y de dónde salen sus datos.' },
   { sel: '#tema-btn', texto: 'Tema día o noche.' },

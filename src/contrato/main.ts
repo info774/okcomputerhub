@@ -5,6 +5,7 @@
 // (tarjeta o SEPA por Stripe, cuando esté conectado), se ofrece aquí mismo.
 import '../portal/portal.css';
 import './contrato.css';
+import { ico, type IconoLinea } from '../shell/linea';
 import { FUNCIONES_URL, SUPABASE_ANON_KEY } from '../core/config';
 import { esc } from '../ui/dom';
 
@@ -29,9 +30,9 @@ function centrado(ico: string, tono: 'bien' | 'mal' | 'aviso', titulo: string, t
 }
 
 const euros = (n: number) => Number(n).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
-const METODO: Record<string, { titulo: string; sub: string; ico: string }> = {
-  card: { titulo: 'Pagar con tarjeta', sub: 'Se cobra en cuanto la registras. Las cuotas siguientes se cargan en la misma tarjeta.', ico: '💳' },
-  sepa: { titulo: 'Domiciliar por SEPA', sub: 'Introduces tu IBAN y firmas el mandato. El recibo se confirma en unos días.', ico: '🏦' },
+const METODO: Record<string, { titulo: string; sub: string; ico: IconoLinea }> = {
+  card: { titulo: 'Pagar con tarjeta', sub: 'Se cobra en cuanto la registras. Las cuotas siguientes se cargan en la misma tarjeta.', ico: 'tarjeta' },
+  sepa: { titulo: 'Domiciliar por SEPA', sub: 'Introduces tu IBAN y firmas el mandato. El recibo se confirma en unos días.', ico: 'banco' },
 };
 
 // Segundo paso, con el contrato firmado: pagar la primera cuota. «Ahora no» no
@@ -45,7 +46,7 @@ function vistaPago(p: Pago, titulo = '¡Contrato firmado!') {
     <p>Ya solo queda un paso: elige cómo quieres pagar la cuota de mantenimiento ${p.plan ? `<strong>${esc(p.plan)}</strong>` : ''}${p.sede ? ` de ${esc(p.sede)}` : ''}.
       Primera cuota (${esc((p.frecuencia ?? 'Mensual').toLowerCase())}): ${desglose}${porMeses}.</p>
     <p class="po-nota">Los datos de pago se introducen en la página segura de Stripe: nosotros no vemos ni guardamos tu tarjeta ni tu IBAN.</p>
-    <div class="ct-metodos">${metodos.map(m => `<button class="po-btn ct-metodo" data-metodo="${m}"><span aria-hidden="true">${METODO[m].ico}</span>
+    <div class="ct-metodos">${metodos.map(m => `<button class="po-btn ct-metodo" data-metodo="${m}"><span aria-hidden="true">${ico(METODO[m].ico)}</span>
       <span><strong>${METODO[m].titulo}</strong><small>${METODO[m].sub}</small></span></button>`).join('')}
       <button class="po-btn sec" id="ct-luego">Ahora no</button></div>
     <p class="po-mal" id="ct-pago-err" role="alert"></p></div>${PIE}</main>`;

@@ -159,7 +159,7 @@ try {
   for (let i = 0; i < 20; i++) await pp.mouse.move(box.x + 20 + i * 12, box.y + 40 + (i % 5) * 15);
   await pp.mouse.up();
   await pp.click('#fr-form button[type=submit]');
-  await pp.waitForSelector('text=✅ Firmado');
+  await pp.waitForSelector('h1:has-text("Firmado")');
   const fr = firmas.find(x => x.accion === 'firmar');
   ok(fr?.hash === 'a'.repeat(64) && fr.nombre === 'Marta' && fr.firma.startsWith('data:image/png;base64,'), 'firmar: manda la huella, el nombre y la firma en PNG');
   ok(await pp.evaluate(() => document.documentElement.scrollWidth) <= 390, 'firmar: móvil sin scroll horizontal');

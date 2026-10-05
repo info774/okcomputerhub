@@ -10,6 +10,7 @@ import { ir } from '../core/router';
 import { esc, hace, toast } from '../ui/dom';
 import { esAdmin } from '../core/estado';
 import { dejarBorrador } from '../ui/borrador';
+import { ico } from './linea';
 
 interface Conv {
   id: string; telefono: string; nombre: string; perfil: string | null; sede: string | null;
@@ -106,7 +107,7 @@ function pintarResumen() {
 }
 
 // El conector del Agente de Meta (solo admin): ver dónde apunta y, tras el cambio, repuntarlo al hub.
-const pieAgente = () => esAdmin() ? '<button type="button" class="wa-agente-b" data-action="waAgente">🤖 Agente de Meta</button>' : '';
+const pieAgente = () => esAdmin() ? `<button type="button" class="wa-agente-b" data-action="waAgente">${ico('robot')} Agente de Meta</button>` : '';
 
 function pintarLista() {
   const el = $id('wa-lista')!;
@@ -198,12 +199,12 @@ function pintarAtajos() {
   const c = actual!;
   const el = $id('wa-atajos')!;
   el.innerHTML = [
-    c.cliente_id ? `<a class="chip-boton" href="#/clientes/${esc(c.cliente_id)}">👤 Cliente</a>` : '<span class="chip aviso" title="El teléfono no está en ninguna ficha">Sin cliente</span>',
-    c.local_id ? `<a class="chip-boton" href="#/sitios/${esc(c.local_id)}">📍 Sede</a>${chipPlan(c)}` : '',
-    c.local_id ? '<button type="button" class="chip-boton" data-action="waRemoto">🖥 Remoto</button>' : '',
-    '<button type="button" class="chip-boton" data-action="waTicket">🎫 Ticket</button>',
-    c.cliente_id ? '<button type="button" class="chip-boton" data-action="waPresupuesto">📄 Presupuesto</button>' : '',
-    c.cliente_id && envio ? '<button type="button" class="chip-boton" data-action="waDocumentos" aria-expanded="false">📎 Factura / presupuesto</button>' : '',
+    c.cliente_id ? `<a class="chip-boton" href="#/clientes/${esc(c.cliente_id)}">${ico('persona')} Cliente</a>` : '<span class="chip aviso" title="El teléfono no está en ninguna ficha">Sin cliente</span>',
+    c.local_id ? `<a class="chip-boton" href="#/sitios/${esc(c.local_id)}">${ico('ubicacion')} Sede</a>${chipPlan(c)}` : '',
+    c.local_id ? `<button type="button" class="chip-boton" data-action="waRemoto">${ico('monitor')} Remoto</button>` : '',
+    `<button type="button" class="chip-boton" data-action="waTicket">${ico('etiqueta')} Ticket</button>`,
+    c.cliente_id ? `<button type="button" class="chip-boton" data-action="waPresupuesto">${ico('documento')} Presupuesto</button>` : '',
+    c.cliente_id && envio ? `<button type="button" class="chip-boton" data-action="waDocumentos" aria-expanded="false">${ico('adjunto')} Factura / presupuesto</button>` : '',
   ].filter(Boolean).join('');
 }
 
@@ -217,7 +218,7 @@ function cerrarPanel() {
   if (p) { p.hidden = true; p.innerHTML = ''; }
 }
 
-// El último mensaje de TEXTO del cliente, de arranque del aviso (una foto solo aporta «📷 Foto»).
+// El último mensaje de TEXTO del cliente, de arranque del aviso (una foto solo aporta «Foto»).
 function ultimoTextoCliente(): string {
   return [...mensajes].reverse().find(m => m.direccion === 'entrante' && m.texto && !m.media_id)?.texto ?? '';
 }
@@ -236,7 +237,7 @@ function pintarOki(propuesta?: string | null, motivo?: string) {
   if (!c.ventana) {
     el.innerHTML = plantilla
       ? `<div class="wa-plantilla"><p class="wa-nota">Han pasado más de 24 h desde su último mensaje: WhatsApp solo deja mandarle la plantilla para retomar la conversación.</p>
-         <button type="button" class="btn secundario" data-action="waPlantilla">📨 Mandar plantilla</button></div>`
+         <button type="button" class="btn secundario" data-action="waPlantilla">${ico('enviar')} Mandar plantilla</button></div>`
       : '<p class="wa-nota">Fuera de las 24 h hace falta una plantilla de Meta, y aún no está puesta en el hub (WHATSAPP_PLANTILLA_TEXTO).</p>';
     return;
   }
@@ -273,10 +274,10 @@ function pintarMensajes() {
     const adjunto = m.media_url
       ? (m.tipo === 'image'
         ? `<a href="${esc(m.media_url)}" target="_blank" rel="noopener"><img class="wa-foto" src="${esc(m.media_url)}" alt="Foto del cliente" loading="lazy"></a>${desc}`
-        : `<a href="${esc(m.media_url)}" target="_blank" rel="noopener">${m.tipo === 'video' ? '🎬' : '📎'} ${esc(m.media_nombre || `Ver ${etiqueta}`)}</a>${desc}`)
+        : `<a href="${esc(m.media_url)}" target="_blank" rel="noopener">${ico(m.tipo === 'video' ? 'video' : 'adjunto')} ${esc(m.media_nombre || `Ver ${etiqueta}`)}</a>${desc}`)
       : m.direccion === 'entrante' && m.media_id
-        ? `<button type="button" class="chip-boton" data-action="waMedia" data-p0="${esc(m.id)}">${m.tipo === 'image' ? '🖼' : '📎'} Ver ${etiqueta}</button>${desc}`
-        : m.media_nombre ? `📎 ${esc(m.media_nombre)}` : '';
+        ? `<button type="button" class="chip-boton" data-action="waMedia" data-p0="${esc(m.id)}">${ico(m.tipo === 'image' ? 'imagen' : 'adjunto')} Ver ${etiqueta}</button>${desc}`
+        : m.media_nombre ? `${ico('adjunto')} ${esc(m.media_nombre)}` : '';
     const texto = m.texto ? esc(m.texto) : (adjunto ? '' : `[${esc(m.tipo)}]`);
     const nuevo = !primera && !_vistos.has(m.id);
     return `${sep}<div class="wa-msg ${m.direccion === 'saliente' ? 'yo' : 'ellos'}${m.estado === 'fallido' ? ' fallido' : ''}${nuevo ? ' nuevo' : ''}">
@@ -396,14 +397,14 @@ registrarAcciones({
     el.innerHTML = '<p class="wa-vacio"><span class="hex-punto pulso" aria-hidden="true"></span> Mirando el Agente de Meta…</p>';
     const { data: r, error } = await llamarFuncion<any>('whatsapp', { accion: 'meta_conector_estado' }, 40000);
     if (!$id('wa-lista') || actual) return;
-    const ETQ: Record<string, string> = { active: '✅ activa', pending_review: '⏳ en revisión', blocked: '⛔ bloqueada', falta: '— sin instalar' };
+    const ETQ: Record<string, string> = { active: `${ico('hecho')} activa`, pending_review: `${ico('espera')} en revisión`, blocked: `${ico('prohibido')} bloqueada`, falta: '— sin instalar' };
     const enHub = String(r?.base_url ?? '').includes('adomalsxsymxzuozksmt');
     const detalle = error || !r?.ok ? `<p class="wa-err">${esc(error ?? r?.error ?? 'Sin respuesta')}</p>`
       : !r.registrado ? '<p class="wa-nota">El conector todavía no está dado de alta en el Agente de Meta.</p>'
         : `<p class="wa-nota">Apunta a <b>${enHub ? 'el hub' : 'la app'}</b>. Conexión: <b>${esc(r.conexion?.status ?? '—')}</b> · herramientas: <b>${esc(r.herramientas?.status ?? '—')}</b> (${esc(r.herramientas?.tool_count ?? 0)})</p>`;
     const skills = (r?.skills ?? []).map((x: any) => `<li><code>${esc(x.title)}</code> ${ETQ[x.status] ?? esc(x.status)}</li>`).join('');
     el.innerHTML = `<div class="wa-agente"><button type="button" class="wa-volver" data-action="waAgenteVolver" aria-label="Volver a las conversaciones">‹</button>
-      <h4>🤖 Agente de Meta</h4>${detalle}${skills ? `<p class="wa-nota">Skills:</p><ul>${skills}</ul>` : ''}
+      <h4>${ico('robot')} Agente de Meta</h4>${detalle}${skills ? `<p class="wa-nota">Skills:</p><ul>${skills}</ul>` : ''}
       <button type="button" class="btn secundario" data-action="waAgenteActualizar">${r?.registrado ? 'Actualizar conector y skills' : 'Dar de alta conector y skills'}</button>
       <p class="wa-nota">Solo se puede con el cambio de WhatsApp hecho: entonces el agente pasa a usar las herramientas del hub.</p></div>`;
   },
@@ -460,7 +461,7 @@ registrarAcciones({
     if (error || data?.motivo || !_docs.length) { abrirPanel(`<p class="wa-nota">${esc(error ?? data?.motivo ?? 'Este cliente no tiene facturas ni presupuestos en Zoho.')}</p>`); return; }
     const aviso = !c.ventana ? `<p class="wa-nota">${data?.plantilla ? 'Fuera de las 24 h: saldrá con la plantilla de documentos de Meta.' : 'Fuera de las 24 h hace falta la plantilla de documentos de Meta, y aún no está puesta en el hub (WHATSAPP_PLANTILLA_DOCUMENTO).'}</p>` : '';
     abrirPanel(`<p class="wa-nota">Mandar por WhatsApp a ${esc(c.nombre)}:</p>${aviso}<div class="wa-docs">${_docs.map((d, i) => `
-      <button type="button" class="btn secundario" data-action="waMandarDoc" data-p0="${i}" ${!c.ventana && !data?.plantilla ? 'disabled' : ''}>${d.tipo === 'factura' ? '🧾 Factura' : '📄 Presupuesto'} ${esc(d.numero)}</button>`).join('')}</div>`);
+      <button type="button" class="btn secundario" data-action="waMandarDoc" data-p0="${i}" ${!c.ventana && !data?.plantilla ? 'disabled' : ''}>${d.tipo === 'factura' ? `${ico('recibo')} Factura` : `${ico('documento')} Presupuesto`} ${esc(d.numero)}</button>`).join('')}</div>`);
   },
   async waMandarDoc(i: string) {
     const d = _docs[Number(i)], c = actual;

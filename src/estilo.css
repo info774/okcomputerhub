@@ -1111,3 +1111,13 @@ details > summary { cursor: pointer; }
 .sis-panel li.mal { border-color: var(--mal); }
 body.os-modo .sis { bottom: 108px; }
 @media (max-width: 767px) { .sis-chip span { display: none; } body.menu-abierto .sis { display: none; } }
+
+/* ---- Sin emojis: hexágono de la pantalla en baldosas y paleta (shell, inicio) ----
+   Las baldosas de Inicio y la paleta Ctrl+K pintan el icono del dock
+   (iconoHex) en vez del emoji del módulo; el tono de la baldosa tiñe el hexágono. */
+.baldosa-hex { grid-area: icono; display: inline-flex; align-items: center; }
+.baldosa-hex .os-ico { width: 32px; height: auto; display: block; }
+.baldosa[data-tono="bien"] .baldosa-hex .os-ico-hex { fill: var(--bien-fondo); }
+.baldosa[data-tono="aviso"] .baldosa-hex .os-ico-hex { fill: var(--aviso-fondo); }
+.baldosa[data-tono="mal"] .baldosa-hex .os-ico-hex { fill: var(--mal-fondo); }
+.bus-ico { width: 26px; height: auto; flex: none; display: block; }

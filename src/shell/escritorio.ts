@@ -31,7 +31,7 @@ import { urgentesDe, diceHTML, pintarEstadisticas, vozHTML, ordenesHTML } from '
 import { pintarPantalla } from './pantalla';
 import { abrirBuscador } from './buscador';
 import { iconoHex } from './iconos';
-import { svgLinea as svgBarra } from './linea';
+import { svgLinea as svgBarra, ico } from './linea';
 import { instalarDock, trasPintar, cargarFijas, fijas, fijar, quitar, rebotar } from './dock';
 
 const CLAVE_ACTIVO = 'hub_escritorio';
@@ -260,7 +260,7 @@ function pintarLanzador() {
   const lista = visibles();
   const grupo = (titulo: string, ms: Modulo[]) => ms.length ? `<div class="os-ltit"><i class="hex-punto"></i>${esc(titulo)}</div>
     <div class="os-lgrid">${ms.map(m => `<a class="os-litem ${m.enlaceExterno ? 'ext' : ''}" href="${esc(hrefDe(m))}"${m.enlaceExterno ? ' target="_blank" rel="noopener"' : ` data-mod="${esc(m.id)}" draggable="false"`} data-action="osLanzador" data-p0="0">
-      ${m.enlaceExterno ? `<span class="hex" aria-hidden="true">${esc(m.icono)}</span>` : iconoHex(m.id === 'inicio' ? 'oki' : m.id, m.titulo, m.id === 'inicio' ? 'os-ico-oki' : '')}<span>${esc(m.titulo)}<small>${esc(m.enlaceExterno ? 'abre la app actual' : m.grupo)}</small></span></a>`).join('')}</div>` : '';
+      ${iconoHex(m.id === 'inicio' ? 'oki' : m.id, m.titulo, m.id === 'inicio' ? 'os-ico-oki' : '')}<span>${esc(m.titulo)}<small>${esc(m.enlaceExterno ? 'abre la app actual' : m.grupo)}</small></span></a>`).join('')}</div>` : '';
   document.querySelector('#os-lanzador .os-lanzador-panel')!.innerHTML =
     '<p class="nota os-lnota">Arrastra una pantalla al dock para dejarla fija, o clic derecho → «Mantener en el dock».</p>'
     + grupo('Del hub', lista.filter(delHub)) + grupo('En la app actual', lista.filter(m => !delHub(m)));
@@ -858,7 +858,7 @@ async function widgetAvisos() {
   badge.textContent = String(n); badge.hidden = !n;
   el.innerHTML = error && !lista.length ? `<p class="nota mal">No se pudieron leer: ${esc(error.message)}</p>`
     : lista.slice(0, 5).map(a => `<div class="os-fila"><span class="os-punto g-${esc(a.gravedad)}"></span><span class="os-n"><b>${esc(a.titulo.replace(/^[^:]+: /, ''))}</b>${a.detalle ? `<br><small>${esc(a.detalle)}</small>` : ''}</span>${a.importe ? `<span class="os-num">${eur(a.importe)}</span>` : ''}</div>`).join('')
-      || '<p class="nota">✅ Nada pendiente.</p>';
+      || `<p class="nota">${ico('hecho')} Nada pendiente.</p>`;
   if (!document.getElementById('os-avisos')!.hidden) pintarCentroAvisos();
 }
 
@@ -952,7 +952,7 @@ function pintarCentroAvisos() {
   const tipos = [...new Set(base.map(a => a.tipo))];
   const nuevos = _avisos.filter(a => _nuevosAv.has(a.clave)).length;
   const fila = (a: Aviso) => {
-    const g = GRUPOS[a.tipo] ?? { nombre: a.tipo, icono: '' };
+    const g = GRUPOS[a.tipo] ?? { nombre: a.tipo };
     const p = AVISO_PANTALLA[a.tipo];
     const interno = a.enlace?.startsWith('#');
     const accion = !a.enlace ? '' : a.enlace.includes('zoho.eu') ? 'Abrir en Zoho' : interno ? (p?.accion ?? 'Abrir') : 'Abrir en la app';
