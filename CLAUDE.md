@@ -359,6 +359,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `modules/verifactu.js` de la app, cambiarlas ahí. Espejo `hub.verifactu_sedes`
   (auditado en la app, va por el incremental). Quitar del tablero, solo admin.
   Arnés `verify-verifactu.mjs`.
+- **Control de equipos** (paridad bloque 7, tanda 4; decisión de Fran: verlo
+  ya, la pasada propia preparada sin encender): Monitorización → «Software
+  obligatorio» (`monitorizacion/control.ts`, `mce-`) y la sección de la sede,
+  sobre el espejo `hub.equipos_control` (área `equipos`; la app no lo audita:
+  llega en la nocturna y en `hub-equipos-control` a las 6:40 UTC, tras su
+  comprobación de las 6:10). La función `control-equipos` del hub (SIN_JWT,
+  token del cron o admin) está portada de la app pero lee Breeze por las
+  vistas `hub.rmm_*`; con el área de la app contesta `omitido`. Su cron se
+  pone con el corte. Arnés `verify-control-equipos.mjs`.
 - Firmas: lo firmado es inmutable (trigger `hub.firma_antes`); solo
   `hub.firma_firmar` (service_role, con la huella) lo pasa a firmado.
 - Ficheros privados (Storage, cubo `gastos`): los sube y firma URLs

@@ -144,7 +144,7 @@ try {
     }
   }
   ok(huellaPublic() === antes, 'public (Breeze) queda igual');
-  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '11', 'once tareas de pg_cron (con el aviso de trabajos en una hora), sin duplicar');
+  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '12', 'doce tareas de pg_cron (con la copia del control de equipos), sin duplicar');
 
   // ── Permisos y RLS ─────────────────────────────────────────────────────
   ok(!psql(como('anon', null, 'select count(*) from hub.clientes;'), { esperaError: true }).ok, 'anon no entra en hub');
@@ -631,6 +631,7 @@ try {
   ok(!psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_guardar_lineas('${tr}', '[]');`), { esperaError: true }).ok, 'final: sin el corte, el material tampoco');
   ok(!psql(como('authenticated', 'tito@ok.test', `select hub.inventario_entradas(gen_random_uuid(), '[{"nombre":"x","cantidad":1}]');`), { esperaError: true }).ok, 'inventario: sin el corte, el albarán no entra');
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.verifactu_sedes (local_id) values (gen_random_uuid());`), { esperaError: true }).ok, 'verifactu: sin el corte, el tablero no se toca');
+  ok(!psql(como('authenticated', 'ana@ok.test', `insert into hub.equipos_control (clave) values ('pc-1');`), { esperaError: true }).ok, 'equipos: sin el corte, el control de equipos es solo lectura');
   psql(`insert into hub.trabajos (id, numero, titulo, estado, fecha_programada) values ('00000000-0000-0000-0000-0000000000e2', 699, 'Copia de la app', 'Pendiente', current_date)`);
   ok(psql(`select count(*) from hub.agenda where trabajo_id = '00000000-0000-0000-0000-0000000000e2'`) === '0', 'paridad: sin el corte, una fecha en el trabajo no crea bloque (la agenda la trae el espejo)');
   // Chat

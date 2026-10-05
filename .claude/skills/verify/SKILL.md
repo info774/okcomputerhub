@@ -269,6 +269,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   ficha con casillas y auditoría, «Cargar sedes con TPV» con el carril por el
   NIF, quitar solo admin).
 
+- `verify-control-equipos.mjs`: bloque 7, tanda 4: «Software obligatorio» de
+  Monitorización y la sección de la sede (área de la app: solo lectura; del
+  hub: ignorar, asignar sede a mano y «Comprobar ahora» con la función
+  SIMULADA).
+
 `npm run verify` pasa todos los de la lista.
 
 ## Pantalla nueva
