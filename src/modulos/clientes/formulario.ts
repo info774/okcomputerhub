@@ -46,6 +46,8 @@ export async function crearCliente(cuerpo: Record<string, unknown>): Promise<{ i
   const nuevo = r.data?.[0];
   if (r.error || !nuevo) return { error: `No se pudo crear: ${r.error?.message ?? 'sin respuesta'}` };
   const z = await llamarFuncion<{ zoho_id: string; reutilizado?: boolean }>('clientes', { accion: 'zoho_alta', cliente_id: nuevo.id }, 40000);
+  // Y a Google Contactos, como la app (sin esperar: si falla, el alta vale igual).
+  void llamarFuncion('google', { accion: 'contacto', cliente_id: nuevo.id });
   return { id: nuevo.id, zoho: z.error ? `no se dio de alta en Zoho: ${z.error}` : z.data?.reutilizado ? 'enlazado con su contacto de Zoho' : 'dado de alta en Zoho' };
 }
 
@@ -125,6 +127,7 @@ registrarAcciones({
       if (document.getElementById('cf-zoho')) cuerpo.zoho_id = val('cf-zoho') || null;
       const r = await API.patch('clientes', { id: `eq.${_id}` }, cuerpo);
       if (r.error) { toast(`No se pudo guardar: ${r.error.message}`, 'error'); return; }
+      void llamarFuncion('google', { accion: 'contacto', cliente_id: _id });
       toast('Cliente guardado');
       ir('clientes', _id);
       return;

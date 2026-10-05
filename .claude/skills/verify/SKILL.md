@@ -274,6 +274,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   hub: ignorar, asignar sede a mano y «Comprobar ahora» con la función
   SIMULADA).
 
+- `verify-google.mjs`: bloque 7, tanda 5: capa de Google Calendar del
+  calendario (eventos escapados, todo el día con fin exclusivo, apagar y
+  recordar, aviso sin permiso), «Drive» en las fichas y Contactos al guardar un
+  cliente (función `google` SIMULADA; drive.google.com interceptado).
+
 `npm run verify` pasa todos los de la lista.
 
 ## Pantalla nueva

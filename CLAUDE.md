@@ -368,6 +368,16 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   token del cron o admin) está portada de la app pero lee Breeze por las
   vistas `hub.rmm_*`; con el área de la app contesta `omitido`. Su cron se
   pone con el corte. Arnés `verify-control-equipos.mjs`.
+- **Google** (paridad bloque 7, tanda 5): función `google` (con sesión) sobre la
+  cuenta de servicio y la delegación de dominio (`_shared/google.ts`), nunca el
+  OAuth de cada persona: `calendario` (SOLO LECTURA, calendar.readonly: el de
+  info@ y el de quien tenga correo de la empresa; sin el permiso devuelve
+  `falta_permiso` y el calendario lo dice), `contacto` (Contactos de info@ y
+  `google_contact_id`; 409 mientras `clientes` sea de la app) y `carpeta`
+  (Drive: cliente → sede por nombre en la carpeta compartida de la empresa).
+  Capa en el calendario (casilla «Google», `hub_ca_google`; los de todo el día
+  con fin EXCLUSIVO) y «Drive» en las fichas (`ui/drive.ts`, abre la pestaña en
+  el mismo gesto). Arnés `verify-google.mjs`.
 - Firmas: lo firmado es inmutable (trigger `hub.firma_antes`); solo
   `hub.firma_firmar` (service_role, con la huella) lo pasa a firmado.
 - Ficheros privados (Storage, cubo `gastos`): los sube y firma URLs

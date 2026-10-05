@@ -13,6 +13,7 @@ import { esc, hace, fechaHora, toast } from '../../ui/dom';
 import { eur, enApp, telWhatsApp } from '../ventas/datos';
 import { esqueleto } from '../../ui/esqueleto';
 import { enlaceHistorial } from '../../ui/historial';
+import { botonDrive } from '../../ui/drive';
 import { ico } from '../../shell/linea';
 
 interface Sitio {
@@ -244,7 +245,7 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
     <div class="tarjeta-cab"><h2>${esc(l.nombre)}${l.activo === false ? ' <span class="chip mal">De baja</span>' : ''}</h2>
       <div class="acciones">${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">${ico('mapa')} Cómo llegar</a>` : ''}
         <button class="btn secundario" data-action="siRemoto" data-p0="${esc(l.id)}">${ico('monitor')} Remoto</button>
-        ${botones}${enlaceHistorial('locales', l.id)}</div></div>
+        ${botones}${botonDrive('local', l.id)}${enlaceHistorial('locales', l.id)}</div></div>
     <div id="si-rem-lista" class="tarjeta acciones" hidden></div>
     ${l.activo === false ? `<p class="aviso">Este sitio está DE BAJA: no sale en listados ni buscadores. No se ha borrado nada.</p>` : ''}
     <p class="nota">${cliente ? `<a href="#/clientes/${esc(l.cliente_id)}">${esc(cliente)}</a>` : 'Sin cliente'}${l.direccion ? ` · ${esc(l.direccion)}` : ''} ${chipPago(SIN_MANT(l.plan) ? null : l.estado_pago)}</p>

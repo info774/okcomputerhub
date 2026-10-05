@@ -16,6 +16,7 @@ import { esc, toast } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { nombresClientes } from '../ventas/datos';
 import { pintarCita } from './cita';
+import { llamarFuncion } from '../../core/funciones';
 import {
   type Ev, type Coords, type Pendiente, type Hueco, dia, horaDe, durMin, durCorta, horaTexto,
   solapes, trasladosDelDia, cargaDia, buscarHueco, mismaPersona, deTecnico,
@@ -48,6 +49,24 @@ let _hueco: Hueco | null = null;
 let _escribe = false;
 let _arrastra: string | null = null;     // id de bloque o «pend-<trabajo>»
 let _ses: any[] = [];
+// Capa de Google Calendar (paridad bloque 7, tanda 5): SOLO LECTURA, por la
+// función `google` (el calendario de la empresa y el tuyo si tienes correo de
+// la empresa). Nunca se escribe nada en Google.
+interface GEv { id: string; calendario: string; titulo: string; ubicacion: string; inicio: string; fin: string; todoDia: boolean; enlace: string }
+let _google: GEv[] = [];
+let _googleMsg = '';
+// Los de todo el día acaban el día DESPUÉS (Google da el fin exclusivo).
+const gDia = (ds: string) => _google.filter(g => { const i = g.inicio.slice(0, 10), f = g.fin.slice(0, 10); return i <= ds && (g.todoDia ? ds < f : ds <= f); });
+const gHora = (g: GEv) => g.todoDia ? 'Todo el día' : `${hhmm(new Date(g.inicio))}–${hhmm(new Date(g.fin))}`;
+const gTarjeta = (g: GEv) => `<a class="ca-google" href="${esc(g.enlace)}" target="_blank" rel="noopener" title="Google Calendar (${esc(g.calendario)}) · solo lectura">
+  <span class="chip">Google</span> <strong>${esc(gHora(g))}</strong> ${esc(g.titulo)}${g.ubicacion ? `<small class="nota">${esc(g.ubicacion)}</small>` : ''}</a>`;
+async function cargarGoogle(desde: Date, hasta: Date) {
+  _google = []; _googleMsg = '';
+  const r = await llamarFuncion<{ eventos: GEv[]; error?: string; mensaje?: string }>('google', { accion: 'calendario', desde: desde.toISOString(), hasta: hasta.toISOString() }, 25000);
+  if (r.error) { _googleMsg = 'Google Calendar no contestó.'; return; }
+  _google = Array.isArray(r.data?.eventos) ? r.data!.eventos : [];
+  if (r.data?.mensaje) _googleMsg = r.data.mensaje;
+}
 
 function rango(v: Vista, f: Date): [Date, Date] {
   if (v === 'dia') return [new Date(f), new Date(f.getTime() + DIA_MS)];
@@ -163,7 +182,8 @@ function vistaSemana(evs: Ev[], desde: Date, solapa: Set<string>, tras: Map<stri
     return `<section class="tarjeta ca-dia ${ds === hoy ? 'ca-hoy' : ''}" data-dia="${ds}" ${_escribe ? `data-on-dragover="caSobre:$this" data-prevent="1" data-on-dragleave="caFuera:$this" data-on-drop="caSoltarDia:${ds}"` : ''}>
       <h3><button class="ca-ir-dia" data-action="caIrDia" data-p0="${ds}">${esc(d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }))}</button></h3>
       ${cargaHtml(evs, ds, equipo)}
-      ${evs.filter(e => dia(e.inicio) === ds).map(e => tarjeta(e, solapa, tras)).join('') || '<p class="vacio col-vacia">—</p>'}
+      ${evs.filter(e => dia(e.inicio) === ds).map(e => tarjeta(e, solapa, tras)).join('') || (gDia(ds).length ? '' : '<p class="vacio col-vacia">—</p>')}
+      ${gDia(ds).map(gTarjeta).join('')}
       ${_ses.filter(s => dia(new Date(s.inicio)) === ds && (filtro === 'todo' || (filtro === 'mios' ? mismaPersona(s.tecnico_nombre ?? '', usuario()?.nombre ?? '') : mismaPersona(s.tecnico_nombre ?? '', filtro)))).map(real).join('')}</section>`;
   }).join('')}</div>`;
 }
@@ -173,7 +193,7 @@ function vistaDia(evs: Ev[], f: Date, solapa: Set<string>, tras: Map<string, str
   const cols = [...equipo.map(n => ({ nombre: n, sin: false })), { nombre: '', sin: true }];
   const horas = Array.from({ length: H1 - H0 }, (_, i) => H0 + i);
   const hueco = _hueco && _hueco.fecha === ds ? _hueco : null;
-  return `<div class="tarjeta ca-rejilla-caja mo-scroll">${cargaHtml(evs, ds, equipo)}
+  return `${gDia(ds).length ? `<div class="ca-google-dia">${gDia(ds).map(gTarjeta).join('')}</div>` : ''}<div class="tarjeta ca-rejilla-caja mo-scroll">${cargaHtml(evs, ds, equipo)}
     <div class="ca-rejilla" style="--cols:${cols.length}">
       <div class="ca-horas"><div class="ca-col-cab"></div>${horas.map(h => `<div class="ca-hora" style="height:${PX}px">${String(h).padStart(2, '0')}:00</div>`).join('')}</div>
       ${cols.map(c => {
@@ -225,7 +245,7 @@ function vistaAgenda(evs: Ev[], f: Date, equipo: string[]): string {
             <small class="nota">${esc([e.cliente, e.sede, e.tecnicos.join(', ') || 'Sin técnico', e.estado].filter(Boolean).join(' · '))}</small>
             ${tras.get(e.key) ? `<small class="${tras.get(e.key)!.includes('tarde') ? 'g-mal' : 'nota'}">${ico('coche')} ${esc(tras.get(e.key)!)}</small>` : ''}</span>
           ${c ? `<a class="btn secundario" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" target="_blank" rel="noopener">${ico('mapa')} Cómo llegar</a>` : ''}</li>`;
-      }).join('')}</ul>` : '<p class="vacio">Nada planificado.</p>'}</section>`;
+      }).join('')}</ul>` : gDia(ds).length ? '' : '<p class="vacio">Nada planificado.</p>'}${gDia(ds).length ? `<div class="ca-google-dia">${gDia(ds).map(gTarjeta).join('')}</div>` : ''}</section>`;
   }).join('');
 }
 
@@ -238,7 +258,8 @@ function vistaMes(evs: Ev[], f: Date): string {
       return `<button class="ca-mes-dia${d.getMonth() !== f.getMonth() ? ' fuera' : ''}${ds === hoy ? ' ca-hoy' : ''}" data-action="caIrDia" data-p0="${ds}">
         <span class="ca-mes-num">${d.getDate()}</span>
         ${del.slice(0, 3).map(e => `<span class="ca-mes-ev" style="border-left-color:${color(e.tecnicos[0] ?? '')}">${e.todoDia ? '' : hhmm(e.inicio)} ${esc(e.titulo)}</span>`).join('')}
-        ${del.length > 3 ? `<span class="nota">+${del.length - 3} más</span>` : ''}</button>`;
+        ${del.length > 3 ? `<span class="nota">+${del.length - 3} más</span>` : ''}
+        ${gDia(ds).slice(0, 2).map(g => `<span class="ca-mes-ev ca-mes-google">${g.todoDia ? '' : hhmm(new Date(g.inicio))} ${esc(g.titulo)}</span>`).join('')}</button>`;
     }).join('')}</div>`;
 }
 
@@ -279,7 +300,9 @@ export async function pintar(el: HTMLElement, params: string[] = []) {
   const filtro = leer('hub_ca_filtro', 'todo');
   const conTraslados = leer('hub_ca_traslados', '1') === '1';
   const conPend = leer('hub_ca_pend', '1') === '1';
-  await cargar(vista, f);
+  const conGoogle = leer('hub_ca_google', '1') === '1';
+  const [gDesde, gHasta] = rango(vista, f);
+  await Promise.all([cargar(vista, f), conGoogle ? cargarGoogle(gDesde, gHasta) : Promise.resolve((_google = [], _googleMsg = ''))]);
   if (!el.isConnected) return;
   const [desde, hasta] = rango(vista, f);
   const visibles = _evs.filter(e => pasaFiltro(e, filtro) && e.fin > desde && e.inicio < hasta);
@@ -323,7 +346,9 @@ export async function pintar(el: HTMLElement, params: string[] = []) {
       <button class="btn secundario" data-action="caGuardarFiltro">Guardar filtro</button>
       <label class="check"><input type="checkbox" ${conTraslados ? 'checked' : ''} data-on-change="caTraslados:$checked"> Traslados</label>
       <label class="check"><input type="checkbox" ${conPend ? 'checked' : ''} data-on-change="caPendPanel:$checked"> Pendientes</label>
+      <label class="check" title="Los eventos de Google Calendar, solo para ver"><input type="checkbox" id="ca-google" ${conGoogle ? 'checked' : ''} data-on-change="caGoogle:$checked"> Google</label>
     </div>
+    ${conGoogle && _googleMsg ? `<p class="nota ca-google-nota">${ico('info')} ${esc(_googleMsg)}</p>` : ''}
     ${bannerHueco()}
     <div class="ca-cuerpo${conPend && vista !== 'mes' ? ' con-panel' : ''}"><div class="ca-principal">${cuerpo}</div>${conPend && vista !== 'mes' ? panelPendientes() : ''}</div>
     <p class="nota">${ico('cronometro')} = lo fichado de verdad. ${_escribe ? 'Arrastra un bloque para moverlo; en la vista Día, a otra columna para cambiar de técnico.' : ''}</p>`;
@@ -381,6 +406,7 @@ registrarAcciones({
   caVista(v: Vista) { guardar('hub_ca_vista', v); resolver(); },
   caFiltro(v: string) { guardar('hub_ca_filtro', v); resolver(); },
   caTraslados(v: boolean) { guardar('hub_ca_traslados', v ? '1' : '0'); resolver(); },
+  caGoogle(v: boolean) { guardar('hub_ca_google', v ? '1' : '0'); resolver(); },
   caPendPanel(v: boolean) { guardar('hub_ca_pend', v ? '1' : '0'); resolver(); },
   caPendTodos(v: boolean) { guardar('hub_ca_pend_todos', v ? '1' : ''); resolver(); },
   caPendBuscar(q: string) {

@@ -107,6 +107,10 @@ Fran, 2026-10-03).
    en la app hasta su OK); control de equipos, se VE ya lo que comprueba la app
    y la pasada propia queda preparada sin encender; Google Calendar (capa de
    solo lectura) funcionando ya, Contactos y Drive listos para el cambio.
+   Tanda 1 (inventario completo), 2 (facturas de compra, del hub, y gastos y
+   cobros en Personas), 3 (VeriFactu), 4 (control de equipos) y 5 (Google)
+   HECHAS el 2026-10-05. **Bloque 7 HECHO**: falta lo de Fran (claves de
+   Action1, permiso de Calendar y carpeta de Drive, PENDIENTE_FRAN §2 ter).
 
 ## El mapa
 
@@ -132,7 +136,7 @@ Fran, 2026-10-03).
 | Ficha del sitio: Historial | Solo lectura | `#/sitios` | — |
 | Seguimiento de tareas de la sede (`loadSeguimientoLocal`) | Preparado | Pestaña Seguimiento (rejilla por periodo; marcar/desmarcar) sobre los espejos `plan_tareas` y `sitio_tarea_seguimiento` | Corte. Editar el catálogo de tareas por plan (bloque 4). |
 | Agenda de contactos (`modules/contactos.js`) | Preparado | `#/contactos` (+ Nuevo contacto, ✎ Editar, Dar de baja/Reactivar); `#/contactos/nuevo[/c/<cliente>|/l/<sede>]` y `#/contactos/<id>/editar` (`contactos/formulario.ts`); empleados solo admin | Corte. Renombrar al usuario si es empleado, favoritos por persona (`user_favoritos`) y Google Contactos (bloque 7). |
-| Google Contacts (`google-contacts.js`) | Falta | — | — |
+| Google Contacts (`google-contacts.js`) | Preparado | Al crear o editar un cliente, la función `google` (acción `contacto`) lo guarda en los Contactos de info@ y apunta `google_contact_id` (delegación con el permiso de contactos, que ya está) | Corte del área `clientes` (hasta entonces lo hace la app; la función contesta 409). |
 | Mapa de sedes con estado RMM (`modules/mapa.js`) | Hecho | `#/mapa` | — |
 | Mapa: Día, Semana (planificador), Ruta, técnicos por GPS | Falta | — | Planificar y rutas. |
 
@@ -155,7 +159,7 @@ Fran, 2026-10-03).
 | Calendario semanal con fichajes reales (`modules/calendario.js`) | Preparado | `#/calendario` (Semana y Por técnico; mover y reasignar arrastrando) | Corte. |
 | Calendario: Mes, Día, Agenda, filtros guardados, alta rápida | Preparado | `#/calendario` (Día con rejilla por técnico; «+ Cita»; ir a fecha en vez de mini-mes) | Zoom, redimensionar arrastrando el borde, colores por estado. |
 | Calendario: pendientes, «Sugerir hueco», traslados, solapes, carga del día | Preparado | `calendario/motor.ts` (mismas constantes que la app) y panel de pendientes | Origen de los traslados: oficina con coordenadas fijas (la app geocodifica la dirección de la empresa). |
-| Capa de Google Calendar (`google-calendar-read.js`, `google-token`) | Falta | — | — |
+| Capa de Google Calendar (`google-calendar-read.js`, `google-token`) | Hecho | Casilla «Google» del calendario: los eventos del calendario de la empresa (info@) y el tuyo si tienes correo de la empresa, SOLO LECTURA, en Semana, Día, Agenda y Mes (función `google`, acción `calendario`) | El permiso `calendar.readonly` en la delegación de dominio (PENDIENTE_FRAN §2 ter); mientras, el calendario lo dice. Quien entra con Gmail personal ve el de la empresa, no el suyo. |
 | Lista del día (`modules/lista-dia.js`, `lista_dia`) | Preparado | `#/lista-dia`, `lista-dia/vista.ts`; espejo, `hub.lista_dia_marcar` y limpieza al borrar el origen en `20261018_lista_dia.sql`; casilla en el alta de trabajo | — |
 | Planificador hoy/mañana (`ui/plan-dia.js`) | Preparado | `#/lista-dia/planificar` (hoy, mañana, +7 d; la hora se mueve con la fecha) | — |
 | Modo calle (`ui/calle.js`) | Preparado | `#/hoy`, `hub.fichar`, `trabajo-foto` | Se enciende con el corte. |
@@ -275,7 +279,7 @@ Fran, 2026-10-03).
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
 | Base de conocimiento (`conocimiento.js`) | Solo lectura | `#/buscar` | Se edita en la app; la wiki es lo nuevo. |
-| Google Drive | Falta | (Buscar indexa una carpeta) | Subir a Drive. |
+| Google Drive | Preparado | «Drive» en las fichas de cliente y sede: la carpeta del cliente (y la de la sede dentro) en la carpeta compartida de la empresa, buscada o creada por nombre como la app (función `google`, acción `carpeta`); Buscar indexa una carpeta | Compartir la carpeta con la cuenta de servicio (PENDIENTE_FRAN §2 ter). Las fotos y adjuntos van al almacén privado del hub, no a Drive (decidido en el bloque 1). |
 
 ### 12. Sistema
 
@@ -307,7 +311,7 @@ Fran, 2026-10-03).
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
 | Conector MCP (`mcp-server`) | Hecho | función `mcp` | — |
-| OAuth y token de Google | Falta | — | — |
+| OAuth y token de Google | No aplica | — | El hub usa la cuenta de servicio con delegación de dominio (`_shared/google.ts`), no el OAuth de cada persona. |
 | Backup diario de la base | Falta | — | Backup propio del hub. |
 | Refresco de suscripciones de Zoho | Falta | — | — |
 | Push cada 15 min | Preparado | `hub-push-proximos` (pg_cron) → función `push` `proximos` | Se enciende solo con el corte de la agenda. |

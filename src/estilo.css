@@ -1158,3 +1158,11 @@ body.os-modo .sis { bottom: 108px; }
 .vf-checklist { display: grid; gap: .35rem; margin-bottom: .75rem; }
 .vf-cifras { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .mce-cifras { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+/* ---- Calendario: capa de Google (bloque 7, solo lectura) ---- */
+.ca-google { display: block; margin: .3rem 0; padding: .35rem .5rem; border: 1px dashed var(--linea); border-left: 3px solid var(--serie-2); border-radius: 8px; color: var(--texto); text-decoration: none; font-size: .82rem; background: color-mix(in srgb, var(--serie-2) 6%, transparent); }
+.ca-google small { display: block; }
+.ca-google .chip { font-size: .68rem; padding: 0 .4rem; }
+.ca-google-dia { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .5rem; }
+.ca-google-dia .ca-google { margin: 0; }
+.ca-mes-google { border-left-color: var(--serie-2) !important; border-left-style: dashed !important; }
