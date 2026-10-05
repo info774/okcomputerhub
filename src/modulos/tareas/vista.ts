@@ -4,6 +4,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, hace } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { enApp } from '../ventas/datos';
 import { esMio } from '../direccion';
 import { botonChatFicha } from '../../ui/chat-ficha';
@@ -76,7 +77,7 @@ function tarjeta(t: Tarea): string {
   return `<article class="pr-tarjeta prio-${esc(t.prioridad ?? 'media')} fila-clic" data-action="taAbrir" data-p0="${esc(t.id)}">
     <div class="pr-tarjeta-cab">${t.numero != null ? `<span>#${t.numero}</span>` : ''}${chipPrio(t.prioridad)}${fecha(t)}</div>
     <h4>${esc(t.titulo)}</h4>
-    <div class="pr-tarjeta-pie">${t.tecnico_id ? `<span>👤 ${esc(t.tecnico_id)}</span>` : '<span class="chip aviso">Sin asignar</span>'}${t.cliente_id && _clientes.get(t.cliente_id) ? `<span>${esc(_clientes.get(t.cliente_id))}</span>` : ''}</div></article>`;
+    <div class="pr-tarjeta-pie">${t.tecnico_id ? `<span>${ico('persona')} ${esc(t.tecnico_id)}</span>` : '<span class="chip aviso">Sin asignar</span>'}${t.cliente_id && _clientes.get(t.cliente_id) ? `<span>${esc(_clientes.get(t.cliente_id))}</span>` : ''}</div></article>`;
 }
 
 async function pintarLista(el: HTMLElement) {
@@ -93,7 +94,7 @@ async function pintarLista(el: HTMLElement) {
       }).join('')}</div>`
     : `<div class="tarjeta mo-scroll"><table class="tabla" id="ta-tabla"><thead><tr><th>Tarea</th><th>Estado</th><th>Vence</th><th>Quién</th><th>Cliente</th></tr></thead>
       <tbody>${lista.slice(0, 200).map(t => `<tr class="fila-clic" data-action="taAbrir" data-p0="${esc(t.id)}">
-        <td>${t.numero != null ? `<small class="nota">#${t.numero}</small> ` : ''}<strong>${esc(t.titulo)}</strong> ${chipPrio(t.prioridad)}${t.recurrencia && t.recurrencia !== 'ninguna' ? ' <span title="Se repite">🔁</span>' : ''}</td>
+        <td>${t.numero != null ? `<small class="nota">#${t.numero}</small> ` : ''}<strong>${esc(t.titulo)}</strong> ${chipPrio(t.prioridad)}${t.recurrencia && t.recurrencia !== 'ninguna' ? ` <span title="Se repite" role="img" aria-label="Se repite">${ico('repetir')}</span>` : ''}</td>
         <td>${chipEstado(t.estado)}</td><td>${fecha(t)}</td>
         <td>${t.tecnico_id ? esc(t.tecnico_id) : '<span class="chip aviso">Sin asignar</span>'}</td>
         <td>${esc(_clientes.get(t.cliente_id ?? '') ?? '')}</td></tr>`).join('') || '<tr><td colspan="5" class="vacio">Ninguna tarea con ese filtro.</td></tr>'}</tbody></table></div>`;
@@ -131,22 +132,22 @@ async function pintarFicha(el: HTMLElement, id: string) {
   el.innerHTML = `<p><a href="#/tareas">← Tareas</a></p>
     ${delHub ? '' : avisoSoloLectura('Tareas')}
     <div class="tarjeta-cab"><h2>${t.numero != null ? `#${t.numero} ` : ''}${esc(t.titulo)}</h2>
-      <div class="acciones">${botonChatFicha('tarea', t.id, t.titulo, `#/tareas/${t.id}`)}<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Las tareas se cambian en la app actual">Abrir en la app ↗</a></div></div>
+      <div class="acciones">${botonChatFicha('tarea', t.id, t.titulo, `#/tareas/${t.id}`)}<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Las tareas se cambian en la app actual">Abrir en la app ${ico('externo')}</a></div></div>
     <p>${chipEstado(t.estado)} ${chipPrio(t.prioridad)} ${vencida(t) ? '<span class="chip mal">Vencida</span>' : ''}</p>
     <div class="me-grid">
-      <section class="tarjeta"><h3>📋 La tarea</h3><dl class="me-datos">
+      <section class="tarjeta"><h3>${ico('lista')} La tarea</h3><dl class="me-datos">
         ${dato('Quién', t.tecnico_id ? esc(t.tecnico_id) : '<span class="chip aviso">Sin asignar</span>')}
         ${dato('Vence', t.fecha_vencimiento ? `${fecha(t)}${t.hora_fin ? ` – ${esc(t.hora_fin.slice(0, 5))}` : ''}` : '')}
         ${dato('Duración prevista', t.duracion_teorica ? `${t.duracion_teorica} min` : '')}
         ${dato('Tipo', esc(t.tipo ?? ''))}${dato('Se repite', esc(rec))}${dato('Creada', t.created_at ? esc(hace(t.created_at)) : '')}</dl></section>
-      <section class="tarjeta"><h3>🔗 De qué es</h3><dl class="me-datos">
+      <section class="tarjeta"><h3>${ico('enlace')} De qué es</h3><dl class="me-datos">
         ${dato('Cliente', cli ? enl(`#/clientes/${cli.id}`, cli.nombre) : '')}${dato('Sitio', loc ? enl(`#/sitios/${loc.id}`, loc.nombre) : '')}
         ${dato('Contacto', con ? `${enl(`#/contactos/${con.id}`, con.nombre)}${con.telefono ? ` · <a href="tel:${esc(con.telefono)}">${esc(con.telefono)}</a>` : ''}` : '')}
         ${dato('Trabajo', tra ? enl(`#/trabajos/${tra.id}`, `#${tra.numero ?? '?'} ${tra.titulo ?? ''}`) : '')}
         ${dato('Ticket', tic ? enl(`#/tickets/${tic.id}`, `#${tic.numero ?? '?'} ${tic.titulo ?? ''}`) : '')}
         ${dato('Oportunidad', opo ? enl(`#/oportunidades/${opo.id}`, opo.titulo) : '')}</dl>
         ${cli || loc || con || tra || tic || opo ? '' : '<p class="nota">No cuelga de nada: es una tarea suelta.</p>'}</section>
-      ${t.descripcion || t.notas ? `<section class="tarjeta"><h3>📝 Detalle</h3>${t.descripcion ? `<p class="si-pre">${esc(t.descripcion)}</p>` : ''}${t.notas ? `<p class="si-pre nota">${esc(t.notas)}</p>` : ''}</section>` : ''}
+      ${t.descripcion || t.notas ? `<section class="tarjeta"><h3>${ico('nota')} Detalle</h3>${t.descripcion ? `<p class="si-pre">${esc(t.descripcion)}</p>` : ''}${t.notas ? `<p class="si-pre nota">${esc(t.notas)}</p>` : ''}</section>` : ''}
     </div>`;
 }
 

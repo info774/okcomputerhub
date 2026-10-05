@@ -50,7 +50,7 @@ try {
   await cuantas(page, 3);
   let fs = await filas(page);
   ok(fs[0].includes('#42') && fs[1].includes('#41') && fs[2].includes('#43'), 'por defecto: pendientes, ordenadas por vencimiento');
-  ok(fs[2].includes('Sin asignar') && fs[2].includes('🔁'), 'sin asignar y recurrente, marcados');
+  ok(fs[2].includes('Sin asignar') && await page.locator('#ta-tabla tbody tr:nth-child(3) [title="Se repite"] svg.ico').count() === 1, 'sin asignar y recurrente, marcados');
   ok(!!(await page.$('.aviso.area-app')), 'aviso de solo lectura (el área es de la app)');
   await page.screenshot({ path: `${CAPTURAS}/tareas-lista.png` });
 

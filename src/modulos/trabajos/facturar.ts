@@ -18,6 +18,7 @@ import { ir } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { buscarClientes, eur } from '../ventas/datos';
 
 export interface LineaFactura { tipo: 'trabajo' | 'producto' | 'material'; nombre: string; detalle: string; cantidad: number; precio: number; descuento: number }
@@ -121,7 +122,7 @@ function tablaLineas(): string {
       <td class="num"><input type="number" min="0" step="0.01" value="${l.precio}" aria-label="Precio" data-on-change="ftCampo:${i},precio,$value"></td>
       <td class="num"><input type="number" min="0" max="100" value="${l.descuento}" aria-label="Descuento" data-on-change="ftCampo:${i},descuento,$value"></td>
       <td class="num">${eur(sub(l), 2)}</td>
-      <td><button type="button" class="btn secundario" data-action="ftQuitar" data-p0="${i}" aria-label="Quitar la línea">🗑</button></td></tr>`).join('')
+      <td><button type="button" class="btn secundario" data-action="ftQuitar" data-p0="${i}" aria-label="Quitar la línea">${ico('eliminar')}</button></td></tr>`).join('')
       || '<tr><td colspan="6" class="vacio">Sin líneas.</td></tr>'}</tbody>
     <tfoot><tr><th colspan="4">Total (sin impuestos)</th><th class="num" id="ft-total">${eur(_lineas.reduce((a, l) => a + sub(l), 0), 2)}</th><th></th></tr></tfoot></table>
     <button type="button" class="btn secundario" data-action="ftAnadir">+ Línea</button>`;

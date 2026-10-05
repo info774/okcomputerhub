@@ -7,6 +7,7 @@ import { equipo, nombreDe } from '../../core/equipo';
 import { ir } from '../../core/router';
 import { registrarAcciones } from '../../core/dispatcher';
 import { esc, toast, fechaHora } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { markdown } from '../../ui/markdown';
 import {
   type Peticion,
@@ -76,7 +77,7 @@ async function tabIdea(p: Proyecto): Promise<string> {
       <div class="acciones">
         <button class="btn" data-action="pfGuardar">Guardar</button>
         ${sig ? `<button class="btn secundario" data-action="pfAvanzar">Pasar a ${esc(nombreFase(sig))} →</button>` : ''}
-        ${p.estado !== 'cerrado' ? '<button class="btn secundario" data-action="pfPedirClaude" data-p0="desarrollar">🚀 Desarrollar esta fase con Claude</button>' : ''}
+        ${p.estado !== 'cerrado' ? `<button class="btn secundario" data-action="pfPedirClaude" data-p0="desarrollar">${ico('cohete')} Desarrollar esta fase con Claude</button>` : ''}
         ${esAdmin() ? '<button class="btn peligro" data-action="pfBorrarProyecto">Borrar proyecto</button>' : ''}
       </div>
     </section>
@@ -97,7 +98,7 @@ function tabObjetivos(): string {
     <ul class="pr-objetivos">${obs.map(o => `<li>
       <label class="check"><input type="checkbox" ${o.hecho ? 'checked' : ''} data-on-change="pfObjetivoHecho:${o.id},$checked">
         <span class="${o.hecho ? 'tachado' : ''}">${esc(o.texto)}</span></label>
-      ${o.metrica ? `<small>📏 ${esc(o.metrica)}</small>` : ''}
+      ${o.metrica ? `<small>${ico('regla')} ${esc(o.metrica)}</small>` : ''}
       <button class="icono-btn pequeno" aria-label="Quitar objetivo" data-action="pfBorrar" data-p0="proyecto_objetivos" data-p1="${o.id}">✕</button>
     </li>`).join('') || '<li class="vacio">Sin objetivos todavía.</li>'}</ul>
     <form class="acciones" data-on-submit="pfNuevoObjetivo" data-prevent="1">
@@ -133,11 +134,11 @@ function tabInvestigacion(): string {
   if (_paginaAbierta) return editorPagina(_paginaAbierta === 'nueva' ? null : pags.find(p => p.id === _paginaAbierta) ?? null);
   return `<div class="acciones pr-barra">
       <button class="btn" data-action="pfAbrirPagina" data-p0="nueva">+ Página</button>
-      <button class="btn secundario" data-action="pfPedirClaude" data-p0="investigar">🔎 Investigar con Claude</button>
+      <button class="btn secundario" data-action="pfPedirClaude" data-p0="investigar">${ico('buscar')} Investigar con Claude</button>
     </div>
     ${pags.map(pg => `<article class="tarjeta pr-pagina">
       <div class="tarjeta-cab"><h3>${esc(pg.titulo)}</h3>
-        <div class="acciones"><span class="chip ${pg.autor === 'claude' ? 'aviso' : 'neutro'}">${pg.autor === 'claude' ? '🤖 Claude' : esc(nombreDe(pg.autor_id) || 'Persona')}</span>
+        <div class="acciones"><span class="chip ${pg.autor === 'claude' ? 'aviso' : 'neutro'}">${pg.autor === 'claude' ? `${ico('robot')} Claude` : esc(nombreDe(pg.autor_id) || 'Persona')}</span>
         <span class="chip">${esc(pg.tipo)}</span>
         <button class="btn secundario" data-action="pfAbrirPagina" data-p0="${pg.id}">Editar</button></div></div>
       <div class="md">${markdown(pg.contenido)}</div>
@@ -218,15 +219,15 @@ async function tabTareas(): Promise<string> {
 function tarjetaTarea(t: TareaP): string {
   const hito = _pz!.hitos.find(h => h.id === t.hito_id);
   const tarde = t.estado !== 'hecho' && t.fecha_limite && t.fecha_limite < hoy();
-  const mover = (a: string, texto: string) => `<button class="icono-btn pequeno" data-action="pfTareaEstado" data-p0="${t.id}" data-p1="${a}" aria-label="${texto}">${texto === 'Atrás' ? '◀' : '▶'}</button>`;
+  const mover = (a: string, texto: string) => `<button class="icono-btn pequeno" data-action="pfTareaEstado" data-p0="${t.id}" data-p1="${a}" aria-label="${texto}">${texto === 'Atrás' ? ico('izquierda') : ico('derecha')}</button>`;
   const orden = ['pendiente', 'en_curso', 'hecho'];
   const i = orden.indexOf(t.estado);
   return `<article class="pr-tarjeta" draggable="true" data-id="${t.id}" data-on-dragstart="pfTareaArrastrar:$this" data-on-dragend="pfTareaFin">
     <h4>${esc(t.titulo)}</h4>
     <div class="pr-tarjeta-pie">
-      <span>👤 ${esc(nombreDe(t.responsable_id) || 'Sin asignar')}</span>
-      ${t.fecha_limite ? `<span class="${tarde ? 'mal' : ''}">📅 ${esc(t.fecha_limite)}</span>` : ''}
-      ${hito ? `<span>🏁 ${esc(hito.nombre)}</span>` : ''}
+      <span>${ico('persona')} ${esc(nombreDe(t.responsable_id) || 'Sin asignar')}</span>
+      ${t.fecha_limite ? `<span class="${tarde ? 'mal' : ''}">${ico('calendario')} ${esc(t.fecha_limite)}</span>` : ''}
+      ${hito ? `<span>${ico('bandera')} ${esc(hito.nombre)}</span>` : ''}
     </div>
     <div class="acciones">${i > 0 ? mover(orden[i - 1], 'Atrás') : ''}${i < 2 ? mover(orden[i + 1], 'Adelante') : ''}
       <button class="icono-btn pequeno" aria-label="Quitar tarea" data-action="pfBorrar" data-p0="proyecto_tareas" data-p1="${t.id}">✕</button></div>
@@ -325,7 +326,7 @@ let _pidiendo: string | null = null;
 
 function formularioPeticion(tipo: string): string {
   return `<section class="tarjeta pc-form">
-    <h3>${tipo === 'investigar' ? '🔎 Investigar con Claude' : tipo === 'desarrollar' ? `🚀 Desarrollar «${esc(nombreFase(_p!.estado))}» con Claude` : '🧐 Revisar con Claude'}</h3>
+    <h3>${tipo === 'investigar' ? `${ico('buscar')} Investigar con Claude` : tipo === 'desarrollar' ? `${ico('cohete')} Desarrollar «${esc(nombreFase(_p!.estado))}» con Claude` : `${ico('buscar')} Revisar con Claude`}</h3>
     <p class="nota">${esc(QUE_HACE[tipo])} Claude lo recoge en menos de una hora y deja el resultado en el proyecto; aquí verás el resumen.</p>
     <label>¿Algo concreto? (opcional) <textarea id="pc-instrucciones" rows="4" maxlength="4000"
       placeholder="p. ej. Compara al menos 3 proveedores con precio por TB y soporte en español"></textarea></label>
@@ -340,9 +341,9 @@ function tabClaude(): string {
   const ps = _pz!.peticiones;
   return `${_pidiendo ? formularioPeticion(_pidiendo) : `<div class="acciones pr-barra">
       <div class="acciones">
-        <button class="btn" data-action="pfPedirClaude" data-p0="investigar">🔎 Investigar</button>
-        ${_p!.estado !== 'cerrado' ? `<button class="btn" data-action="pfPedirClaude" data-p0="desarrollar">🚀 Desarrollar «${esc(nombreFase(_p!.estado))}»</button>` : ''}
-        <button class="btn secundario" data-action="pfPedirClaude" data-p0="revisar">🧐 Revisar el proyecto</button>
+        <button class="btn" data-action="pfPedirClaude" data-p0="investigar">${ico('buscar')} Investigar</button>
+        ${_p!.estado !== 'cerrado' ? `<button class="btn" data-action="pfPedirClaude" data-p0="desarrollar">${ico('cohete')} Desarrollar «${esc(nombreFase(_p!.estado))}»</button>` : ''}
+        <button class="btn secundario" data-action="pfPedirClaude" data-p0="revisar">${ico('buscar')} Revisar el proyecto</button>
       </div></div>`}
     ${ps.map((x: Peticion) => {
       const [tono, texto] = ESTADO_PET[x.estado] ?? ['neutro', x.estado];
@@ -394,7 +395,7 @@ export async function pintarFicha(el: HTMLElement, numero: number, pestana?: str
   document.getElementById('pantalla-titulo')!.textContent = `#${data.numero} ${data.titulo}`;
   el.innerHTML = `
     <p><a href="#/proyectos">← Proyectos</a> · <span class="chip aviso" id="pf-fase">${esc(nombreFase(data.estado))}</span>
-      ${data.tipo === 'cliente' && _clienteNombre ? ` · 🏢 ${esc(_clienteNombre)}` : ''}</p>
+      ${data.tipo === 'cliente' && _clienteNombre ? ` · ${ico('empresa')} ${esc(_clienteNombre)}` : ''}</p>
     <nav class="pestanas" role="tablist">${PESTANAS.map(([k, n]) =>
       `<button role="tab" class="pf-pestana" data-action="pfPestana" data-p0="${data.numero}" data-p1="${k}">${n}</button>`).join('')}</nav>
     <div id="pf-cuerpo"></div>`;

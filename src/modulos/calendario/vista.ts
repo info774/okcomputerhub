@@ -13,6 +13,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { nombresClientes } from '../ventas/datos';
 import { pintarCita } from './cita';
 import {
@@ -140,7 +141,7 @@ function tarjeta(e: Ev, solapa: Set<string>, tras: Map<string, string>, comoReji
     <strong>${e.todoDia ? 'Todo el día' : `${hhmm(e.inicio)}–${hhmm(e.fin)}`}</strong> ${href ? `<a href="${href}">${esc(`${e.numero ? `#${e.numero} ` : ''}${e.titulo}`)}</a>` : esc(e.titulo)}
     ${e.cliente || e.sede ? `<small class="nota">${esc([e.cliente, e.sede].filter(Boolean).join(' · '))}</small>` : ''}
     <small class="nota">${esc(e.tecnicos.join(', ') || 'Sin técnico')}${e.estado ? ` · ${esc(e.estado)}` : ''}</small>
-    ${solapa.has(e.key) ? '<small class="g-mal">⚠ Se pisa con otro bloque del mismo técnico</small>' : ''}</article>`;
+    ${solapa.has(e.key) ? `<small class="g-mal">${ico('atencion')} Se pisa con otro bloque del mismo técnico</small>` : ''}</article>`;
 }
 
 function cargaHtml(evs: Ev[], ds: string, equipo: string[]): string {
@@ -153,7 +154,7 @@ function cargaHtml(evs: Ev[], ds: string, equipo: string[]): string {
     <small>${durCorta(c.total)} de ${durCorta(c.capacidad)} · ${c.libres.length ? `${c.libres.length} libre${c.libres.length === 1 ? '' : 's'}` : 'todos ocupados'}</small></div>`;
 }
 
-const real = (s: any) => `<div class="ca-real" title="Fichado">⏱ ${hhmm(new Date(s.inicio))}–${s.fin ? hhmm(new Date(s.fin)) : 'en curso'} · ${esc(s.tecnico_nombre ?? '')}</div>`;
+const real = (s: any) => `<div class="ca-real" title="Fichado">${ico('cronometro')} ${hhmm(new Date(s.inicio))}–${s.fin ? hhmm(new Date(s.fin)) : 'en curso'} · ${esc(s.tecnico_nombre ?? '')}</div>`;
 
 function vistaSemana(evs: Ev[], desde: Date, solapa: Set<string>, tras: Map<string, string>, equipo: string[], filtro: string): string {
   const hoy = dia(new Date());
@@ -182,7 +183,7 @@ function vistaDia(evs: Ev[], f: Date, solapa: Set<string>, tras: Map<string, str
         // El trayecto se pinta ANTES de cada bloque (como en la app), en rojo si no llega.
         const bandas = conTraslados && !c.sin ? trasladosDelDia(mios, ds, [c.nombre], _coords).map(t => {
           const fin = horaDe(t.ev.inicio), ini = Math.max(H0, fin - t.min / 60);
-          return `<div class="ca-tras-banda${t.tarde ? ' tarde' : ''}" style="top:${(ini - H0) * PX}px;height:${Math.max(4, (fin - ini) * PX)}px" title="${esc(`${t.min} min desde ${t.desde}${t.km != null ? ` · ${t.km.toFixed(1)} km` : ' · sede sin coordenadas'}${t.tarde ? ` · llega ${t.tarde} min tarde` : ''}`)}">🚗 ${t.min}′${t.tarde ? ` · +${t.tarde}′` : ''}</div>`;
+          return `<div class="ca-tras-banda${t.tarde ? ' tarde' : ''}" style="top:${(ini - H0) * PX}px;height:${Math.max(4, (fin - ini) * PX)}px" title="${esc(`${t.min} min desde ${t.desde}${t.km != null ? ` · ${t.km.toFixed(1)} km` : ' · sede sin coordenadas'}${t.tarde ? ` · llega ${t.tarde} min tarde` : ''}`)}">${ico('coche')} ${t.min}′${t.tarde ? ` · +${t.tarde}′` : ''}</div>`;
         }).join('') : '';
         return `<div class="ca-col">
           <div class="ca-col-cab"><strong>${esc(c.sin ? 'Sin asignar' : c.nombre)}</strong>${c.sin ? '' : `<small class="nota">${durCorta(min)}</small>`}</div>
@@ -192,7 +193,7 @@ function vistaDia(evs: Ev[], f: Date, solapa: Set<string>, tras: Map<string, str
             ${bandas}${mios.map(e => tarjeta(e, solapa, tras, true, lanes.get(e.key))).join('')}
             ${_ses.filter(s => !c.sin && dia(new Date(s.inicio)) === ds && mismaPersona(s.tecnico_nombre ?? '', c.nombre)).map(s => {
               const i = new Date(s.inicio), fi = s.fin ? new Date(s.fin) : new Date();
-              return `<div class="ca-real en-rejilla" style="top:${(Math.max(H0, horaDe(i)) - H0) * PX}px;height:${Math.max(16, (fi.getTime() - i.getTime()) / 3600000 * PX)}px" title="Fichado">⏱ ${hhmm(i)}–${s.fin ? hhmm(fi) : 'en curso'}</div>`;
+              return `<div class="ca-real en-rejilla" style="top:${(Math.max(H0, horaDe(i)) - H0) * PX}px;height:${Math.max(16, (fi.getTime() - i.getTime()) / 3600000 * PX)}px" title="Fichado">${ico('cronometro')} ${hhmm(i)}–${s.fin ? hhmm(fi) : 'en curso'}</div>`;
             }).join('')}
             ${hueco && (c.sin ? !hueco.tecnico : mismaPersona(hueco.tecnico, c.nombre)) ? `<div class="ca-hueco" style="top:${(hueco.hora - H0) * PX}px;height:${hueco.dur / 60 * PX}px">Hueco para #${hueco.numero}</div>` : ''}
           </div></div>`;
@@ -214,7 +215,7 @@ function vistaAgenda(evs: Ev[], f: Date, equipo: string[]): string {
   return dias.map(d => {
     const ds = dia(d);
     const del = evs.filter(e => dia(e.inicio) === ds).sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
-    for (const t of trasladosDelDia(del, ds, equipo, _coords)) tras.set(t.ev.key, `🚗 ${t.min} min desde ${t.desde}${t.tarde ? ` · llega ${t.tarde} min tarde` : ''}`);
+    for (const t of trasladosDelDia(del, ds, equipo, _coords)) tras.set(t.ev.key, `${t.min} min desde ${t.desde}${t.tarde ? ` · llega ${t.tarde} min tarde` : ''}`);
     return `<section class="tarjeta ca-agenda-dia"><h3>${esc(d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }))}</h3>${cargaHtml(evs, ds, equipo)}
       ${del.length ? `<ul class="ca-agenda">${del.map(e => {
         const c = e.localId ? _coords.get(e.localId) : null;
@@ -222,8 +223,8 @@ function vistaAgenda(evs: Ev[], f: Date, equipo: string[]): string {
         return `<li id="ca-b-${e.id}"><span class="ca-ag-hora">${e.todoDia ? 'Todo el día' : `${hhmm(e.inicio)}–${hhmm(e.fin)}`}</span>
           <span class="ca-ag-txt"><strong>${href ? `<a href="${href}">${esc(`${e.numero ? `#${e.numero} ` : ''}${e.titulo}`)}</a>` : esc(e.titulo)}</strong>
             <small class="nota">${esc([e.cliente, e.sede, e.tecnicos.join(', ') || 'Sin técnico', e.estado].filter(Boolean).join(' · '))}</small>
-            ${tras.get(e.key) ? `<small class="${tras.get(e.key)!.includes('tarde') ? 'g-mal' : 'nota'}">${esc(tras.get(e.key)!)}</small>` : ''}</span>
-          ${c ? `<a class="btn secundario" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" target="_blank" rel="noopener">🗺 Cómo llegar</a>` : ''}</li>`;
+            ${tras.get(e.key) ? `<small class="${tras.get(e.key)!.includes('tarde') ? 'g-mal' : 'nota'}">${ico('coche')} ${esc(tras.get(e.key)!)}</small>` : ''}</span>
+          ${c ? `<a class="btn secundario" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" target="_blank" rel="noopener">${ico('mapa')} Cómo llegar</a>` : ''}</li>`;
       }).join('')}</ul>` : '<p class="vacio">Nada planificado.</p>'}</section>`;
   }).join('');
 }
@@ -288,8 +289,8 @@ export async function pintar(el: HTMLElement, params: string[] = []) {
   if (conTraslados) {
     for (const ds of [...new Set(visibles.map(e => dia(e.inicio)))]) {
       for (const t of trasladosDelDia(visibles, ds, equipoVista, _coords)) {
-        const texto = `🚗 ${t.min} min desde ${t.desde}${t.km != null ? ` · ${t.km < 10 ? t.km.toFixed(1) : Math.round(t.km)} km` : ' · sede sin coordenadas'}${t.tarde ? ` · llega ${t.tarde} min tarde` : ''}${equipoVista.length > 1 ? ` (${t.tecnico})` : ''}`;
-        tras.set(t.ev.key, `${tras.get(t.ev.key) ?? ''}<small class="ca-tras${t.tarde ? ' g-mal' : ''}" title="${esc(texto)}">${esc(texto)}</small>`);
+        const texto = `${t.min} min desde ${t.desde}${t.km != null ? ` · ${t.km < 10 ? t.km.toFixed(1) : Math.round(t.km)} km` : ' · sede sin coordenadas'}${t.tarde ? ` · llega ${t.tarde} min tarde` : ''}${equipoVista.length > 1 ? ` (${t.tecnico})` : ''}`;
+        tras.set(t.ev.key, `${tras.get(t.ev.key) ?? ''}<small class="ca-tras${t.tarde ? ' g-mal' : ''}" title="${esc(texto)}">${ico('coche')} ${esc(texto)}</small>`);
       }
     }
   }
@@ -310,7 +311,7 @@ export async function pintar(el: HTMLElement, params: string[] = []) {
       <button class="btn secundario" data-action="caMover" data-p0="0">Hoy</button>
       ${_escribe ? '<a class="btn secundario" href="#/calendario/cita">+ Cita</a>' : ''}
       <input type="date" id="ca-ir" value="${dia(f)}" data-on-change="caIrDia:$value" aria-label="Ir a la fecha">
-      ${sol.lista.length ? `<button class="chip mal" data-action="caVerSolape" data-p0="${sol.lista[0].a.id}">⚠ ${sol.lista.length} solape${sol.lista.length === 1 ? '' : 's'}</button>` : ''}
+      ${sol.lista.length ? `<button class="chip mal" data-action="caVerSolape" data-p0="${sol.lista[0].a.id}">${ico('atencion')} ${sol.lista.length} solape${sol.lista.length === 1 ? '' : 's'}</button>` : ''}
     </div>
     <div class="acciones pr-barra ca-barra">
       <div class="segmentado" role="tablist" aria-label="Vista">${(Object.keys(VISTAS) as Vista[]).map(v => `<button role="tab" aria-selected="${v === vista}" class="${v === vista ? 'activo' : ''}" data-action="caVista" data-p0="${v}">${VISTAS[v]}</button>`).join('')}</div>
@@ -325,7 +326,7 @@ export async function pintar(el: HTMLElement, params: string[] = []) {
     </div>
     ${bannerHueco()}
     <div class="ca-cuerpo${conPend && vista !== 'mes' ? ' con-panel' : ''}"><div class="ca-principal">${cuerpo}</div>${conPend && vista !== 'mes' ? panelPendientes() : ''}</div>
-    <p class="nota">⏱ = lo fichado de verdad. ${_escribe ? 'Arrastra un bloque para moverlo; en la vista Día, a otra columna para cambiar de técnico.' : ''}</p>`;
+    <p class="nota">${ico('cronometro')} = lo fichado de verdad. ${_escribe ? 'Arrastra un bloque para moverlo; en la vista Día, a otra columna para cambiar de técnico.' : ''}</p>`;
 }
 
 // ── Escrituras (solo con el corte) ─────────────────────────────────────────

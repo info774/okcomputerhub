@@ -72,7 +72,7 @@ try {
   ok((await page.textContent(`.ca-dia[data-dia="${D}"] .ca-carga`)).includes('3h de 16h'), 'carga del día: 3 h de 2 técnicos × 8 h');
   ok(await page.locator('.ca-bloque.ca-solapa').count() === 2 && (await page.textContent('.ca-barra')).includes('1 solape'), 'solapes: «Tito» y «Tito Pérez» a la misma hora se marcan (nombre de pila)');
   const tras = await page.textContent('#ca-b-ag2');
-  ok(/🚗 \d+ min desde Hotel Playa/.test(tras) && tras.includes('tarde'), 'traslados: de Adeje a La Laguna en 15 min llega tarde');
+  ok(/\d+ min desde Hotel Playa/.test(tras) && tras.includes('tarde') && await page.locator('#ca-b-ag2 .ca-ag-txt small svg.ico').count() === 1, 'traslados: de Adeje a La Laguna en 15 min llega tarde');
   ok((await page.textContent('#ca-b-ag1')).includes('desde la oficina'), 'traslados: el primero del día sale de la oficina');
 
   // Pendientes y «Sugerir hueco»

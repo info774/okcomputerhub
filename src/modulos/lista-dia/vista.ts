@@ -16,13 +16,15 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
+import type { IconoLinea } from '../../shell/linea';
 import { nombresClientes } from '../ventas/datos';
 
 type Tipo = 'trabajo' | 'tarea' | 'ticket' | 'nota';
 interface Item { id: string; fecha: string; usuario: string; tipo: Tipo; ref_id: string | null; titulo: string | null; orden: number; completado: boolean; estado_previo: string | null; _reg?: any; _cliente?: string }
 const TABLA: Record<Exclude<Tipo, 'nota'>, string> = { trabajo: 'trabajos', tarea: 'tareas', ticket: 'tickets' };
 const ABIERTOS: Record<Exclude<Tipo, 'nota'>, string> = { trabajo: '(Pendiente,"En progreso")', tarea: '(pendiente,en_progreso)', ticket: '(Abierto,"En curso",Pendiente)' };
-const ICONO: Record<Tipo, string> = { trabajo: '🛠', tarea: '✅', ticket: '🎫', nota: '📝' };
+const ICONO: Record<Tipo, IconoLinea> = { trabajo: 'herramienta', tarea: 'hecho', ticket: 'etiqueta', nota: 'nota' };
 const ETIQ: Record<Tipo, string> = { trabajo: 'Trabajo', tarea: 'Tarea', ticket: 'Ticket', nota: 'Recado' };
 const TODOS = '__todos';
 const leer = (k: string, d: string) => { try { return sessionStorage.getItem(k) ?? d; } catch { return d; } };
@@ -67,10 +69,10 @@ async function vistaLista(): Promise<string> {
     const estado = it._reg?.estado;
     return `<li class="ld-fila${it.completado ? ' hecho' : ''}">
       <label class="ld-check"><input type="checkbox" ${it.completado ? 'checked' : ''} ${escribe ? '' : 'disabled'} data-on-change="ldMarcar:${it.id},$checked" aria-label="Hecho"></label>
-      <span class="ld-ico" aria-hidden="true">${ICONO[it.tipo]}</span>
+      <span class="ld-ico" aria-hidden="true">${ico(ICONO[it.tipo])}</span>
       <span class="ld-txt"><strong>${href ? `<a href="${href}">${esc(tituloDe(it))}</a>` : esc(tituloDe(it))}</strong>
         <small class="nota">${esc([ETIQ[it.tipo], it._cliente, estado, _persona === TODOS ? it.usuario : null].filter(Boolean).join(' · '))}</small></span>
-      ${escribe ? `<select class="ld-mover" data-on-change="ldMover:${it.id},$value" aria-label="Pasar a otra persona"><option value="">👤 Pasar a…</option>${personas.filter(p => p.nombre !== it.usuario).map(p => `<option>${esc(p.nombre)}</option>`).join('')}</select>
+      ${escribe ? `<select class="ld-mover" data-on-change="ldMover:${it.id},$value" aria-label="Pasar a otra persona"><option value="">Pasar a…</option>${personas.filter(p => p.nombre !== it.usuario).map(p => `<option>${esc(p.nombre)}</option>`).join('')}</select>
         <button class="btn secundario" data-action="ldQuitar" data-p0="${it.id}" aria-label="Quitar de la lista">✕</button>` : ''}</li>`;
   };
   return `${escribe ? '' : avisoSoloLectura('La lista del día')}
@@ -80,7 +82,7 @@ async function vistaLista(): Promise<string> {
       <button class="btn secundario" data-action="ldDia" data-p0="1" aria-label="Día siguiente">›</button>
       ${_fecha !== hoyStr() ? '<button class="btn secundario" data-action="ldFecha" data-p0="">Hoy</button>' : ''}</div>
     ${esAdmin() ? `<div class="acciones ld-personas">${personas.map(p => `<button class="chip-boton${_persona === p.nombre ? ' activo' : ''}" data-action="ldPersona" data-p0="${esc(p.nombre)}">${esc(p.nombre)}</button>`).join('')}
-      <button class="chip-boton${_persona === TODOS ? ' activo' : ''}" data-action="ldPersona" data-p0="${TODOS}">👥 Todo el equipo</button></div>` : ''}
+      <button class="chip-boton${_persona === TODOS ? ' activo' : ''}" data-action="ldPersona" data-p0="${TODOS}">${ico('personas')} Todo el equipo</button></div>` : ''}
     <section class="tarjeta"><div class="tarjeta-cab"><h3>${esc(_persona === TODOS ? 'Todo el equipo' : _persona)} · ${esc(d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }))}</h3>
       <span class="chip ${_items.length && hechos === _items.length ? 'bien' : ''}">${hechos}/${_items.length} hechos</span></div>
       ${_items.length ? `<ul class="ld-lista">${_items.map(fila).join('')}</ul>` : '<p class="vacio">La lista está vacía.</p>'}
@@ -114,7 +116,7 @@ function pintarCandidatos() {
   const html = lista.map(c => {
     const dentro = _items.some(i => i.tipo === c.tipo && i.ref_id === c.id && i.usuario === _persona);
     return `<li><button class="ld-cand${dentro ? ' dentro' : ''}" data-action="ldAlternar" data-p0="${c.tipo}" data-p1="${c.id}" aria-pressed="${dentro}">
-      <span aria-hidden="true">${ICONO[c.tipo]}</span><span><strong>${esc(c.titulo)}</strong><small class="nota">${esc(c.sub)}${c.suyo ? ' · ya es suyo' : ''}</small></span><span aria-hidden="true">${dentro ? '✓' : '+'}</span></button></li>`;
+      <span aria-hidden="true">${ico(ICONO[c.tipo])}</span><span><strong>${esc(c.titulo)}</strong><small class="nota">${esc(c.sub)}${c.suyo ? ' · ya es suyo' : ''}</small></span><span aria-hidden="true">${dentro ? '✓' : '+'}</span></button></li>`;
   }).join('') || '<li class="vacio">Nada con ese filtro.</li>';
   if (ul) { ul.innerHTML = html; return; }
   el.innerHTML = `<div class="tarjeta ld-panel"><div class="acciones"><input id="ld-cand-q" type="search" placeholder="Buscar…" data-on-input="ldFiltrarCands" aria-label="Buscar pendiente">
@@ -179,7 +181,7 @@ async function vistaPlanificar(params: string[]): Promise<string> {
       <div class="segmentado" role="tablist" aria-label="Qué día">${[['hoy', 'Hoy y atrasado'], ['manana', 'Mañana']].map(([k, t]) => `<button role="tab" aria-selected="${pest === k}" class="${pest === k ? 'activo' : ''}" data-action="ldPlanPest" data-p0="${k}">${t}</button>`).join('')}</div>
       <input type="date" value="${pest === 'fecha' ? dia : ''}" data-on-change="ldPlanFecha:$value" aria-label="Otro día">
       ${escribe && pest === 'hoy' && items.some(i => i.fecha && i.fecha < hoyStr()) ? '<button class="btn" data-action="ldTodoHoy">Pasar todo lo atrasado a hoy</button>' : ''}</div>
-    <section class="tarjeta">${items.length ? `<ul class="ld-lista">${items.map(i => `<li class="ld-fila" id="ld-p-${i.id}"><span class="ld-ico" aria-hidden="true">${ICONO[i.tipo as Tipo]}</span>
+    <section class="tarjeta">${items.length ? `<ul class="ld-lista">${items.map(i => `<li class="ld-fila" id="ld-p-${i.id}"><span class="ld-ico" aria-hidden="true">${ico(ICONO[i.tipo as Tipo])}</span>
       <span class="ld-txt"><strong><a href="${i.href}">${esc(i.titulo)}</a></strong><small class="nota">${esc([i.sub, fechaCorta(i.fecha)].filter(Boolean).join(' · '))}${i.fecha && i.fecha < hoyStr() ? ' · <span class="g-mal">atrasado</span>' : ''}</small></span>
       ${escribe ? `<span class="acciones">${[['hoy', 'Hoy'], ['manana', 'Mañana'], ['semana', '+7 d']].map(([a, t]) => `<button class="btn secundario" data-action="ldPlanMover" data-p0="${i.tipo}" data-p1="${i.id}" data-p2="${a}">${t}</button>`).join('')}</span>` : ''}</li>`).join('')}</ul>` : '<p class="vacio">Nada pendiente para ese día.</p>'}</section>`;
 }
