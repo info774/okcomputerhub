@@ -130,7 +130,11 @@ Fran, 2026-10-03).
    aceptación del presupuesto en el portal, preparada para el corte. Tanda 4
    HECHA (2026-10-05): guía de instalación del trabajo y escáner de códigos en
    el material, catálogo y base de conocimiento con escritura, todo preparado
-   para el corte de su área (`20261105_guia_catalogo.sql`).
+   para el corte de su área (`20261105_guia_catalogo.sql`). Tanda 5 HECHA
+   (2026-10-05): tonos y avisos del chat, backup propio (falta el secret) y
+   filas puestas al día. **Bloque 8 HECHO**: lo que sigue en «Falta» es el
+   asistente de voz (bloque propio, con Groq), el sync de Zoho (con el corte
+   de clientes) y lo que espera al corte final (APK, dominio antiguo).
 
 ## El mapa
 
@@ -144,16 +148,16 @@ Fran, 2026-10-03).
 | Dar de baja y reactivar cliente o sede | Preparado | Ficha → «Dar de baja» / «Reactivar»; «De baja» en la lista (clientes y sitios) | Corte del área `clientes`. |
 | Empresa por NIF y NIF duplicado (`lookup-nif`) | Hecho | «🔎 Buscar el nombre» del formulario (función `clientes`, acción `nif`); con NIF repetido no se crea | — |
 | Cliente o sede desde Google Maps (`google-places.js`) | Preparado | «🔎 Buscar en Google Maps» (`src/ui/maps.ts`, solo Tenerife) en el alta/edición de sede y en la sede rápida del trabajo; aviso de sede de nombre parecido (≥ 80 %) | Que Fran añada el hub a las webs de la clave (PENDIENTE_FRAN §2 bis). Corte. |
-| Sync de clientes y presupuestos desde Zoho (`sync-zoho*`, `sync-auto.js`) | Falta | — | Hoy entra por la app y el hub copia. |
-| Ficha del cliente (General, Locales, Contactos, Historial) | Solo lectura | `#/clientes` (ficha 360) | Editar datos. |
-| Suscripción de Zoho Billing a una sede (`list-zoho-subscriptions`) | Falta | — | Cartera vieja. |
+| Sync de clientes y presupuestos desde Zoho (`sync-zoho*`, `sync-auto.js`) | Falta | — | Hoy entra por la app y el hub copia. Va con el corte de `clientes`/`presupuestos` y necesita los permisos del Self Client de Zoho (PENDIENTE_FRAN §5). |
+| Ficha del cliente (General, Locales, Contactos, Historial) | Preparado | `#/clientes` (ficha 360), editar en `#/clientes/<id>/editar`, «Historial de cambios» | Corte del área `clientes` (bloque 2). |
+| Suscripción de Zoho Billing a una sede (`list-zoho-subscriptions`) | Hecho / Preparado | Función `zoho-cartera` (`listar`, `comprobar`; `vincular` admin) y «Zoho Billing» en la pestaña Sedes del cliente (bloque 4, tanda 4) | Escribir en la sede: corte de `mantenimiento`. |
 | Lista de sitios, etiqueta RMM, Excel, AnyDesk/RustDesk (`modules/locales.js`) | Preparado | `#/sitios` (Excel con AnyDesk, «+ Nuevo sitio», enlace de AnyDesk en la fila); alta y edición en `#/sitios/nuevo[/<cliente>]`, `#/sitios/<id>/editar` (`sitios/formulario.ts`); ficha → «🖥 Remoto» (AnyDesk de hardware + software y RustDesk de Breeze con la contraseña de la sede de `rmm_despliegues`) | Corte del área `clientes`. Importar sitios desde Excel (`importSitiosExcel`). |
 | Ficha del sitio: Info (renombrar, cliente, contacto) | Preparado | Ficha → «✎ Editar»; «Eliminar» (admin, se lleva sus teléfonos); «+ Nueva sede» en la ficha del cliente | Corte del área `clientes`. |
 | Ficha del sitio: Software y Hardware (`loadSoftware`, `hwAutoGarantia`) | Preparado | Pestañas Software y Hardware (`sitios/equipamiento.ts`; certificado y garantía con aviso a 30 días; garantía = instalación + 1 año); espejos `20261022_sitio_equipamiento.sql` | Corte. El disparador que sube el certificado a `locales.cert_caducidad` va con la ficha de mantenimiento (bloque 4). |
 | Ficha del sitio: Cámaras | Preparado | Pestaña Cámaras (contraseña oculta tras «Ver») | Corte. |
 | Ficha del sitio: Alarma (código oculto) | Preparado | `#/sitios` (se edita en el formulario) | Corte. |
 | Teléfonos de la sede con rol (`local_telefonos`) | Preparado | Ficha del sitio → «Teléfonos» (añadir, rol en la fila, editar, quitar); espejo `20261021_local_telefonos.sql` (pasada nocturna) | Corte. |
-| Ficha del sitio: Historial | Solo lectura | `#/sitios` | — |
+| Ficha del sitio: Historial | Hecho | `#/sitios` → «Historial de cambios» (`enlaceHistorial`, bloque 6) | — |
 | Seguimiento de tareas de la sede (`loadSeguimientoLocal`) | Preparado | Pestaña Seguimiento (rejilla por periodo; marcar/desmarcar) sobre los espejos `plan_tareas` y `sitio_tarea_seguimiento` | Corte. Editar el catálogo de tareas por plan (bloque 4). |
 | Agenda de contactos (`modules/contactos.js`) | Preparado | `#/contactos` (+ Nuevo contacto, ✎ Editar, Dar de baja/Reactivar); `#/contactos/nuevo[/c/<cliente>|/l/<sede>]` y `#/contactos/<id>/editar` (`contactos/formulario.ts`); empleados solo admin | Corte. Renombrar al usuario si es empleado, favoritos por persona (`user_favoritos`) y Google Contactos (bloque 7). |
 | Google Contacts (`google-contacts.js`) | Preparado | Al crear o editar un cliente, la función `google` (acción `contacto`) lo guarda en los Contactos de info@ y apunta `google_contact_id` (delegación con el permiso de contactos, que ya está) | Corte del área `clientes` (hasta entonces lo hace la app; la función contesta 409). |
@@ -273,16 +277,16 @@ Fran, 2026-10-03).
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
 | Chat interno en tiempo real (`chat.js`) | Hecho | `#/chat` | Tiempo real, adjuntos, historial de la app. |
-| Tonos y avisos del chat | Falta | — | — |
+| Tonos y avisos del chat | Hecho | `shell/chat-avisos.ts`: tono por conversación (los ocho de la app y el sonido propio), silenciar 1 h/8 h/siempre, vista previa, aviso dentro del hub y «(N)» en el título; «Avisos» en cada conversación | — |
 | Push web y FCM (`push.js`, `send-*-push`) | Hecho | Web Push con VAPID propio: `core/push.ts`, «Avisos en este dispositivo» (pie del menú y Configuración, con prueba e «Instalar como app»), función `push` (`registrar`, `quitar`, `probar`, `chat`, `proximos`), `hub.push_suscripciones`; avisan comandas, chat y los avisos de WhatsApp, además de Telegram | FCM de la APK (corte final). Los trabajos en ~1 h: el cron ya llama, pero no avisa mientras la agenda sea de la app (avisa la app). |
-| Bandeja de notificaciones (`inbox.js`) | Falta | (campana de avisos) | — |
+| Bandeja de notificaciones (`inbox.js`) | No aplica | Avisos push (bloque 6) + centro de avisos y avisos del chat | La tabla `notifications` de la app está vacía (solo la llenaban recordatorios locales del navegador); en el hub lo cubren el push y el centro de avisos. |
 | Bandeja de WhatsApp: leer y contestar (`wa-bandeja.js`) | Hecho | `shell/whatsapp.ts`, función `whatsapp`: plantilla fuera de 24 h, documentos de Zoho, fotos en la conversación y «Ver foto» pedida a Meta, enlaces rápidos (Cliente, Sede, Remoto, Ticket, Presupuesto) y chip del plan (2026-10-04) | Vincular un teléfono a una ficha (en la app). |
 | Webhook de WhatsApp: menú, horario, ticket u oportunidad, órdenes del equipo, adjuntos | Preparado | Función `whatsapp-webhook` (SIN_JWT, firma de Meta) + `equipo.ts`, espejos `hub.wa_*` y `ticket_adjuntos` (`20261028_whatsapp.sql`); la ventana fija cambia sola de fuente con el área `whatsapp` | El cambio de WhatsApp (`supabase/cortes/corte_whatsapp.sql` + la URL en Meta, PENDIENTE_FRAN §1 quinquies). Avisos por Telegram en vez de push. Las órdenes del equipo que tocan trabajos, tareas o fichajes esperan a su corte (lo dicen y no escriben). |
 | Agente de Meta por MCP (`meta-agente-mcp`) | Preparado | Función `meta-agente-mcp` (SIN_JWT, token `x-mcp-token`; skills LITERALES en `_shared/meta-agente-skills.ts`); «🤖 Agente de Meta» en la ventana de WhatsApp (admin: ver el estado; registrar/repuntar al hub, solo tras el cambio) | El cambio de WhatsApp y `META_AGENTE_MCP_TOKEN` (PENDIENTE_FRAN §1 quinquies, paso 5). |
 | WhatsApp pegado o captura a ticket/trabajo (`parse-whatsapp`) | Hecho | `#/tickets/whatsapp` (`tickets/whatsapp.ts`, `wai-`) + función `parse-whatsapp` (Groq, el mismo prompt); abre el alta de ticket o trabajo rellena (`ui/borrador.ts`) | `GROQ_API_KEY` en el hub (PENDIENTE_FRAN §3). «Compartir» desde el móvil (share target) al hub. |
-| Asistente de voz (`voice.js`, `groq-proxy`) | Falta | (notas de voz → comandas) | — |
+| Asistente de voz (`voice.js`, `groq-proxy`) | Falta | (voz de Oki: preguntas al buscador y encargos como comandas) | Las órdenes por voz de la app (crear, fichar, estados, agenda…) quedan para un bloque propio; necesitan la clave de Groq (PENDIENTE_FRAN §3). |
 | Repaso matinal y cierre | Hecho | `informes-enviar`, `telegram-bot` | — |
-| Dictado en formularios (`dictado.js`, `transcribe-audio`) | Falta | — | — |
+| Dictado en formularios (`dictado.js`, `transcribe-audio`) | Hecho | `alternarDictado` de `src/ui/dictado.ts` (tablero, feedback…; función `comandas`, `transcribir`) | Necesita la clave de Groq (PENDIENTE_FRAN §3). |
 
 ### 10. Monitorización
 
@@ -332,14 +336,14 @@ Fran, 2026-10-03).
 |---|---|---|---|
 | Conector MCP (`mcp-server`) | Hecho | función `mcp` | — |
 | OAuth y token de Google | No aplica | — | El hub usa la cuenta de servicio con delegación de dominio (`_shared/google.ts`), no el OAuth de cada persona. |
-| Backup diario de la base | Falta | — | Backup propio del hub. |
-| Refresco de suscripciones de Zoho | Falta | — | — |
+| Backup diario de la base | Preparado | Copia física diaria de Supabase (activa) + `.github/workflows/backup.yml` (volcado de `hub` cada noche, 90 días) | Poner el secret `HUB_DB_PASSWORD` en GitHub (PENDIENTE_FRAN §10). |
+| Refresco de suscripciones de Zoho | Preparado | `zoho-cartera` `diario` (pg_cron 4:10 UTC) | Escribe en las sedes con el corte de `mantenimiento`. |
 | Push cada 15 min | Preparado | `hub-push-proximos` (pg_cron) → función `push` `proximos` | Se enciende solo con el corte de la agenda. |
 | Control de equipos a diario | Preparado | `hub-equipos-control` copia la comprobación de la app cada mañana; la pasada propia, función `control-equipos` | El cron propio, con el corte del área `equipos`. |
 | Repaso y cierre programados | Hecho | `hub-informes` | — |
 | Repaso visual nocturno y `/repaso` | No aplica | — | El hub tiene su trabajador de Claude. |
 | Despliegues y lint | Hecho | `.github/workflows/` | — |
-| Previsualización de PRs, APK, FCM, borrar funciones | Falta | — | — |
+| Previsualización de PRs, APK, FCM, borrar funciones | No aplica | — | Herramientas de despliegue de la app: el hub se despliega desde la sesión, usa Web Push (no FCM) y la APK va en el corte final. |
 | Redirección del dominio antiguo | Falta | — | Paso 6 del corte. |
 
 ## Lo propio del hub (la app no lo tiene)

@@ -66,6 +66,7 @@ function cumple(fila, k, v) {
   }
 }
 const RESERVADOS = new Set(['select', 'order', 'limit', 'offset', 'on_conflict']);
+const RPC_LECTURA = new Set(['chat_resumen']);
 
 export function baseMemoria(inicial = {}, rpc = {}) {
   const db = structuredClone(inicial);
@@ -84,7 +85,8 @@ export function baseMemoria(inicial = {}, rpc = {}) {
     if (url.pathname.includes('/rpc/')) {
       const f = rpc[tabla];
       const cuerpo = req.postDataJSON();
-      reg.escrituras.push({ metodo: 'RPC', tabla, cuerpo });
+      // Las RPC de solo lectura que el shell llama siempre (el vigilante del chat) no cuentan como escritura.
+      if (!RPC_LECTURA.has(tabla)) reg.escrituras.push({ metodo: 'RPC', tabla, cuerpo });
       if (!f) return route.fulfill({ status: 404, headers: h, contentType: 'application/json', body: '{"message":"rpc no simulada"}' });
       try { return route.fulfill({ status: 200, headers: h, contentType: 'application/json', body: JSON.stringify(await f(cuerpo, db)) }); }
       catch (e) { return route.fulfill({ status: 400, headers: h, contentType: 'application/json', body: JSON.stringify({ message: e.message }) }); }

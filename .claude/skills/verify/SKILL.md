@@ -305,6 +305,11 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   material (sin cámara: el campo), catálogo (filtros, alta, categoría en
   bloque) y base de conocimiento; con las áreas de la app, solo lectura.
 
+- `verify-chat-avisos.mjs`: bloque 8, tanda 5: avisos del chat con
+  `chat_resumen` SIMULADA y Web Audio espiado (tono, aviso con vista previa,
+  «(N)» en el título, silenciar, sin vista previa, la conversación abierta no
+  avisa, sonido propio).
+
 `npm run verify` pasa todos los de la lista.
 
 ## Pantalla nueva

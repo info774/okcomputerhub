@@ -1,0 +1,72 @@
+name: Backup diario del hub
+
+# Copia lógica propia del esquema `hub` (paridad bloque 8, tanda 5: backup.yml
+# de la app). Además de las copias físicas diarias que ya hace Supabase del
+# proyecto entero, esto deja cada noche un volcado restaurable con pg_restore
+# como artefacto del repo (90 días). SOLO `hub`: `public` es de Breeze y tiene
+# su propio respaldo.
+#
+# Secret: HUB_DB_PASSWORD (Supabase → okcomputer-hub → Settings → Database).
+# Sin él, avisa y no falla (PENDIENTE_FRAN §10): la copia física de Supabase
+# sigue estando.
+on:
+  schedule:
+    - cron: '20 2 * * *'   # 2:20 UTC, después del de la app
+  workflow_dispatch:
+
+env:
+  PGHOST: aws-1-eu-west-1.pooler.supabase.com
+  PGPORT: '5432'
+  PGUSER: postgres.adomalsxsymxzuozksmt
+  PGDATABASE: postgres
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ¿Está la contraseña?
+        id: clave
+        env:
+          PGPASSWORD: ${{ secrets.HUB_DB_PASSWORD }}
+        run: |
+          if [ -z "${PGPASSWORD:-}" ]; then
+            echo "::warning::Falta el secret HUB_DB_PASSWORD: no se hace la copia lógica (la física de Supabase sigue). Ver docs/PENDIENTE_FRAN.md §10."
+            echo "hay=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "hay=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      # pg_dump tiene que ser >= la versión del servidor (PostgreSQL 17).
+      - name: Instalar postgresql-client 17
+        if: steps.clave.outputs.hay == '1'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y curl ca-certificates lsb-release
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -sS -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Volcado del esquema hub
+        if: steps.clave.outputs.hay == '1'
+        env:
+          PGPASSWORD: ${{ secrets.HUB_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          PGPASSWORD="$(printf '%s' "$PGPASSWORD" | tr -d '\r\n\t')"
+          export PGPASSWORD
+          OUT="hub_$(date +%Y-%m-%d).dump"
+          /usr/lib/postgresql/17/bin/pg_dump --format=custom --no-owner --schema=hub --file="$OUT"
+          SIZE=$(stat -c%s "$OUT")
+          echo "Copia: $OUT ($(numfmt --to=iec "$SIZE"))"
+          [ "$SIZE" -ge 10240 ] || { echo "❌ La copia es sospechosamente pequeña ($SIZE bytes)"; exit 1; }
+
+      - name: Guardar como artefacto (90 días)
+        if: steps.clave.outputs.hay == '1'
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: backup-hub-${{ github.run_number }}
+          path: hub_*.dump
+          retention-days: 90

@@ -434,3 +434,21 @@ del entorno cloud (menú del entorno → Edit → variables) las mismas claves d
 Action1 que tiene la app, una por línea: `ACTION1_CLIENT_ID=…`,
 `ACTION1_CLIENT_SECRET=…` y `ACTION1_REGION=eu`. Claude las pasa a la función
 `control-equipos` del hub y programa su pasada diaria.
+
+## 10 · La copia diaria propia del hub (una vez, ~3 minutos)
+
+**Desbloquea**: el volcado del hub que se guarda cada noche en GitHub (90 días),
+además de la copia que ya hace Supabase sola. Sin esto el workflow avisa y no
+hace nada (no falla).
+
+1. Entra en **https://supabase.com/dashboard** → proyecto **okcomputer-hub** →
+   **Project Settings** (rueda abajo a la izquierda) → **Database**.
+2. En **Database password**, si no la tienes guardada pulsa **Reset database
+   password**, genera una y **cópiala** (ojo: Breeze usa sus propios roles, no
+   esta contraseña; no le afecta).
+3. Entra en **https://github.com/info774/okcomputerhub** → **Settings** →
+   **Secrets and variables** → **Actions** → **New repository secret**.
+4. **Name**: `HUB_DB_PASSWORD` · **Secret**: pega la contraseña → **Add secret**.
+5. Para probarlo: pestaña **Actions** → **Backup diario del hub** → **Run
+   workflow**. Al acabar, abajo en **Artifacts** sale `backup-hub-…`.
+   (Con el mismo secret funciona también «Aplicar migración».)

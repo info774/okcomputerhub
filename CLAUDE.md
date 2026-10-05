@@ -939,6 +939,16 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   escribe, las altas del inventario van por `hub.inventario_catalogo`). Base de
   conocimiento: Wiki → `#/wiki/conocimiento` (`wiki/conocimiento.ts`, `kc-`).
   Arnés `verify-guia-catalogo.mjs`.
+- **Avisos del chat** (paridad bloque 8, tanda 5, 2026-10-05): `shell/chat-avisos.ts`
+  (`cha-`): `vigilarChat()` (desde `main.ts`) mira `hub.chat_resumen` cada 20 s y
+  al volver a la pestaña; con mensajes nuevos de otro suena el tono de la
+  conversación (Web Audio, los ocho de la app, o el sonido propio en IndexedDB
+  `hub-chat-sonido`), sale un aviso arriba a la derecha y el título lleva
+  «(N) » (el shell pone el título con `ponerTitulo`, nunca `document.title` a
+  secas). Silenciar y tono por conversación en «Avisos» de la conversación;
+  prefs en `localStorage.hub_chat_avisos_<usuario>`. Arnés `verify-chat-avisos.mjs`.
+  Backup propio: `.github/workflows/backup.yml` (volcado de `hub`; sin el
+  secret `HUB_DB_PASSWORD` avisa y no falla).
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

@@ -11,6 +11,7 @@ import { ir, resolver } from '../../core/router';
 import { esc, toast } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { markdown } from '../../ui/markdown';
+import { panelAvisos, marcarLeida, silenciada } from '../../shell/chat-avisos';
 
 interface Canal { id: string; nombre: string | null; tipo: 'grupo' | 'directo' | 'ficha'; miembros: string[]; ultimo_at: string; sin_leer: number; ultimo_texto: string | null }
 interface Mensaje { id: string; canal_id: string; autor_id: string | null; texto: string; created_at: string; editado_at: string | null }
@@ -42,6 +43,7 @@ async function refrescar() {
   c.innerHTML = burbujas(ms);
   if (abajo || !c.dataset.listo) { c.scrollTop = c.scrollHeight; c.dataset.listo = '1'; }
   if (usuario()?.id) await API.upsert('chat_leidos', 'canal_id,usuario_id', { canal_id: _canal, usuario_id: usuario()!.id, leido_hasta: new Date().toISOString() });
+  if (_canal) marcarLeida(_canal);
 }
 
 export async function pintar(el: HTMLElement, params: string[]) {
@@ -59,7 +61,9 @@ export async function pintar(el: HTMLElement, params: string[]) {
         <small class="nota">${esc((c.ultimo_texto ?? '').slice(0, 50))}</small></a></li>`).join('') || '<li class="nota">Sin canales.</li>'}</ul>
       <form class="acciones" data-on-submit="chDirecto" data-prevent="1"><select id="ch-persona" aria-label="Persona"><option value="">Mensaje directo a…</option>${personas.filter(p => p.id !== usuario()?.id).map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}</select><button class="btn secundario" type="submit">Abrir</button></form>
       <form class="acciones" data-on-submit="chGrupo" data-prevent="1"><input id="ch-grupo" placeholder="Nuevo canal de grupo" maxlength="40" aria-label="Nombre del canal"><button class="btn secundario" type="submit">Crear</button></form></aside>
-    <section class="tarjeta ch-conversacion">${actual ? `<header class="ch-cab"><a href="#/chat" class="ch-volver" aria-label="Volver a la lista">‹</a><h3>${icoCanal(actual)}${esc(nombreCanal(actual))}</h3>${ruta && /^#\/[a-z-]+\/[A-Za-z0-9-]+$/.test(ruta) ? `<a class="ch-ficha" href="${esc(ruta)}">Abrir la ficha →</a>` : ''}</header>
+    <section class="tarjeta ch-conversacion">${actual ? `<header class="ch-cab"><a href="#/chat" class="ch-volver" aria-label="Volver a la lista">‹</a><h3>${icoCanal(actual)}${esc(nombreCanal(actual))}</h3>${ruta && /^#\/[a-z-]+\/[A-Za-z0-9-]+$/.test(ruta) ? `<a class="ch-ficha" href="${esc(ruta)}">Abrir la ficha →</a>` : ''}
+        <button type="button" class="btn secundario ch-avisos-btn" data-action="chAvisos" data-p0="$this" aria-expanded="false" title="Tono y silencio de esta conversación">${ico(silenciada(actual.id) ? 'prohibido' : 'campana')} Avisos</button></header>
+      <div id="ch-avisos-panel" hidden></div>
       <div id="ch-mensajes" class="ch-mensajes" aria-live="polite"></div>
       <form class="ch-escribir" data-on-submit="chEnviar" data-prevent="1"><textarea id="ch-texto" rows="2" maxlength="4000" placeholder="Escribe… (Intro envía, Mayús+Intro salta de línea)" data-on-keydown="chTecla:$event" aria-label="Mensaje"></textarea>
         <button class="btn" type="submit">Enviar</button></form>` : '<p class="vacio">Elige una conversación.</p>'}</section></div>`;
@@ -79,6 +83,14 @@ registrarAcciones({
     if (id) void llamarFuncion('push', { accion: 'chat', mensaje_id: id });
     await refrescar();
     const c = document.getElementById('ch-mensajes'); if (c) c.scrollTop = c.scrollHeight;
+  },
+  chAvisos(b: HTMLButtonElement) {
+    const c = document.getElementById('ch-avisos-panel');
+    if (!c || !_canal) return;
+    const abrir = c.hidden;
+    c.innerHTML = abrir ? panelAvisos(_canal) : '';
+    c.hidden = !abrir;
+    b?.setAttribute('aria-expanded', String(abrir));
   },
   chTecla(e: KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); (document.querySelector('.ch-escribir') as HTMLFormElement)?.requestSubmit(); }

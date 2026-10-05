@@ -23,6 +23,7 @@ import { pintarPendientes, enviarAlEntrar } from './shell/pendientes';
 import { limpiarHistorial } from './core/deshacer';
 import { refrescarPush, escucharAvisos } from './core/push';
 import { borrarLecturas } from './core/lecturas';
+import { vigilarChat } from './shell/chat-avisos';
 
 const raiz = document.getElementById('app')!;
 let arrancado = false;
@@ -89,6 +90,7 @@ async function arrancarUnaVez() {
     history.replaceState(null, '', '#/hoy');
   }
   pintarShell(raiz);
+  vigilarChat();
   pintarPendientes(raiz);
   enviarAlEntrar();
   void refrescarPush().catch(() => {});
