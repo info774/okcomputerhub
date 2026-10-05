@@ -978,6 +978,8 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
   .icono-btn.solo-movil { display: inline-flex; }
   /* En el móvil la búsqueda es un botón redondo más (sin texto ni atajo). */
   .buscador-btn { min-width: 0; width: 40px; padding: 0; justify-content: center; }
+  /* El micro del asistente va en la cabecera del móvil (como en la app): el tour se queda fuera (sale solo la primera vez). */
+  .cabecera [data-action="empezarTour"] { display: none; }
 }
 
 /* Menú lateral: el hexágono de cada pantalla (el mismo del dock y del escritorio). */
@@ -1251,3 +1253,31 @@ body.os-modo .sis { bottom: 108px; }
 .cha-panel h4 { margin: .6rem 0 .3rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-suave); }
 .cha-subir { cursor: pointer; }
 .cha-subir input[hidden] { display: none; }
+
+/* Asistente de voz (ui/voz.ts, prefijo vz-) */
+.vz { width: min(560px, calc(100vw - 32px)); max-height: min(86vh, 760px); padding: 0; border: 1px solid var(--borde); border-radius: 16px; background: var(--superficie); color: var(--texto); display: none; flex-direction: column; }
+.vz[open] { display: flex; }
+.vz::backdrop { background: rgb(0 0 0 / .35); }
+.vz-cab { display: flex; align-items: center; gap: .6rem; padding: .8rem 1rem; border-bottom: 1px solid var(--borde); }
+.vz-cab h2 { margin: 0; font-size: 1.05rem; }
+.vz-cab .icono-btn { margin-left: auto; }
+.vz-conv { flex: 1; overflow: auto; padding: 1rem; display: flex; flex-direction: column; gap: .5rem; min-height: 180px; }
+.vz-burbuja { margin: 0; padding: .55rem .8rem; border-radius: 14px; max-width: 85%; white-space: pre-wrap; }
+.vz-user { align-self: flex-end; background: var(--primario-suave); }
+.vz-assistant { align-self: flex-start; background: var(--fondo); border: 1px solid var(--borde); }
+.vz-res { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3rem; }
+.vz-res button { width: 100%; display: grid; grid-template-columns: 1fr auto; text-align: left; gap: 0 .5rem; padding: .5rem .7rem; border: 1px solid var(--borde); border-radius: 10px; background: var(--superficie); color: inherit; font: inherit; cursor: pointer; }
+.vz-res button:hover { border-color: var(--accion); }
+.vz-res small { grid-column: 1; color: var(--texto-suave); }
+.vz-res span { grid-row: 1 / span 2; grid-column: 2; align-self: center; color: var(--texto-suave); }
+#vz-aviso { margin: 0 1rem; }
+#vz-aviso[hidden] { display: none; }
+.vz-pie { display: flex; align-items: center; gap: .6rem; padding: .7rem 1rem; border-top: 1px solid var(--borde); }
+.vz-mic { flex: none; width: 52px; height: 52px; border-radius: 50%; border: 0; background: var(--accion); color: var(--superficie); font-size: 1.4rem; display: grid; place-items: center; cursor: pointer; }
+.vz-mic.escuchando { animation: vz-pulso 1.2s ease-in-out infinite; background: var(--mal, #c0392b); }
+.vz-mic.pensando { opacity: .6; }
+@keyframes vz-pulso { 50% { box-shadow: 0 0 0 10px rgb(1 191 97 / .2); } }
+@media (prefers-reduced-motion: reduce) { .vz-mic.escuchando { animation: none; } }
+.vz-escribir { flex: 1; display: flex; gap: .4rem; }
+.vz-escribir input { flex: 1; min-width: 0; }
+.vz-opciones { padding: 0 1rem .8rem; flex-wrap: wrap; }

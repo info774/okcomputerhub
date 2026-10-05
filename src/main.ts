@@ -41,6 +41,8 @@ void iniciarVersion();
 registrarAcciones({
   alternarTema, alternarMenu, abrirBuscador: () => abrirBuscador(), cerrarBuscador, filtrarBuscador, buscadorEnter, buscadorTecla, busModo,
   empezarTour, tourSiguiente, tourCerrar, recargarVersion, tamTexto: (v: string) => aplicarTexto(v),
+  // El asistente de voz se carga al abrirlo (micro de la cabecera).
+  vozAbrir: () => { void import('./ui/voz').then(m => m.abrirVoz()); },
   async entrar() {
     const email = (document.getElementById('lg-email') as HTMLInputElement).value.trim();
     const pass = (document.getElementById('lg-pass') as HTMLInputElement).value;

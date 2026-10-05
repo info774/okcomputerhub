@@ -310,6 +310,12 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   «(N)» en el título, silenciar, sin vista previa, la conversación abierta no
   avisa, sonido propio).
 
+- `verify-voz.mjs`: asistente de voz con la función `voz` SIMULADA (guion de
+  respuestas con `[[ACCION]]`): micro de la cabecera, resumen del día, buscar y
+  abrir un resultado, abrir por número, control remoto, deshacer, lo que aún no
+  está, el resultado vuelve al historial, sin clave lo dice, y la voz de Oki
+  manda lo dictado al asistente (grabación simulada).
+
 `npm run verify` pasa todos los de la lista.
 
 ## Pantalla nueva
