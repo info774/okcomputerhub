@@ -13,6 +13,7 @@ import { iconoHex } from './iconos';
 import { svgLinea } from './linea';
 import { controlTexto } from './texto';
 import { controlAvisos, pintarAvisos } from './avisos-dispositivo';
+import { ponerTitulo } from './chat-avisos';
 
 export function pintarShell(raiz: HTMLElement) {
   const u = usuario();
@@ -66,7 +67,7 @@ function pintarMenu() {
 export async function mostrarModulo(m: Modulo, params: string[]) {
   document.body.classList.remove('menu-abierto');
   document.querySelectorAll('.menu-item').forEach(a => a.classList.toggle('activo', (a as HTMLElement).dataset.mod === m.id));
-  document.title = `${m.titulo} · Ok Computer Hub`;
+  ponerTitulo(`${m.titulo} · Ok Computer Hub`);
   if (escritorioActivo()) { await mostrarEnEscritorio(m, params); return; }
   document.getElementById('pantalla-icono')!.innerHTML = iconoHex(m.id === 'inicio' ? 'oki' : m.id, m.titulo, m.id === 'inicio' ? 'os-ico-oki' : '');
   document.getElementById('pantalla-titulo')!.textContent = m.titulo;

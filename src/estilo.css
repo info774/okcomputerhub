@@ -1237,3 +1237,17 @@ body.os-modo .sis { bottom: 108px; }
 .kc-lista li > div { flex: 1; min-width: 0; }
 .kc-ico { font-size: 1.3rem; color: var(--primario); }
 .wk-conocimiento { margin-top: 1rem; border-top: 1px solid var(--borde); padding-top: .75rem; }
+
+/* Avisos del chat (shell/chat-avisos.ts, prefijo cha-) */
+.cha-avisos { position: fixed; top: 64px; right: 16px; z-index: 8000; display: flex; flex-direction: column; gap: .5rem; width: min(340px, calc(100vw - 32px)); }
+.cha-aviso { display: flex; gap: .6rem; align-items: flex-start; padding: .7rem .8rem; color: inherit; text-decoration: none; box-shadow: 0 6px 24px rgb(0 0 0 / .18); animation: cha-entra .2s ease-out; }
+.cha-aviso small { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.cha-ico { color: var(--primario); font-size: 1.2rem; }
+@keyframes cha-entra { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cha-aviso { animation: none; } }
+.ch-avisos-btn { margin-left: auto; }
+#ch-avisos-panel[hidden] { display: none; }
+.cha-panel { margin: .5rem 0; }
+.cha-panel h4 { margin: .6rem 0 .3rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-suave); }
+.cha-subir { cursor: pointer; }
+.cha-subir input[hidden] { display: none; }
