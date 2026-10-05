@@ -3,7 +3,7 @@
 // guion) y el bloque [[ACCION]] se ejecuta en el navegador: resumen del día
 // (trabajo por fecha y por bloque de agenda), buscar con local y abrir un
 // resultado, abrir directo por número, control remoto (AnyDesk), deshacer sin
-// nada, una acción de las tandas siguientes, el resultado vuelve al historial,
+// nada, una acción que no existe, el resultado vuelve al historial,
 // y sin clave lo dice. La voz de Oki manda lo dictado al asistente.
 // Sin datos reales.
 //   npm run build && node .claude/skills/verify/verify-voz.mjs
@@ -35,7 +35,7 @@ const GUION = [
   [/abre el 153/i, '[[ACCION]]{"accion":"abrir","datos":{"tipo":"trabajo","texto":"153"}}'],
   [/conéctame/i, '[[ACCION]]{"accion":"control_remoto","datos":{"local":"bar manolo"}}'],
   [/deshaz/i, '[[ACCION]]{"accion":"deshacer","datos":{}}'],
-  [/empiezo/i, '[[ACCION]]{"accion":"fichar","datos":{"que":"inicio","referencia":"151"}}'],
+  [/mándale un whatsapp/i, '[[ACCION]]{"accion":"mandar_whatsapp","datos":{"texto":"hola"}}'],
   [/hola/i, 'Hola, ¿en qué te ayudo?'],
 ];
 
@@ -100,9 +100,9 @@ try {
   await page.waitForFunction(() => [...document.querySelectorAll('.vz-assistant')].pop()?.textContent.includes('nada reciente'));
   ok(true, 'deshacer sin nada hecho: lo dice');
 
-  await decir('empiezo con el 151');
+  await decir('mándale un whatsapp a Bar Manolo');
   await page.waitForFunction(() => [...document.querySelectorAll('.vz-assistant')].pop()?.textContent.includes('todavía no'));
-  ok(true, 'una orden que aún no está: lo dice y no hace nada');
+  ok(true, 'una orden que el hub no tiene: lo dice y no hace nada');
   await page.screenshot({ path: `${CAPTURAS}/voz.png` });
 
   sinClave = true;

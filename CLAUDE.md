@@ -962,6 +962,12 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   (`registrarAccionesVoz`), desplegando la función en el mismo rato. Oki:
   con asistente configurado (`asistenteDisponible()`), lo dictado va a él; si
   no, como antes (buscador o comanda). Arnés `verify-voz.mjs`.
+  Tanda 2: ÓRDENES DIRECTAS en `src/ui/voz-ordenes.ts` (carga diferida desde
+  `ejecutarAccion`): fichar (`hub.fichar`), estados (trabajo SIEMPRE por
+  `hub.trabajo_estado`), programar/mover (`hub.agenda_mover`; el técnico se
+  AÑADE al trabajo), cita, gasto, nota, descripción y comanda. Se ejecutan sin
+  confirmar; antes de escribir en un área, `esDelHub` (si es de la app, lo dice
+  con `enLaApp` y no escribe). Arnés `verify-voz-ordenes.mjs`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto
