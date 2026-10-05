@@ -144,7 +144,7 @@ try {
     }
   }
   ok(huellaPublic() === antes, 'public (Breeze) queda igual');
-  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '10', 'diez tareas de pg_cron (con el repaso de la cartera de Zoho), sin duplicar');
+  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '11', 'once tareas de pg_cron (con el aviso de trabajos en una hora), sin duplicar');
 
   // ── Permisos y RLS ─────────────────────────────────────────────────────
   ok(!psql(como('anon', null, 'select count(*) from hub.clientes;'), { esperaError: true }).ok, 'anon no entra en hub');
@@ -852,6 +852,17 @@ commit;`);
     'whatsapp: los códigos de las sedes y los mensajes, solo las funciones');
   ok(psql(`select array_to_string(tablas, ',') from hub.areas where area = 'whatsapp'`) === 'wa_conversaciones,wa_mensajes'
     && psql(`select 'ticket_adjuntos' = any (tablas) from hub.areas where area = 'tickets'`) === 't', 'whatsapp: área propia y los adjuntos con los tickets');
+
+  // Feedback y avisos push (paridad bloque 6, tanda 4).
+  psql(como('authenticated', 'tito@ok.test', `insert into hub.feedback (tipo, descripcion, estado, autor_nombre, resultado) values ('bug', 'No guarda la sede', 'hecha', 'Otro', 'trampa');`));
+  ok(psql(`select estado || '|' || autor_nombre || '|' || coalesce(resultado, '-') from hub.feedback where descripcion = 'No guarda la sede'`) === 'nueva|Tito|-',
+    'feedback: nace «nueva» y a nombre de quien la cuenta (no de lo que diga el navegador)');
+  ok(una('tito@ok.test', `update hub.feedback set estado = 'claude' returning 1;`) !== '1' && una('ana@ok.test', `select count(*) from hub.feedback`) === '1',
+    'feedback: el técnico no la gestiona y el admin la ve');
+  una('ana@ok.test', `update hub.feedback set estado = 'claude' where descripcion = 'No guarda la sede';`);
+  ok(psql(`select pasada_at is not null from hub.feedback where descripcion = 'No guarda la sede'`) === 't', 'feedback: pasarla a Claude apunta cuándo');
+  ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.push_suscripciones (usuario_id, endpoint, p256dh, auth) values (gen_random_uuid(), 'https://x', 'a', 'b');`), { esperaError: true }).ok,
+    'push: las suscripciones solo las registra la función');
 
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);

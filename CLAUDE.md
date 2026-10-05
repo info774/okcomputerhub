@@ -790,8 +790,8 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `reloj-<n>`; aquí no hay SDK de Android (dl.google.com bloqueado). El
   `resumen` es un contrato con relojes ya instalados: se añaden campos, no se
   quitan. Detalle e instalación en `docs/RELOJ.md`.
-- **Usuarios, modo empleado y registro de cambios** (paridad bloque 6, tanda
-  1, 2026-10-04): `#/usuarios` (`usuarios/`, `us-`, admin; PREPARADO para el
+- **Usuarios, modo empleado y registro de cambios** (paridad bloque 6 HECHO,
+  tanda 1, 2026-10-04): `#/usuarios` (`usuarios/`, `us-`, admin; PREPARADO para el
   corte del área `usuarios`: alta, rol, teléfono y activar, nunca a uno mismo).
   Modo empleado = `core/empleado.ts` (`MENU_EMPLEADO`): quien NO es admin ve el
   menú del técnico (lo filtra `visibles()`; es solo interfaz, la URL sigue
@@ -829,6 +829,24 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   (`shell/atajos.ts`). OJO en los arneses: guardar ahora hace un GET antes del
   PATCH; esperar a lo que dice la pantalla («Guardado»), no a un valor que ya
   estaba puesto.
+  Tanda 4 (2026-10-05): AVISOS PUSH (Web Push con VAPID PROPIO del hub: la
+  pública en `config.ts`, la privada en el secret `VAPID_PRIVATE_KEY`).
+  `core/push.ts` suscribe y la función `push` (SIN_JWT: sesión o token del
+  cron) guarda en `hub.push_suscripciones` a nombre de quien tiene la sesión
+  (al entrar se reapunta; las caducadas se borran solas). Mandar un aviso desde
+  una función: `avisarPush(usuarioIds, { title, body, tag, url })` de
+  `_shared/push.ts` (nunca lanza); va ADEMÁS de Telegram. Avisan las comandas,
+  el chat (el front llama `push` `chat` tras enviar; el service worker no lo
+  enseña si el hub está a la vista) y los avisos de WhatsApp a admins; el cron
+  `hub-push-proximos` (trabajos en ~1 h) no hace nada mientras la agenda sea de
+  la app. Botón «🔔 Avisos» al pie del menú y tarjeta en Configuración
+  (`shell/avisos-dispositivo.ts`, `av-`, con «Instalar como app»).
+  FEEDBACK: `#/feedback` (`feedback/`, `fb-`, todos; en `MENU_EMPLEADO`) sobre
+  `hub.feedback` (el autor y el estado inicial los pone la base; gestionar,
+  solo admin). Contexto solo: `core/errores.ts` (últimos errores JS y la
+  pantalla de antes) y `buildActual()`. «Pasar a Claude» = estado `claude`; el
+  trabajador lo toma por el MCP (`feedback_pendientes`/`_tomar`/`_terminar`,
+  docs/CLAUDE_TRABAJADOR.md punto 3) y deja `resultado`. Sin GitHub.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto

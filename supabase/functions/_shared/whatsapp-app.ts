@@ -8,6 +8,7 @@
 //  · el comentario del ticket va al Desk del hub (`tipo = respuesta`, canal
 //    whatsapp, ya enviado);
 //  · los avisos a los administradores van por Telegram (el hub no tiene push).
+import { avisarPush } from './push.ts'
 import {
   normalizaTelefono, dentroDeVentana, enviarDocumento, enviarPlantillaDocumento, subirMedia, plantillaDocumento,
   type EnvioWa,
@@ -99,11 +100,13 @@ export async function enviarDocumentoZoho(
 
 // Aviso a los administradores por Telegram (el push de la app, en el hub): a
 // los que tengan su Telegram vinculado (Informes → Vincular mi Telegram).
-export async function avisarAdmins(db: SupabaseClient, titulo: string, cuerpo: string, _tag: string) {
+export async function avisarAdmins(db: SupabaseClient, titulo: string, cuerpo: string, tag: string) {
   try {
-    if (!telegramConfigurado()) return
     const { data: admins } = await db.from('usuarios').select('id').eq('rol', 'admin').neq('activo', false)
     if (!admins?.length) return
+    // En el móvil (push, como la app) y por Telegram.
+    await avisarPush(admins.map((a: any) => a.id), { title: titulo, body: cuerpo, tag, url: '/#/inicio' })
+    if (!telegramConfigurado()) return
     const { data: vs } = await db.from('telegram_vinculos').select('chat_id')
       .eq('activo', true).not('chat_id', 'is', null).in('usuario_id', admins.map((a: any) => a.id))
     const texto = `<b>${h(titulo)}</b>\n${h(cuerpo.slice(0, 300))}\n\n<a href="${HUB}">Abrir el hub</a> (el WhatsApp, abajo a la derecha)`

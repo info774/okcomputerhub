@@ -1,4 +1,5 @@
 // Arranque: tema → sesión → ¿es usuario del hub? → shell + router.
+import './core/errores';
 import './estilo.css';
 import './escritorio.css';
 import './oki.css';
@@ -20,6 +21,7 @@ import { aplicarTexto } from './shell/texto';
 import './shell/atajos';
 import { pintarPendientes, enviarAlEntrar } from './shell/pendientes';
 import { limpiarHistorial } from './core/deshacer';
+import { refrescarPush, escucharAvisos } from './core/push';
 import { borrarLecturas } from './core/lecturas';
 
 const raiz = document.getElementById('app')!;
@@ -89,6 +91,7 @@ async function arrancarUnaVez() {
   pintarShell(raiz);
   pintarPendientes(raiz);
   enviarAlEntrar();
+  void refrescarPush().catch(() => {});
   iniciarRouter(mostrarModulo);
   tourSiEsNuevo();
 }
@@ -99,4 +102,5 @@ await arrancar();
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   navigator.serviceWorker.register('/sw.js').catch(e => console.warn('[sw]', e));
+  escucharAvisos();
 }

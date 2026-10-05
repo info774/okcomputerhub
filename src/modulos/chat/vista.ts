@@ -2,6 +2,7 @@
 // (hub.chat_resumen), conversación que se refresca cada 4 s mientras está a la
 // vista, directos (hub.chat_directo), canales de grupo y los de cada ficha
 // (hub.chat_ficha, con enlace de vuelta). Prefijo de ids: ch-.
+import { llamarFuncion } from '../../core/funciones';
 import { API } from '../../core/api';
 import { usuario, esAdmin } from '../../core/estado';
 import { equipo, nombreDe } from '../../core/equipo';
@@ -71,8 +72,11 @@ registrarAcciones({
     const texto = t?.value.trim();
     if (!texto || !_canal) return;
     t!.value = '';
-    const r = await API.post('chat_mensajes', { canal_id: _canal, texto });
+    const r = await API.post<{ id: string }[]>('chat_mensajes', { canal_id: _canal, texto });
     if (r.error) { toast(`No se pudo enviar: ${r.error.message}`, 'error'); t!.value = texto; return; }
+    // Aviso en el móvil de los demás (como send-chat-push de la app); si falla, el mensaje ya está.
+    const id = r.data?.[0]?.id;
+    if (id) void llamarFuncion('push', { accion: 'chat', mensaje_id: id });
     await refrescar();
     const c = document.getElementById('ch-mensajes'); if (c) c.scrollTop = c.scrollHeight;
   },

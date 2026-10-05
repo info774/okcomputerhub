@@ -1112,6 +1112,22 @@ details > summary { cursor: pointer; }
 body.os-modo .sis { bottom: 108px; }
 @media (max-width: 767px) { .sis-chip span { display: none; } body.menu-abierto .sis { display: none; } }
 
+/* ---- Avisos en este dispositivo (bloque 6, pie del menú) ---- */
+.menu-avisos { display: flex; align-items: center; gap: .5rem; width: calc(100% - 1.5rem); margin: .25rem .75rem; padding: .55rem .75rem; border: 1px solid var(--borde); border-radius: 10px; background: var(--superficie); color: var(--texto); font: inherit; font-size: .85rem; text-align: left; cursor: pointer; }
+.menu-avisos[hidden] { display: none; }
+.menu-avisos[data-estado="activo"] { border-color: var(--accion); color: var(--primario); }
+.menu-avisos[data-estado="denegado"] { color: var(--texto-suave); }
+
+/* ---- Feedback (bloque 6, fb-) ---- */
+.fb-zona > .acciones { justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.fb-zona h3 { margin: 0; }
+.fb-item { display: flex; flex-direction: column; gap: .5rem; }
+.fb-cab { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.fb-ctx pre { white-space: pre-wrap; font-size: .78rem; max-height: 14rem; overflow: auto; }
+.fb-resultado { border-left: 3px solid var(--accion); padding-left: .75rem; }
+.fb-resultado h4 { margin: 0 0 .25rem; font-size: .85rem; color: var(--texto-suave); }
+.fb-notas textarea { width: 100%; }
+
 /* ---- Sin emojis: hexágono de la pantalla en baldosas y paleta (shell, inicio) ----
    Las baldosas de Inicio y la paleta Ctrl+K pintan el icono del dock
    (iconoHex) en vez del emoji del módulo; el tono de la baldosa tiñe el hexágono. */

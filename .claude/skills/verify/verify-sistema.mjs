@@ -13,7 +13,11 @@
 // Tanda 3: deshacer (el chip, Ctrl+Z devuelve el cambio, el panel deshace un
 // alta y lo de otros no se toca) y la cola sin red (fichar sin conexión: se
 // ve al momento con la última copia, «1 sin enviar» (chip de la nube), y al volver la red sale
-// solo con la hora de la pulsación). Sin datos reales.
+// solo con la hora de la pulsación).
+// Tanda 4: avisos push (con el navegador SIMULADO: permiso, suscripción con la
+// clave VAPID del hub → `push` registrar; «Mandarme una prueba») y Feedback
+// (el técnico lo cuenta con la pantalla de antes y los últimos errores; el
+// admin lo ve todo y lo «Pasa a Claude» con sus notas). Sin datos reales.
 //   npm run build && node .claude/skills/verify/verify-sistema.mjs
 import { servidor, navegador, baseMemoria, preparar, contador, CAPTURAS, SB } from './comun.mjs';
 
@@ -248,6 +252,98 @@ try {
   await page.waitForFunction(() => document.querySelector('.ho-fichaje')?.textContent.includes('En traslado'));
   ok(base.db.sesiones.length === 1, 'al volver la red: un solo fichaje (no se repite)');
   await page.screenshot({ path: `${CAPTURAS}/sistema-cola.png` });
+
+  // ── Avisos push en el dispositivo (navegador simulado) ───────────────────
+  base = baseMemoria(inicial([]), {});
+  ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 900 } });
+  await preparar(ctx, { email: 'ana@ok.test', base });
+  const pushes = [];
+  await ctx.route(`${SB}/functions/v1/push`, async route => {
+    const b = route.request().postDataJSON();
+    pushes.push(b);
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b.accion === 'probar' ? { enviados: 1, errores: 0, borradas: 0 } : { ok: true }) });
+  });
+  await ctx.addInitScript(() => {
+    let sub = null, perm = 'default';
+    const pm = {
+      getSubscription: async () => sub,
+      subscribe: async o => { window.__clave = o.applicationServerKey?.length;
+        sub = { endpoint: 'https://push.test/abc', toJSON: () => ({ endpoint: 'https://push.test/abc', keys: { p256dh: 'P', auth: 'A' } }), unsubscribe: async () => { sub = null; return true; } };
+        return sub; },
+    };
+    const reg = { pushManager: pm, update: async () => {} };
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { getRegistration: async () => reg, register: async () => reg, addEventListener() {} } });
+    window.PushManager = function () {};
+    window.Notification = { get permission() { return perm; }, requestPermission: async () => (perm = 'granted') };
+  });
+  page = await ctx.newPage();
+  page.on('pageerror', e => errores.push(String(e.stack ?? e)));
+  await page.goto(`${srv.base}/#/configuracion`);
+  await page.waitForSelector('#av-botones [data-action="pushActivar"]');
+  ok(await page.getAttribute('.menu-avisos', 'data-estado') === 'inactivo', 'push: el pie del menú ofrece activar los avisos');
+  await page.click('#av-botones [data-action="pushActivar"]');
+  await page.waitForSelector('#av-botones [data-action="pushProbar"]');
+  const reg = pushes.find(p => p.accion === 'registrar');
+  ok(reg?.endpoint === 'https://push.test/abc' && reg.p256dh === 'P' && reg.auth === 'A' && await page.evaluate(() => window.__clave) === 65,
+    'push: se suscribe con la clave VAPID del hub y la función apunta el dispositivo');
+  ok(await page.getAttribute('.menu-avisos', 'data-estado') === 'activo', 'push: el menú dice que están activados');
+  await page.click('#av-botones [data-action="pushProbar"]');
+  await page.waitForFunction(() => document.getElementById('toast')?.textContent.includes('Enviada a 1 dispositivo'));
+  ok(pushes.some(p => p.accion === 'probar'), 'push: «Mandarme una prueba»');
+  await page.click('#av-botones [data-action="pushDesactivar"]');
+  await page.waitForSelector('#av-botones [data-action="pushActivar"]');
+  ok(pushes.some(p => p.accion === 'quitar' && p.endpoint === 'https://push.test/abc'), 'push: desactivar lo quita del hub');
+  await ctx.close();
+
+  // ── Feedback: el técnico lo cuenta ──────────────────────────────────────
+  base = baseMemoria({ ...inicial([]), feedback: [] }, {});
+  ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 900 } });
+  await preparar(ctx, { email: 'tito@ok.test', base });
+  page = await ctx.newPage();
+  page.on('pageerror', e => errores.push(String(e.stack ?? e)));
+  await page.goto(`${srv.base}/#/tareas`);
+  await page.waitForSelector('#menu a[data-mod="feedback"]', { state: 'attached' });
+  await page.evaluate(() => window.dispatchEvent(new ErrorEvent('error', { message: 'Prueba: no se pudo leer x' })));
+  await page.evaluate(() => { location.hash = '#/feedback'; });
+  await page.waitForSelector('#fb-desc');
+  ok(await page.inputValue('#fb-seccion') === 'tareas', 'feedback: «Dónde» sale con la pantalla de antes');
+  await page.selectOption('#fb-tipo', 'mejora');
+  await page.fill('#fb-desc', 'Que se pueda filtrar por sede');
+  await page.click('#fb-form button[type="submit"]');
+  await page.waitForFunction(() => document.getElementById('toast')?.textContent.includes('Gracias'));
+  const fb = base.db.feedback[0];
+  ok(fb?.tipo === 'mejora' && fb.seccion === 'tareas' && fb.ruta === '#/tareas' && fb.contexto?.errores?.some(e => e.mensaje.includes('Prueba: no se pudo leer')) && fb.contexto.entorno,
+    'feedback: se guarda con la pantalla, el entorno y los últimos errores');
+  ok(await page.locator('[data-action="fbClaude"]').count() === 0, 'feedback: el técnico no lo gestiona');
+  await ctx.close();
+
+  // ── Feedback: el admin lo pasa a Claude ─────────────────────────────────
+  base = baseMemoria({ ...inicial([]), feedback: [
+    { id: 'fb1', numero: 7, created_at: iso(ahora - 3600e3), tipo: 'bug', descripcion: 'No guarda la **sede**', seccion: 'sitios', ruta: '#/sitios/1', estado: 'nueva',
+      autor_id: 'u-tito', autor_nombre: 'Tito Técnico', contexto: { version: 'abc123', entorno: 'Navegador', errores: [{ ts: iso(ahora), mensaje: 'TypeError: x is null', ruta: '#/sitios/1' }] },
+      notas: null, pasada_at: null, terminada_at: null, resultado: null },
+    { id: 'fb2', numero: 6, created_at: iso(ahora - 86400e3), tipo: 'idea', descripcion: 'Modo oscuro', seccion: null, ruta: null, estado: 'hecha',
+      autor_id: 'u-ana', autor_nombre: 'Ana Admin', contexto: {}, notas: null, pasada_at: null, terminada_at: iso(ahora - 3600e3), resultado: 'Hecho en el **PR #30**' },
+  ] }, {});
+  ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 900 } });
+  await preparar(ctx, { email: 'ana@ok.test', base });
+  page = await ctx.newPage();
+  page.on('pageerror', e => errores.push(String(e.stack ?? e)));
+  page.on('dialog', d => d.accept());
+  await page.goto(`${srv.base}/#/feedback`);
+  await page.waitForSelector('.fb-item');
+  ok(await page.locator('.fb-item').count() === 1 && (await page.textContent('.fb-item')).includes('TypeError: x is null'), 'feedback: el admin ve lo abierto con su contexto y errores');
+  ok(!(await page.$eval('.principal', e => /\p{Extended_Pictographic}/u.test(e.textContent))) && !(await page.$eval('.menu-avisos', e => /\p{Extended_Pictographic}/u.test(e.textContent))),
+    'feedback y avisos: sin emojis (iconos de línea)');
+  await page.fill('#fb-notas-fb1', 'Mira sitios/formulario.ts');
+  await page.click('[data-action="fbClaude"][data-p0="fb1"]');
+  await page.waitForFunction(() => document.getElementById('toast')?.textContent.includes('Pasada a Claude'));
+  ok(base.db.feedback[0].estado === 'claude' && base.db.feedback[0].notas === 'Mira sitios/formulario.ts', 'feedback: «Pasar a Claude» lo deja en la cola con las notas');
+  await page.click('.fb-filtros [data-p0="hecha"]');
+  await page.waitForFunction(() => document.querySelector('.fb-resultado')?.textContent.includes('PR #30'));
+  ok(await page.locator('.fb-resultado strong').count() === 1, 'feedback: lo que hizo Claude, con markdown seguro');
+  await page.screenshot({ path: `${CAPTURAS}/sistema-feedback.png` });
+  await ctx.close();
 
   ok(!errores.length, `sin errores JS${errores.length ? ': ' + errores.join(' | ') : ''}`);
 } finally {

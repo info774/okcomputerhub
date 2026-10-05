@@ -6,6 +6,7 @@
 import type { Db, Fila } from './hub-db.ts'
 import { claudeConfigurado, preguntarClaude } from './claude.ts'
 import { enviarTelegram, h } from './mensajeria.ts'
+import { avisarPush } from './push.ts'
 
 export const groqConfigurado = () => !!Deno.env.get('GROQ_API_KEY')
 
@@ -75,6 +76,9 @@ async function avisar(db: Db, tareas: Fila[], personas: { id: string; nombre: st
   const por = new Map<string, Fila[]>()
   for (const t of tareas) if (t.persona_id && t.persona_id !== autorId) por.set(t.persona_id as string, [...(por.get(t.persona_id as string) ?? []), t])
   if (!por.size) return
+  // En el móvil (push) además de por Telegram.
+  await Promise.all([...por].map(([id, ts]) => avisarPush([id], { title: `${autor} te ha pasado ${ts.length === 1 ? 'una comanda' : ts.length + ' comandas'}`,
+    body: ts.map(t => `${t.prioridad ? 'URGENTE: ' : ''}${t.texto}`).join(' · '), tag: `comanda-${ts[0].comanda_id}`, url: '/#/comandas' })))
   const vs = await db.get(`telegram_vinculos?select=usuario_id,chat_id&activo=eq.true&chat_id=not.is.null&usuario_id=in.(${[...por.keys()].join(',')})`).catch(() => [])
   for (const v of vs) {
     const ts = por.get(v.usuario_id as string) ?? []

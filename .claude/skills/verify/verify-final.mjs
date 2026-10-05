@@ -131,6 +131,8 @@ try {
   await page.press('#ch-texto', 'Enter');
   await page.waitForFunction(() => document.querySelector('.ch-mensajes')?.textContent.includes('Voy para el hotel'));
   ok(base.db.chat_mensajes.some(m => m.texto === 'Voy para el hotel' && m.canal_id === 'cg'), 'chat: Intro envía');
+  const msj = base.db.chat_mensajes.find(m => m.texto === 'Voy para el hotel');
+  ok(base.reg.funciones.some(f => f.url.endsWith('/push') && f.body?.accion === 'chat' && f.body.mensaje_id === msj?.id), 'chat: avisa por push a los demás (función push, acción chat)');
   await page.selectOption('#ch-persona', 'u-ana');
   await page.click('form[data-on-submit="chDirecto"] button[type=submit]');
   await page.waitForFunction(() => location.hash === '#/chat/cd');
