@@ -11,6 +11,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { resolver, ir } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 
 export const TIPOS: Record<string, { nombre: string; ayuda: string; dinero?: boolean; hora: string }> = {
   repaso_matinal: { nombre: 'Repaso de la mañana', ayuda: 'Tu agenda del día, tus tickets y tareas, y tus avisos.', hora: '07:45' },
@@ -42,13 +43,13 @@ export function htmlTelegram(t: string): string {
 
 function tarjetaTelegram(v: Vinculo | undefined): string {
   if (!_bot?.configurado) {
-    return `<section class="tarjeta"><h3>📨 Telegram</h3><p class="aviso">El bot de Telegram todavía no está puesto. ${esAdmin()
+    return `<section class="tarjeta"><h3>${ico('enviar')} Telegram</h3><p class="aviso">El bot de Telegram todavía no está puesto. ${esAdmin()
       ? 'Los pasos están en <code>docs/FASE3.md</code>: crear el bot con @BotFather y pasarle el token a Claude.' : 'Cuando lo ponga un administrador, aquí podrás vincular tu Telegram.'}</p></section>`;
   }
   const admin = esAdmin() && _bot.webhook ? `<p class="nota">Bot @${esc(_bot.usuario)} · webhook ${_bot.webhook.puesto ? '<span class="chip bien">puesto</span>'
     : '<span class="chip mal">sin poner</span>'}${_bot.webhook.ultimo_error ? ` · último error: ${esc(_bot.webhook.ultimo_error)}` : ''}
     <button class="btn secundario" data-action="inConfigurarBot">${_bot.webhook.puesto ? 'Volver a configurar' : 'Configurar el bot'}</button></p>` : '';
-  return `<section class="tarjeta"><h3>📨 Tu Telegram</h3>
+  return `<section class="tarjeta"><h3>${ico('enviar')} Tu Telegram</h3>
     ${v?.chat_id ? `<p><span class="chip bien">Vinculado</span> ${esc(v.nombre_tg ?? '')} · desde ${esc(fechaHora(v.vinculado_at))}</p>
       <div class="acciones"><button class="btn secundario" data-action="inDesvincular">Desvincular</button></div>`
       : `<p class="nota">Vincula tu Telegram para recibir aquí los informes y pedirle cosas al bot (/avisos, /repaso…).</p>

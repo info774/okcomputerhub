@@ -3,6 +3,7 @@
 import type { Modulo } from '../core/modulo';
 import { esAdmin } from '../core/estado';
 import { esc } from '../ui/dom';
+import { ico } from './linea';
 
 export async function pintarPantalla(el: HTMLElement, m: Modulo, params: string[]) {
   el.innerHTML = '';
@@ -19,6 +20,6 @@ export async function pintarPantalla(el: HTMLElement, m: Modulo, params: string[
       el.innerHTML = `<p class="aviso mal">Esta pantalla ha fallado al cargar: ${esc(e?.message ?? e)}</p>`;
     }
   } else if (m.enlaceExterno) {
-    el.innerHTML = `<p><a class="btn" href="${esc(m.enlaceExterno)}" target="_blank" rel="noopener">Abrir en la app actual ↗</a></p>`;
+    el.innerHTML = `<p><a class="btn" href="${esc(m.enlaceExterno)}" target="_blank" rel="noopener">Abrir en la app actual ${ico('externo')}</a></p>`;
   }
 }

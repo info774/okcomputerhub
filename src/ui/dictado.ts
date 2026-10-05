@@ -7,6 +7,7 @@
 //     al campo. Lo usa la nota de voz del Tablero.
 import { llamarFuncion } from '../core/funciones';
 import { toast } from './dom';
+import { ico } from '../shell/linea';
 
 let _grabadora: MediaRecorder | null = null;
 
@@ -43,12 +44,12 @@ export async function grabarYTranscribir(avisos: Avisos = {}): Promise<{ texto: 
 
 export async function alternarDictado(boton: HTMLElement | null, campoId: string) {
   if (grabando()) { pararGrabacion(); return; }
-  const texto0 = boton?.textContent ?? '';
+  const html0 = boton?.innerHTML ?? '';
   const r = await grabarYTranscribir({
-    empieza: () => { if (boton) { boton.textContent = '⏹ Parar'; boton.setAttribute('aria-pressed', 'true'); } },
+    empieza: () => { if (boton) { boton.innerHTML = `${ico('parar')} Parar`; boton.setAttribute('aria-pressed', 'true'); } },
     pasando: () => { if (boton) boton.textContent = '… pasando a texto'; },
   });
-  if (boton) { boton.textContent = texto0; boton.setAttribute('aria-pressed', 'false'); }
+  if (boton) { boton.innerHTML = html0; boton.setAttribute('aria-pressed', 'false'); }
   if (!r.texto) { toast(r.error ?? 'No se entendió nada', 'error'); return; }
   const campo = document.getElementById(campoId) as HTMLTextAreaElement | HTMLInputElement | null;
   if (campo) { campo.value = campo.value.trim() ? `${campo.value.trimEnd()}\n${r.texto}` : r.texto; campo.dispatchEvent(new Event('input', { bubbles: true })); }

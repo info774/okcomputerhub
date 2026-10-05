@@ -49,7 +49,7 @@ async function proximos(db: Db) {
     const para = nombres.length ? personas.filter(p => nombres.some(n => esDe(n, p))) : personas
     const hora = new Date(b.inicio as string).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Atlantic/Canary' })
     const sitio = locales.find(l => l.id === t.local_id)?.nombre
-    const r = await avisarPush(para.map(p => p.id), { title: `⏰ A las ${hora}: #${t.numero ?? ''} ${t.titulo ?? ''}`.trim(),
+    const r = await avisarPush(para.map(p => p.id), { title: `A las ${hora}: #${t.numero ?? ''} ${t.titulo ?? ''}`.trim(),
       body: sitio ? `En ${sitio}` : 'Empieza en una hora', tag: `trabajo-${t.id}`, url: `/#/trabajos/${t.numero ?? t.id}` })
     enviados += r.enviados
   }
@@ -93,7 +93,7 @@ Deno.serve(async req => {
       }
       case 'probar': {
         if (!pushConfigurado()) return json({ error: 'Faltan las claves VAPID del hub (docs/PENDIENTE_FRAN.md)' }, 503, cors)
-        const r = await avisarPush([yo.id], { title: '🔔 Prueba del hub', body: `Así te llegarán los avisos, ${yo.nombre.split(/\s+/)[0]}.`, tag: 'hub-prueba', url: '/#/configuracion' })
+        const r = await avisarPush([yo.id], { title: 'Prueba del hub', body: `Así te llegarán los avisos, ${yo.nombre.split(/\s+/)[0]}.`, tag: 'hub-prueba', url: '/#/configuracion' })
         return json(r, 200, cors)
       }
       case 'chat': {
@@ -106,7 +106,7 @@ Deno.serve(async req => {
         const para = c.tipo === 'grupo'
           ? (await db.get('usuarios?select=id&activo=eq.true')).map(u => u.id as string)
           : ((c.miembros as string[] | null) ?? [])
-        const titulo = c.tipo === 'directo' ? `💬 ${yo.nombre}` : `💬 ${yo.nombre} en ${c.nombre ?? 'el chat'}`
+        const titulo = c.tipo === 'directo' ? yo.nombre : `${yo.nombre} en ${c.nombre ?? 'el chat'}`
         const r = await avisarPush(para.filter(id => id !== yo.id), { title: titulo, body: String(m.texto), tag: `chat-${c.id}`, url: `/#/chat/${c.id}`, chat: c.id as string })
         return json(r, 200, cors)
       }

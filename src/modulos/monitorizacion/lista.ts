@@ -6,6 +6,7 @@ import { API } from '../../core/api';
 import { ir, resolver } from '../../core/router';
 import { registrarAcciones } from '../../core/dispatcher';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import {
   type Equipo, type Alerta, type Site, type EstadoLocal,
   ESTADOS_SEDE, SEVERIDAD, ESTADO_ALERTA, enBreeze,
@@ -45,7 +46,7 @@ export function tablaEquipos(equipos: Equipo[], sedes: Map<string, string>, conS
   return `<div class="tarjeta mo-scroll"><table class="tabla">
     <thead><tr><th>Equipo</th><th>Conexión</th>${conSede ? '<th>Sede</th>' : ''}<th>Sistema</th><th>Disco</th><th>Parches</th><th>Alertas</th><th>TPV</th></tr></thead>
     <tbody>${equipos.map(e => `<tr class="fila-clic" data-action="moEquipo" data-p0="${esc(e.id)}">
-      <td><strong>${esc(e.nombre)}</strong>${e.ultimo_usuario ? `<br><small class="nota">👤 ${esc(e.ultimo_usuario)}</small>` : ''}</td>
+      <td><strong>${esc(e.nombre)}</strong>${e.ultimo_usuario ? `<br><small class="nota">${ico('persona')} ${esc(e.ultimo_usuario)}</small>` : ''}</td>
       <td>${conexion(e)}</td>
       ${conSede ? `<td>${e.local_id ? esc(sedes.get(e.local_id) ?? '…') : `<span class="nota">${esc(e.sitio ?? 'Sin Site')} · sin sede</span>`}</td>` : ''}
       <td>${esc((e.so_version ?? e.so).replace(/^Microsoft /, ''))}</td>
@@ -57,7 +58,7 @@ export function tablaEquipos(equipos: Equipo[], sedes: Map<string, string>, conS
 }
 
 export function tablaAlertas(alertas: Alerta[], sedes: Map<string, string>): string {
-  if (!alertas.length) return '<p class="vacio">Sin alertas. 🎉</p>';
+  if (!alertas.length) return `<p class="vacio">Sin alertas. ${ico('trofeo')}</p>`;
   return `<div class="tarjeta mo-scroll"><table class="tabla">
     <thead><tr><th>Gravedad</th><th>Alerta</th><th>Equipo</th><th>Cuándo</th><th>Estado</th><th></th></tr></thead>
     <tbody>${alertas.map(a => {
@@ -71,7 +72,7 @@ export function tablaAlertas(alertas: Alerta[], sedes: Map<string, string>): str
         <td>${esc(ESTADO_ALERTA[a.estado] ?? a.estado)}${a.acusada_por ? `<br><small class="nota">por ${esc(a.acusada_por)}</small>` : ''}</td>
         <td class="acciones">
           ${a.estado === 'active' ? `<button class="btn secundario" data-action="moAcusar" data-p0="${esc(a.id)}">Acusar</button>` : ''}
-          <a class="btn secundario" href="${esc(enBreeze.alerta(a.id))}" target="_blank" rel="noopener">${a.estado === 'resolved' ? 'Ver' : 'Resolver'} en Breeze ↗</a>
+          <a class="btn secundario" href="${esc(enBreeze.alerta(a.id))}" target="_blank" rel="noopener">${a.estado === 'resolved' ? 'Ver' : 'Resolver'} en Breeze ${ico('externo')}</a>
         </td>
       </tr>`;
     }).join('')}</tbody></table></div>`;

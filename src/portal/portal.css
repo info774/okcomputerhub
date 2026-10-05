@@ -43,3 +43,6 @@ input, textarea, select { display: block; width: 100%; margin-top: .25rem; font:
 .md h1, .md h2, .md h3 { margin: .8rem 0 .4rem; }
 .ge-mes { display: flex; align-items: center; gap: .4rem; margin: 0; }
 .ge-mes input { width: auto; margin: 0; }
+
+/* Icono de línea (ico() de shell/linea.ts), como en el hub. */
+.ico { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -.17em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }

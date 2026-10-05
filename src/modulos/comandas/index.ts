@@ -11,6 +11,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 
 interface Tarea { id: string; comanda_id: string | null; created_at: string; texto: string; persona_id: string | null; estado: 'pendiente' | 'en_curso' | 'hecha';
   prioridad: boolean; fecha_limite: string | null; origen: string; creada_por: string | null; hecha_at: string | null }
@@ -37,7 +38,7 @@ function tarjeta(t: Tarea): string {
     <p class="co-texto">${esc(t.texto)}</p>
     <div class="pr-tarjeta-pie"><select aria-label="Persona" data-on-change="coPersona:${t.id},$value"><option value="">Sin repartir</option>
       ${_personas.map(p => `<option value="${p.id}" ${p.id === t.persona_id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>
-      ${t.fecha_limite ? `<span class="${vencida ? 'mal' : ''}">📅 ${esc(t.fecha_limite)}</span>` : ''}</div>
+      ${t.fecha_limite ? `<span class="${vencida ? 'mal' : ''}">${ico('calendario')} ${esc(t.fecha_limite)}</span>` : ''}</div>
     <div class="acciones">${botones}${esAdmin() || t.creada_por === usuario()?.id ? `<button class="btn secundario" data-action="coBorrar" data-p0="${t.id}" aria-label="Borrar">✕</button>` : ''}</div>
   </article>`;
 }
@@ -61,7 +62,7 @@ async function pintar(el: HTMLElement) {
         <label for="co-texto">¿Qué hay que hacer? Díctalo o escríbelo, con los nombres: «Tito, mañana cambia el router del Bar Pepe; Ana, llama al Hotel Playa por la factura».</label>
         <textarea id="co-texto" rows="3" placeholder="Escribe aquí o pulsa Grabar…"></textarea>
         <div class="acciones">
-          ${puedeGrabar ? '<button type="button" class="btn secundario" id="co-grabar" data-action="coGrabar" aria-pressed="false">🎙 Grabar</button>' : ''}
+          ${puedeGrabar ? `<button type="button" class="btn secundario" id="co-grabar" data-action="coGrabar" aria-pressed="false">${ico('micro')} Grabar</button>` : ''}
           <button class="btn" type="submit" id="co-enviar">Repartir</button>
           <span class="nota" id="co-estado">${est.data ? `${est.data.audio ? '' : 'El audio aún no está conectado (falta la clave de Groq): escríbelo. '}${est.data.claude ? '' : 'Sin Claude, se reparte una tarea por línea (empieza la línea con el nombre).'}` : ''}</span>
         </div></form>
@@ -115,13 +116,13 @@ registrarAcciones({
       _grabadora.ondataavailable = e => { if (e.data.size) _trozos.push(e.data); };
       _grabadora.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
-        if (b) { b.textContent = '🎙 Grabar'; b.setAttribute('aria-pressed', 'false'); }
+        if (b) { b.innerHTML = `${ico('micro')} Grabar`; b.setAttribute('aria-pressed', 'false'); }
         const blob = new Blob(_trozos, { type: _grabadora?.mimeType || 'audio/webm' });
         if (blob.size < 1000) { toast('No se ha grabado nada', 'error'); return; }
         await enviar({ audio: await aBase64(blob), mime: blob.type });
       };
       _grabadora.start();
-      if (b) { b.textContent = '⏹ Parar y repartir'; b.setAttribute('aria-pressed', 'true'); }
+      if (b) { b.innerHTML = `${ico('parar')} Parar y repartir`; b.setAttribute('aria-pressed', 'true'); }
     } catch { toast('No hay permiso para el micrófono: actívalo en el navegador', 'error'); }
   },
   async coManual() {

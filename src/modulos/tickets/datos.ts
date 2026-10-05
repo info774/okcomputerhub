@@ -3,6 +3,7 @@
 // y sus comentarios llegan por sync-app. SLA: lo calcula la base en horario
 // laboral (hub.sla_politicas, hub.horario_laboral, hub.festivos).
 import { usuario } from '../../core/estado';
+import type { IconoLinea } from '../../shell/linea';
 
 export interface Ticket {
   id: string; numero: number; created_at: string; updated_at: string | null; cliente_id: string | null; local_id: string | null;
@@ -22,8 +23,11 @@ export const ESTADOS = ['Abierto', 'En curso', 'Pendiente', 'Cerrado'];
 export const ABIERTOS = ['Abierto', 'En curso', 'Pendiente'];
 export const PRIORIDADES = ['Urgente', 'Alta', 'Media', 'Baja'];
 export const CATEGORIAS = ['Remoto', 'Presencial', 'Teléfono', 'Pasó a trabajo', 'Sin acción', 'Otro'];
-export const CANALES: Record<string, string> = { email: '✉️ Correo', whatsapp: '💬 WhatsApp', telefono: '📞 Teléfono', presencial: '🚶 En persona',
-  portal: '🌐 Portal', rmm: '🖥 Monitorización', hub: '🎫 Hub', app: '📱 App' };
+export const CANALES: Record<string, string> = { email: 'Correo', whatsapp: 'WhatsApp', telefono: 'Teléfono', presencial: 'En persona',
+  portal: 'Portal', rmm: 'Monitorización', hub: 'Hub', app: 'App' };
+// Icono de línea de cada canal (donde se pinta HTML; en <option> y texto, el nombre solo).
+export const ICONO_CANAL: Record<string, IconoLinea | undefined> = { email: 'correo', whatsapp: 'mensaje', telefono: 'telefono', presencial: 'andando',
+  portal: 'web', rmm: 'monitor', hub: 'etiqueta', app: 'movil' };
 export const TONO_PRIORIDAD: Record<string, string> = { urgente: 'mal', alta: 'aviso', media: 'neutro', baja: 'neutro' };
 export const prioridadNorm = (p: string | null) => (p ?? 'Media').toLowerCase();
 

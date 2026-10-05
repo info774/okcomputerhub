@@ -19,6 +19,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { barras } from '../../ui/barras';
 import { eur, telWhatsApp } from '../ventas/datos';
 import {
@@ -152,16 +153,16 @@ async function pintarResumen(el: HTMLElement, escribe: boolean) {
       ${cifra('Pagos pendientes', String(pendientes.length), pendientes.length ? 'no están al corriente' : 'todas al corriente', pendientes.length ? 'mal' : '', '#/mantenimientos/locales')}
     </div>${barras('mt-barras', admin ? 'Cuota mensual por plan' : 'Sedes por plan', filas, 'mtPlanBarra', _plan)}</div>
     <div class="me-grid">
-      <section class="tarjeta"><h3>⚠️ Requieren atención</h3>${atencion.length ? `<ul class="di-ultimo">${atencion.map(s => `<li><a href="#/sitios/${esc(s.id)}">${esc(s.nombre)}</a>
+      <section class="tarjeta"><h3>${ico('atencion')} Requieren atención</h3>${atencion.length ? `<ul class="di-ultimo">${atencion.map(s => `<li><a href="#/sitios/${esc(s.id)}">${esc(s.nombre)}</a>
         <span>${s.proxima_cuota && s.proxima_cuota < hoyS ? `cuota vencida el ${esc(fechaCorta(s.proxima_cuota))} · ` : ''}${chipPago(s)}</span></li>`).join('')}</ul>` : '<p class="nota">Nada: todas las cuotas al día.</p>'}</section>
-      <section class="tarjeta"><h3>🗓 Próximas visitas</h3>${(visitas.data ?? []).length ? `<ul class="di-ultimo">${(visitas.data ?? []).map(t => `<li><a href="#/trabajos/${t.numero}">#${t.numero} ${esc(t.titulo ?? '')}</a>
+      <section class="tarjeta"><h3>${ico('calendario')} Próximas visitas</h3>${(visitas.data ?? []).length ? `<ul class="di-ultimo">${(visitas.data ?? []).map(t => `<li><a href="#/trabajos/${t.numero}">#${t.numero} ${esc(t.titulo ?? '')}</a>
         <span class="nota">${esc(fechaCorta(t.fecha_programada))} · ${esc(nombreSede(t.local_id))} · ${esc((t.tecnicos ?? []).join(', ') || 'sin técnico')}</span></li>`).join('')}</ul>` : '<p class="nota">No hay visitas de mantenimiento programadas.</p>'}
         <p><a href="#/calendario">Ver el calendario →</a></p></section>
-      <section class="tarjeta"><h3>🔁 Renovaciones (2 meses)</h3>${renovaciones().length ? `<ul class="di-ultimo" id="mt-renovaciones">${renovaciones().slice(0, 8).map(({ c, r }) => `<li>
+      <section class="tarjeta"><h3>${ico('repetir')} Renovaciones (2 meses)</h3>${renovaciones().length ? `<ul class="di-ultimo" id="mt-renovaciones">${renovaciones().slice(0, 8).map(({ c, r }) => `<li>
         <a href="#/mantenimientos/contrato/${esc(c.id)}/ver">${esc(c.cliente_nombre || nombreSede(c.local_id) || '—')}</a>
         <span class="nota">${r.auto ? 'renueva' : '<span class="g-mal">vence</span>'} el ${esc(fechaCorta(r.fecha))}${r.avisado ? ' · avisado' : ''}</span></li>`).join('')}</ul>` : '<p class="nota">Ningún contrato cumple año en los próximos 2 meses.</p>'}
         <p><a href="#/mantenimientos/documentos">Ver los contratos →</a></p></section>
-      <section class="tarjeta"><h3>🛡 Garantías a punto de vencer</h3>${(garantias.data ?? []).length ? `<ul class="di-ultimo">${(garantias.data ?? []).map(h => `<li><a href="#/sitios/${esc(h.local_id)}/hardware">${esc([h.tipo, h.nombre].filter(Boolean).join(' · ') || 'Equipo')}</a>
+      <section class="tarjeta"><h3>${ico('escudo')} Garantías a punto de vencer</h3>${(garantias.data ?? []).length ? `<ul class="di-ultimo">${(garantias.data ?? []).map(h => `<li><a href="#/sitios/${esc(h.local_id)}/hardware">${esc([h.tipo, h.nombre].filter(Boolean).join(' · ') || 'Equipo')}</a>
         <span class="nota">vence el ${esc(fechaCorta(h.garantia))}</span></li>`).join('')}</ul>` : '<p class="nota">Ninguna en los próximos 30 días.</p>'}</section>
     </div>`;
 }
@@ -202,8 +203,8 @@ function celdaCodigo(s: Sede): string {
   const wa = telWhatsApp(tel?.numero);
   const email = _clientes.get(s.cliente_id ?? '')?.email;
   const txt = encodeURIComponent(textoCodigo(s.nombre, s.codigo_verificacion));
-  return `<code>${esc(s.codigo_verificacion)}</code><br>${wa ? `<a href="https://wa.me/${wa}?text=${txt}" target="_blank" rel="noopener" title="Mandar el código por WhatsApp">💬</a> ` : ''}${
-    email ? `<a href="mailto:${esc(email)}?subject=${encodeURIComponent(`Código de verificación · ${s.nombre}`)}&body=${txt}" title="Mandar el código por correo">✉️</a>` : ''}`;
+  return `<code>${esc(s.codigo_verificacion)}</code><br>${wa ? `<a href="https://wa.me/${wa}?text=${txt}" target="_blank" rel="noopener" title="Mandar el código por WhatsApp" aria-label="Mandar el código por WhatsApp">${ico('mensaje')}</a> ` : ''}${
+    email ? `<a href="mailto:${esc(email)}?subject=${encodeURIComponent(`Código de verificación · ${s.nombre}`)}&body=${txt}" title="Mandar el código por correo" aria-label="Mandar el código por correo">${ico('correo')}</a>` : ''}`;
 }
 
 // El documento de cada sede (contratoDeSede): firmar el pendiente, ver el

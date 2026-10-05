@@ -1,7 +1,7 @@
 // Arnés de la paridad de sedes (bloque 2, tanda 3): pestañas Software,
 // Hardware y Cámaras (añadir, editar, quitar; garantía = instalación + 1 año;
 // contraseña de la cámara oculta tras «Ver»), Seguimiento del plan (marcar y
-// desmarcar por periodo), «🖥 Remoto» (AnyDesk sin repetir + RustDesk con la
+// desmarcar por periodo), «Remoto» (AnyDesk sin repetir + RustDesk con la
 // contraseña de la sede al portapapeles), AnyDesk en la lista y en el Excel,
 // vivienda sin Software ni Seguimiento, y eliminar llevándose lo que cuelga.
 // Sin corte: todo en solo lectura.
@@ -102,7 +102,7 @@ try {
   const hw = escr(base, 'POST', 'local_hardware').at(-1)?.cuerpo;
   ok(hw?.local_id === L1 && hw?.tipo === 'Impresora' && hw?.nombre === 'Impresora' && hw?.garantia === '2027-10-03', 'hardware: se añade (sin nombre, el del tipo)');
   await page.click('tr[data-eq="h2"] [data-action="siEqEditar"]');
-  ok((await page.inputValue('#si-eq-ip')) === '192.168.1.1' && (await page.inputValue('#si-eq-tipo')) === 'Router', 'hardware: «✎» lo sube al formulario');
+  ok((await page.inputValue('#si-eq-ip')) === '192.168.1.1' && (await page.inputValue('#si-eq-tipo')) === 'Router', 'hardware: «Editar» lo sube al formulario');
   await page.fill('#si-eq-ip', '192.168.1.254');
   await page.click('#si-eq-form button[type=submit]');
   await page.waitForFunction(() => document.getElementById('si-eq-tabla')?.textContent.includes('192.168.1.254'));

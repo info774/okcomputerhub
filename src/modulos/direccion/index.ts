@@ -10,6 +10,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { esc, hace, fechaHora } from '../../ui/dom';
 import { iconoHex } from '../../shell/iconos';
+import { ico, type IconoLinea } from '../../shell/linea';
 
 export interface Aviso {
   clave: string; tipo: string; gravedad: 'mal' | 'aviso' | 'info'; titulo: string; detalle: string | null;
@@ -33,12 +34,13 @@ export const AVISO_PANTALLA: Record<string, { ico: string; accion: string }> = {
   trabajo_sin_facturar: { ico: 'trabajos', accion: 'Facturar' }, hito_vencido: { ico: 'proyectos', accion: 'Ver el hito' },
   cliente_sin_comprar: { ico: 'clientes', accion: 'Ver el cliente' }, cierre_mes: { ico: 'calendario', accion: 'Ver el cierre' },
 };
-export const GRUPOS: Record<string, { nombre: string; icono: string }> = {
-  alerta_rmm: { nombre: 'Alertas de equipos', icono: '🚨' }, sede_sin_conexion: { nombre: 'Sedes sin conexión', icono: '📡' },
-  factura_vencida: { nombre: 'Facturas vencidas', icono: '💶' }, cobro_mantenimiento: { nombre: 'Cobros de mantenimiento', icono: '🔁' },
-  ticket_sin_asignar: { nombre: 'Tickets sin asignar', icono: '🎫' }, presupuesto_sin_respuesta: { nombre: 'Presupuestos sin respuesta', icono: '📄' },
-  trabajo_sin_facturar: { nombre: 'Trabajos por facturar', icono: '🧾' }, hito_vencido: { nombre: 'Hitos de proyecto vencidos', icono: '🧭' },
-  cliente_sin_comprar: { nombre: 'Clientes importantes sin comprar', icono: '🤝' }, cierre_mes: { nombre: 'Cierre del mes', icono: '📅' },
+// `icono`: de reserva (icono de línea) si el tipo no tiene pantalla en AVISO_PANTALLA.
+export const GRUPOS: Record<string, { nombre: string; icono?: IconoLinea }> = {
+  alerta_rmm: { nombre: 'Alertas de equipos', icono: 'alarma' }, sede_sin_conexion: { nombre: 'Sedes sin conexión', icono: 'antena' },
+  factura_vencida: { nombre: 'Facturas vencidas', icono: 'dinero' }, cobro_mantenimiento: { nombre: 'Cobros de mantenimiento', icono: 'repetir' },
+  ticket_sin_asignar: { nombre: 'Tickets sin asignar', icono: 'etiqueta' }, presupuesto_sin_respuesta: { nombre: 'Presupuestos sin respuesta', icono: 'documento' },
+  trabajo_sin_facturar: { nombre: 'Trabajos por facturar', icono: 'recibo' }, hito_vencido: { nombre: 'Hitos de proyecto vencidos', icono: 'brujula' },
+  cliente_sin_comprar: { nombre: 'Clientes importantes sin comprar', icono: 'trato' }, cierre_mes: { nombre: 'Cierre del mes', icono: 'calendario' },
 };
 const PESO = { mal: 0, aviso: 1, info: 2 } as const;
 const CLAVE_MIOS = 'hub_direccion_mios';
@@ -63,7 +65,7 @@ export async function avisos() {
 function botonEnlace(a: Aviso): string {
   if (!a.enlace) return '';
   const interno = a.enlace.startsWith('#');
-  const texto = a.enlace.includes('zoho.eu') ? 'Zoho ↗' : interno ? 'Abrir' : 'App ↗';
+  const texto = a.enlace.includes('zoho.eu') ? `Zoho ${ico('externo')}` : interno ? 'Abrir' : `App ${ico('externo')}`;
   return `<a class="btn secundario" href="${esc(a.enlace)}"${interno ? '' : ' target="_blank" rel="noopener"'}>${texto}</a>`;
 }
 
@@ -73,18 +75,18 @@ function pintarAvisos(lista: Aviso[], soloMios: boolean): string {
       <button role="tab" aria-selected="${!soloMios}" class="${soloMios ? '' : 'activo'}" data-action="diMios" data-p0="0">Todos (${lista.length})</button>
       <button role="tab" aria-selected="${soloMios}" class="${soloMios ? 'activo' : ''}" data-action="diMios" data-p0="1">Los míos (${lista.filter(a => esMio(a.persona)).length})</button>
     </div></div>`;
-  if (!filtrada.length) return `${barra}<p class="vacio">✅ Nada pendiente${soloMios ? ' a tu nombre' : ''}.</p>`;
+  if (!filtrada.length) return `${barra}<p class="vacio">${ico('hecho')} Nada pendiente${soloMios ? ' a tu nombre' : ''}.</p>`;
   const grupos = new Map<string, Aviso[]>();
   for (const a of filtrada) grupos.set(a.tipo, [...(grupos.get(a.tipo) ?? []), a]);
   const orden = [...grupos.entries()].sort((x, y) =>
     Math.min(...x[1].map(a => PESO[a.gravedad])) - Math.min(...y[1].map(a => PESO[a.gravedad])) || y[1].length - x[1].length);
   return barra + orden.map(([tipo, fs], i) => {
-    const g = GRUPOS[tipo] ?? { nombre: tipo, icono: '•' };
+    const g: { nombre: string; icono?: IconoLinea } = GRUPOS[tipo] ?? { nombre: tipo };
     const suma = fs.reduce((s, a) => s + Number(a.importe ?? 0), 0);
     const peor = fs.some(a => a.gravedad === 'mal') ? 'mal' : fs.some(a => a.gravedad === 'aviso') ? 'aviso' : 'neutro';
     fs.sort((a, b) => PESO[a.gravedad] - PESO[b.gravedad] || Number(b.importe ?? 0) - Number(a.importe ?? 0));
     return `<details class="tarjeta di-grupo di-g-${peor}" ${i < 4 ? 'open' : ''} data-tipo="${esc(tipo)}">
-      <summary><span class="di-grupo-tit">${AVISO_PANTALLA[tipo] ? iconoHex(AVISO_PANTALLA[tipo].ico, g.nombre, 'di-grupo-ico') : esc(g.icono)} <strong>${esc(g.nombre)}</strong></span>
+      <summary><span class="di-grupo-tit">${AVISO_PANTALLA[tipo] ? iconoHex(AVISO_PANTALLA[tipo].ico, g.nombre, 'di-grupo-ico') : g.icono ? ico(g.icono) : '•'} <strong>${esc(g.nombre)}</strong></span>
         <span class="chip ${peor}">${fs.length}</span>${suma ? `<span class="di-suma">${eur(suma)}</span>` : ''}</summary>
       <ul class="di-lista">${fs.map(a => `<li class="di-aviso">
         <span class="di-punto g-${esc(a.gravedad)}" aria-label="${a.gravedad === 'mal' ? 'Urgente' : a.gravedad === 'aviso' ? 'Pendiente' : 'Información'}"></span>

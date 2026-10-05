@@ -8,6 +8,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { telWhatsApp } from '../ventas/datos';
 import { ROLES_TEL } from '../sitios/vista';
 import { textoCodigo, ROLES_SENSIBLES, type Telefono } from './datos';
@@ -56,8 +57,8 @@ export async function pintarFicha(el: HTMLElement, id: string) {
         <button type="button" class="btn secundario" data-action="fmTelAnadir">+ Teléfono</button></fieldset>
       <section class="fm-codigo"><h3>Código de verificación</h3>
         <p><code id="fm-codigo">${esc(s.codigo_verificacion ?? '—')}</code>
-        ${txt && wa ? `<a class="btn secundario" href="https://wa.me/${wa}?text=${txt}" target="_blank" rel="noopener">💬 Mandarlo por WhatsApp</a>` : ''}
-        ${txt && cli?.email ? `<a class="btn secundario" href="mailto:${esc(cli.email)}?subject=${encodeURIComponent(`Código de verificación · ${s.nombre}`)}&body=${txt}">✉️ Por correo</a>` : ''}</p>
+        ${txt && wa ? `<a class="btn secundario" href="https://wa.me/${wa}?text=${txt}" target="_blank" rel="noopener">${ico('mensaje')} Mandarlo por WhatsApp</a>` : ''}
+        ${txt && cli?.email ? `<a class="btn secundario" href="mailto:${esc(cli.email)}?subject=${encodeURIComponent(`Código de verificación · ${s.nombre}`)}&body=${txt}">${ico('correo')} Por correo</a>` : ''}</p>
         <p class="nota">Sale impreso en el contrato. Lo pone la base al crear la sede y no se cambia aquí.</p></section>
       <div class="acciones"><button class="btn" type="submit" ${escribe ? '' : 'disabled'}>Guardar la ficha</button>
         <a class="btn secundario" href="#/mantenimientos/locales">Cancelar</a></div>
@@ -69,7 +70,7 @@ function filasTels(): string {
     <label>Nombre <input value="${esc(t.nombre ?? '')}" data-on-change="fmTelCampo:${i},nombre,$value"></label>
     <label>Número <input type="tel" value="${esc(t.numero)}" data-on-change="fmTelCampo:${i},numero,$value"></label>
     <label>Rol <select data-on-change="fmTelCampo:${i},rol,$value">${ROLES_TEL.map(([k, n]) => `<option value="${k}" ${k === (t.rol ?? 'otro') ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-    <button type="button" class="btn secundario" data-action="fmTelQuitar" data-p0="${i}" aria-label="Quitar el teléfono">🗑</button></div>`).join('')
+    <button type="button" class="btn secundario" data-action="fmTelQuitar" data-p0="${i}" aria-label="Quitar el teléfono">${ico('eliminar')}</button></div>`).join('')
     || '<p class="nota">Sin teléfonos.</p>';
 }
 

@@ -4,6 +4,7 @@
 import { API } from './api';
 import { APP_ACTUAL_URL } from './config';
 import { esc } from '../ui/dom';
+import { ico } from '../shell/linea';
 
 let _duenos = new Map<string, string>();
 let _at = 0;
@@ -24,5 +25,5 @@ export async function esDelHub(...tablas: string[]): Promise<boolean> {
   return tablas.every(t => (m.get(t) ?? 'hub') === 'hub');
 }
 
-export const avisoSoloLectura = (que: string) => `<p class="aviso area-app">🔒 <strong>${esc(que)} se sigue llevando en la app</strong> hasta el cambio: aquí se ve todo, pero se cambia en la
-  <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">app actual ↗</a>.</p>`;
+export const avisoSoloLectura = (que: string) => `<p class="aviso area-app">${ico('candado')} <strong>${esc(que)} se sigue llevando en la app</strong> hasta el cambio: aquí se ve todo, pero se cambia en la
+  <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">app actual ${ico('externo')}</a>.</p>`;

@@ -6,6 +6,8 @@ import { modulos } from '../../core/router';
 import { esAdmin } from '../../core/estado';
 import { enMenuEmpleado } from '../../core/empleado';
 import { esc } from '../../ui/dom';
+import { iconoHex } from '../../shell/iconos';
+import { ico } from '../../shell/linea';
 
 export function visibles(): Modulo[] {
   // Quien no es admin, el menú reducido del técnico (modo empleado, core/empleado.ts).
@@ -19,8 +21,8 @@ export function hrefDe(m: Modulo): string {
 function baldosa(m: Modulo): string {
   const externo = m.enlaceExterno ? ' target="_blank" rel="noopener"' : '';
   return `<a class="baldosa" id="bal-${esc(m.id)}" href="${esc(hrefDe(m))}"${externo}>
-    <span class="baldosa-icono" aria-hidden="true">${esc(m.icono)}</span>
-    <span class="baldosa-titulo">${esc(m.titulo)}${m.enlaceExterno ? ' <small>↗</small>' : ''}</span>
+    <span class="baldosa-hex" aria-hidden="true">${iconoHex(m.id, m.titulo)}</span>
+    <span class="baldosa-titulo">${esc(m.titulo)}${m.enlaceExterno ? ` <small>${ico('externo')}</small>` : ''}</span>
     <span class="baldosa-valor">${m.contador ? '…' : ''}</span>
     <span class="baldosa-sub"></span>
   </a>`;

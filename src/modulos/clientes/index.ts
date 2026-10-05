@@ -23,6 +23,10 @@ import {
   TIPOS_ACTIVIDAD, ICONO_EVENTO, CLASE_TONO, eur, clases, olvidarClases, telWhatsApp, enApp,
 } from '../ventas/datos';
 import { enlaceHistorial } from '../../ui/historial';
+import { ico } from '../../shell/linea';
+
+// Icono de un evento de la línea de tiempo (el mapa de ventas/datos.ts); sin él, un punto.
+const iconoEvento = (tipo: string) => { const n = ICONO_EVENTO[tipo]; return n ? ico(n) : '•'; };
 
 const PESTANAS = [['resumen', 'Resumen'], ['actividad', 'Actividad'], ['sedes', 'Sedes'], ['contactos', 'Contactos'], ['oportunidades', 'Oportunidades']] as const;
 let _lista: Cliente[] = [];
@@ -89,8 +93,8 @@ function barraLista(escribe: boolean): string {
   return `<div class="acciones mo-barra">
       <input id="cl-filtro" type="search" placeholder="Buscar por nombre, NIF, teléfono o email…" value="${esc(_filtro)}" data-on-input="clFiltrar:$value" aria-label="Buscar cliente">
       <button class="chip-boton ${_bajas ? 'activo' : ''}" data-action="clBajas" aria-pressed="${_bajas}">De baja</button>
-      <button class="btn secundario" data-action="clExcel">⬇ Excel</button>
-      ${escribe ? '<a class="btn" href="#/clientes/nuevo">+ Nuevo cliente</a>' : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener">+ Nuevo cliente en la app ↗</a>`}
+      <button class="btn secundario" data-action="clExcel">${ico('descargar')} Excel</button>
+      ${escribe ? '<a class="btn" href="#/clientes/nuevo">+ Nuevo cliente</a>' : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener">+ Nuevo cliente en la app ${ico('externo')}</a>`}
     </div>`;
 }
 
@@ -116,7 +120,7 @@ async function tabResumen(c: Cliente): Promise<string> {
     const pend = fs.reduce((s, f) => s + Number(f.saldo), 0);
     const venc = fs.filter(f => f.saldo > 0 && f.vence < hoy()).reduce((s, f) => s + Number(f.saldo), 0);
     const ano = fs.filter(f => f.fecha >= hace12).reduce((s, f) => s + Number(f.total), 0);
-    dinero = `<section class="tarjeta"><h3>💶 Dinero (Zoho)</h3><dl class="me-datos">
+    dinero = `<section class="tarjeta"><h3>${ico('dinero')} Dinero (Zoho)</h3><dl class="me-datos">
       <div class="me-dato"><dt>Facturado 12 meses</dt><dd>${eur(ano)}</dd></div>
       <div class="me-dato"><dt>Pendiente de cobro</dt><dd>${eur(pend, 2)}</dd></div>
       <div class="me-dato"><dt>Vencido</dt><dd class="${venc ? 'mal' : ''}">${eur(venc, 2)}</dd></div></dl>
@@ -124,21 +128,21 @@ async function tabResumen(c: Cliente): Promise<string> {
   }
   const [trab, tick, pres, opor] = abiertos;
   return `<div class="me-grid">
-    <section class="tarjeta"><h3>➡️ Lo siguiente</h3>
+    <section class="tarjeta"><h3>${ico('flecha')} Lo siguiente</h3>
       <form data-on-submit="clGuardarSiguiente" data-prevent="1">
         <div class="in-campos"><label>Fecha <input id="cl-sig-fecha" type="date" value="${esc(crm?.siguiente_fecha ?? '')}"></label>
           <label>Quién <select id="cl-sig-resp"><option value="">—</option>${personas.map(p => `<option value="${esc(p.id)}" ${p.id === (crm?.responsable_id ?? usuario()?.id) ? 'selected' : ''}>${esc(nombreDe(p.id) || p.nombre)}</option>`).join('')}</select></label></div>
         <label>Qué <input id="cl-sig-texto" maxlength="300" value="${esc(crm?.siguiente_texto ?? '')}" placeholder="p. ej. Llamar para renovar el mantenimiento"></label>
         <div class="acciones"><button class="btn" type="submit">Guardar</button>${crm?.siguiente_fecha ? '<button class="btn secundario" type="button" data-action="clSiguienteHecho">Hecho ✓</button>' : ''}</div>
       </form></section>
-    <section class="tarjeta"><h3>✍️ Apuntar lo de hoy</h3>
+    <section class="tarjeta"><h3>${ico('firma')} Apuntar lo de hoy</h3>
       <form data-on-submit="clApuntar" data-prevent="1">
         <div class="segmentado cl-tipos" role="radiogroup">${Object.entries(TIPOS_ACTIVIDAD).map(([k, t], i) =>
-          `<label><input type="radio" name="cl-tipo" value="${k}" ${i === 1 ? 'checked' : ''}> ${t.icono} ${esc(t.nombre)}</label>`).join('')}</div>
+          `<label><input type="radio" name="cl-tipo" value="${k}" ${i === 1 ? 'checked' : ''}> ${ico(t.icono)} ${esc(t.nombre)}</label>`).join('')}</div>
         <textarea id="cl-texto" rows="3" maxlength="4000" placeholder="Qué se habló, qué se hizo, qué quedó pendiente…" required></textarea>
         <div class="acciones"><button class="btn" type="submit">Apuntar</button></div>
       </form></section>
-    <section class="tarjeta"><h3>📋 Ahora mismo</h3><dl class="me-datos">
+    <section class="tarjeta"><h3>${ico('lista')} Ahora mismo</h3><dl class="me-datos">
       <div class="me-dato"><dt>Clase</dt><dd>${chipClase(cl?.clase, cl?.clase_auto)}
         <select id="cl-clase" data-on-change="clClaseManual:$value" aria-label="Clase a mano">
           <option value="">Automática (${esc(cl?.clase_auto ?? 'C')})</option>${['A', 'B', 'C'].map(k => `<option ${crm?.clase_manual === k ? 'selected' : ''}>${k}</option>`).join('')}</select></dd></div>
@@ -160,7 +164,7 @@ async function tabActividad(c: Cliente): Promise<string> {
   const lista = (data ?? []).filter(e => !_filtroTimeline || e.tipo.startsWith(_filtroTimeline));
   return `<div class="acciones mo-barra">${tipos.map(([k, n]) => `<button class="chip-boton ${_filtroTimeline === k ? 'activo' : ''}" data-action="clTimeline" data-p0="${k}">${n}</button>`).join('')}</div>
     ${lista.length ? `<ol class="cl-linea">${lista.map(e => `<li class="cl-evento">
-      <span class="cl-icono" aria-hidden="true">${ICONO_EVENTO[e.tipo] ?? '•'}</span>
+      <span class="cl-icono" aria-hidden="true">${iconoEvento(e.tipo)}</span>
       <div><div class="cl-ev-cab"><strong>${esc(e.titulo)}</strong>${e.importe ? ` <span class="nota">${eur(e.importe, 2)}</span>` : ''}
         ${e.enlace ? ` <a href="${esc(e.enlace)}"${e.enlace.startsWith('#') ? '' : ' target="_blank" rel="noopener"'}>abrir</a>` : ''}</div>
         ${e.detalle ? `<div class="cl-ev-texto">${esc(e.detalle)}</div>` : ''}
@@ -183,7 +187,7 @@ async function tabSedes(c: Cliente): Promise<string> {
       const e = rmm.get(l.id);
       const mapa = l.maps_url || (l.lat ? `https://www.google.com/maps?q=${l.lat},${l.lng}` : l.direccion ? `https://www.google.com/maps/search/${encodeURIComponent(l.direccion)}` : '');
       return `<tr class="${l.activo === false ? 'in-pausado' : ''}"><td><a href="#/sitios/${esc(l.id)}"><strong>${esc(l.nombre)}</strong></a>${l.direccion ? `<br><small class="nota">${esc(l.direccion)}</small>` : ''}
-        ${mapa ? ` <a href="${esc(mapa)}" target="_blank" rel="noopener">mapa ↗</a>` : ''}</td>
+        ${mapa ? ` <a href="${esc(mapa)}" target="_blank" rel="noopener">mapa ${ico('externo')}</a>` : ''}</td>
         <td>${l.plan ? `${esc(l.plan)}${esAdmin() && l.importe_mantenimiento ? ` · ${eur(l.importe_mantenimiento, 2)}/mes` : ''}<br>` : '—'}${l.estado_pago && l.estado_pago !== 'Al corriente' ? `<span class="chip aviso">${esc(l.estado_pago)}</span>` : ''}</td>
         <td>${esc(l.programa_tpv ?? '—')}</td>
         <td>${e ? `<a class="chip ${tonoRmm[e.estado]}" href="#/monitorizacion/sede/${esc(l.id)}">${e.conectados}/${e.equipos} conectados</a>` : '<span class="nota">sin agente</span>'}</td></tr>`;
@@ -197,10 +201,10 @@ async function tabContactos(c: Cliente): Promise<string> {
   if (!cs.length) return `${nuevo}<p class="vacio">Sin contactos todavía.</p>`;
   return `${nuevo}<div class="cl-contactos">${cs.map(p => {
     const wa = telWhatsApp(p.telefono);
-    return `<article class="tarjeta"><h3><a href="#/contactos/${esc(p.id)}">${p.favorito ? '⭐ ' : ''}${esc(p.nombre)}</a></h3>${p.cargo ? `<p class="nota">${esc(p.cargo)}</p>` : ''}
-      <div class="acciones">${p.telefono ? `<a class="btn secundario" href="tel:${esc(p.telefono)}">📞 ${esc(p.telefono)}</a>` : ''}
-        ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
-        ${p.email ? `<a class="btn secundario" href="mailto:${esc(p.email)}">✉️ ${esc(p.email)}</a>` : ''}</div></article>`;
+    return `<article class="tarjeta"><h3><a href="#/contactos/${esc(p.id)}">${p.favorito ? `${ico('estrella')} ` : ''}${esc(p.nombre)}</a></h3>${p.cargo ? `<p class="nota">${esc(p.cargo)}</p>` : ''}
+      <div class="acciones">${p.telefono ? `<a class="btn secundario" href="tel:${esc(p.telefono)}">${ico('telefono')} ${esc(p.telefono)}</a>` : ''}
+        ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">${ico('mensaje')} WhatsApp</a>` : ''}
+        ${p.email ? `<a class="btn secundario" href="mailto:${esc(p.email)}">${ico('correo')} ${esc(p.email)}</a>` : ''}</div></article>`;
   }).join('')}</div>`;
 }
 
@@ -221,17 +225,17 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
   const cl = cls.get(c.id);
   const deBaja = c.activo === false;
   const botones = escribe
-    ? `<a class="btn secundario" href="#/clientes/${esc(c.id)}/editar">✎ Editar</a>
+    ? `<a class="btn secundario" href="#/clientes/${esc(c.id)}/editar">${ico('editar')} Editar</a>
        ${deBaja ? `<button class="btn secundario" data-action="clReactivar" data-p0="${esc(c.id)}">Reactivar</button>` : '<button class="btn secundario" data-action="clBaja">Dar de baja</button>'}
        ${esAdmin() ? '<button class="btn peligro" data-action="clEliminar">Eliminar</button>' : ''}`
-    : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los datos del cliente se editan en la app actual">Editar en la app ↗</a>`;
+    : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los datos del cliente se editan en la app actual">Editar en la app ${ico('externo')}</a>`;
   const p = PESTANAS.some(([k]) => k === pestana) ? pestana : 'resumen';
   const wa = telWhatsApp(c.telefono);
   el.innerHTML = `<p><a href="#/clientes">← Clientes</a></p>
     <div class="tarjeta-cab"><h2>${chipClase(cl?.clase, cl?.clase_auto)} ${esc(c.nombre)}</h2>
-      <div class="acciones">${c.telefono ? `<a class="btn secundario" href="tel:${esc(c.telefono)}">📞 ${esc(c.telefono)}</a>` : ''}
-        ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬</a>` : ''}
-        ${c.email ? `<a class="btn secundario" href="mailto:${esc(c.email)}">✉️</a>` : ''}
+      <div class="acciones">${c.telefono ? `<a class="btn secundario" href="tel:${esc(c.telefono)}">${ico('telefono')} ${esc(c.telefono)}</a>` : ''}
+        ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener" aria-label="WhatsApp" title="WhatsApp">${ico('mensaje')}</a>` : ''}
+        ${c.email ? `<a class="btn secundario" href="mailto:${esc(c.email)}" aria-label="Correo" title="Correo">${ico('correo')}</a>` : ''}
         ${botones}${enlaceHistorial('clientes', c.id)}</div></div>
     ${deBaja ? '<p class="aviso">Este cliente está <strong>de baja</strong>: no sale en listados ni buscadores, pero no se ha borrado nada.</p>' : ''}
     ${escribe ? '' : avisoSoloLectura('Los datos del cliente')}

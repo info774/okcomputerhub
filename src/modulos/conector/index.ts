@@ -9,6 +9,7 @@ import { equipo, nombreDe } from '../../core/equipo';
 import { usuario } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { esc, fechaHora, hace, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 
 interface Token {
   id: string; created_at: string; nombre: string; prefijo: string; alcance: string; usuario_id: string;
@@ -41,7 +42,7 @@ async function pintar(el: HTMLElement) {
   const tokens = data ?? [];
   el.innerHTML = `
     ${_recien ? `<section class="tarjeta cm-recien">
-      <h3>🔑 Token «${esc(_recien.nombre)}» creado</h3>
+      <h3>${ico('llave')} Token «${esc(_recien.nombre)}» creado</h3>
       <p class="aviso"><b>Cópialo ahora: no se vuelve a enseñar.</b> Si se pierde, se revoca y se crea otro.</p>
       <label>Token <input id="cm-token" readonly value="${esc(_recien.token)}"></label>
       <div class="acciones"><button class="btn" data-action="copiarCampo" data-p0="cm-token">Copiar token</button></div>

@@ -18,3 +18,6 @@
 .ct-metodo small { display: block; font-weight: 400; opacity: .9; }
 .ct-pie { text-align: center; }
 #ct-firmar { margin-top: 1rem; width: 100%; }
+
+/* Icono de línea (ico() de shell/linea.ts), como en el hub. */
+.ico { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -.17em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }

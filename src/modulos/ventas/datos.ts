@@ -4,6 +4,7 @@
 // pipelines y el estado de los recordatorios de cobro.
 import { API } from '../../core/api';
 import { APP_ACTUAL_URL } from '../../core/config';
+import type { IconoLinea } from '../../shell/linea';
 
 export interface Cliente { id: string; nombre: string; nif: string | null; telefono: string | null; email: string | null;
   direccion: string | null; estado: string | null; zoho_id: string | null; notas: string | null; tipo: string | null; activo: boolean | null }
@@ -23,14 +24,14 @@ export interface Oportunidad { id: string; created_at: string; titulo: string; c
 export interface Evento { fecha: string | null; tipo: string; titulo: string; detalle: string | null; importe: number | null;
   enlace: string | null; autor: string | null; ref_id: string }
 
-export const TIPOS_ACTIVIDAD: Record<string, { nombre: string; icono: string }> = {
-  nota: { nombre: 'Nota', icono: '📝' }, llamada: { nombre: 'Llamada', icono: '📞' }, visita: { nombre: 'Visita', icono: '🚗' },
-  email: { nombre: 'Email', icono: '✉️' }, whatsapp: { nombre: 'WhatsApp', icono: '💬' }, reunion: { nombre: 'Reunión', icono: '🤝' },
+export const TIPOS_ACTIVIDAD: Record<string, { nombre: string; icono: IconoLinea }> = {
+  nota: { nombre: 'Nota', icono: 'nota' }, llamada: { nombre: 'Llamada', icono: 'telefono' }, visita: { nombre: 'Visita', icono: 'coche' },
+  email: { nombre: 'Email', icono: 'correo' }, whatsapp: { nombre: 'WhatsApp', icono: 'mensaje' }, reunion: { nombre: 'Reunión', icono: 'trato' },
 };
-export const ICONO_EVENTO: Record<string, string> = {
-  trabajo: '🛠', ticket: '🎫', presupuesto: '📄', oportunidad: '🎯', factura: '💶', cobro: '✅',
+export const ICONO_EVENTO: Record<string, IconoLinea | undefined> = {
+  trabajo: 'herramienta', ticket: 'etiqueta', presupuesto: 'documento', oportunidad: 'objetivo', factura: 'dinero', cobro: 'hecho',
   ...Object.fromEntries(Object.entries(TIPOS_ACTIVIDAD).map(([k, v]) => [`actividad_${k}`, v.icono])),
-  actividad_etapa: '🔀',
+  actividad_etapa: 'ramas',
 };
 export const ORIGENES = ['web', 'whatsapp', 'teléfono', 'recomendación', 'visita', 'cliente actual', 'otro'];
 export const CLASE_TONO: Record<string, string> = { A: 'bien', B: 'aviso', C: 'neutro' };

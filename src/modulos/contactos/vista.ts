@@ -8,6 +8,7 @@ import { esAdmin } from '../../core/estado';
 import { esc, hace, fechaHora, toast } from '../../ui/dom';
 import { enApp, telWhatsApp } from '../ventas/datos';
 import { esqueleto } from '../../ui/esqueleto';
+import { ico, type IconoLinea } from '../../shell/linea';
 
 interface Contacto {
   id: string; nombre: string; tipo: string | null; empresa: string | null; cargo: string | null;
@@ -15,7 +16,7 @@ interface Contacto {
   favorito: boolean | null; cliente_id: string | null; local_id: string | null; activo: boolean | null; etiquetas: string[] | null;
 }
 
-const TIPOS: [string, string][] = [['', 'Todos'], ['favorito', '⭐ Favoritos'], ['cliente', '🏢 Clientes'], ['proveedor', '🚚 Proveedores'], ['empleado', '👷 Empleados'], ['otro', '👤 Otros']];
+const TIPOS: [string, string, IconoLinea?][] = [['', 'Todos'], ['favorito', 'Favoritos', 'estrella'], ['cliente', 'Clientes', 'empresa'], ['proveedor', 'Proveedores', 'furgoneta'], ['empleado', 'Empleados', 'tecnico'], ['otro', 'Otros', 'persona']];
 const NOMBRE_TIPO: Record<string, string> = { cliente: 'Cliente', proveedor: 'Proveedor', empleado: 'Empleado', otro: 'Otro' };
 const PESTANAS = [['datos', 'Datos'], ['trabajos', 'Trabajos'], ['tickets', 'Tickets']] as const;
 const COLS = 'id,nombre,tipo,empresa,cargo,telefono,telefono2,email,direccion,notas,favorito,cliente_id,local_id,activo,etiquetas';
@@ -36,9 +37,9 @@ export function olvidarContactos() { _lista = []; _listaAt = 0; }
 
 const botones = (c: Contacto) => {
   const wa = telWhatsApp(c.telefono);
-  return `${c.telefono ? `<a class="btn secundario" href="tel:${esc(c.telefono)}" data-action="coNada">📞 ${esc(c.telefono)}</a>` : ''}
-    ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener" data-action="coNada" aria-label="WhatsApp">💬</a>` : ''}
-    ${c.email ? `<a class="btn secundario" href="mailto:${esc(c.email)}" data-action="coNada" aria-label="Correo">✉️</a>` : ''}`;
+  return `${c.telefono ? `<a class="btn secundario" href="tel:${esc(c.telefono)}" data-action="coNada">${ico('telefono')} ${esc(c.telefono)}</a>` : ''}
+    ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener" data-action="coNada" aria-label="WhatsApp">${ico('mensaje')}</a>` : ''}
+    ${c.email ? `<a class="btn secundario" href="mailto:${esc(c.email)}" data-action="coNada" aria-label="Correo">${ico('correo')}</a>` : ''}`;
 };
 const chipsEtiquetas = (c: Contacto) => (c.etiquetas ?? []).map(e => `<span class="chip">${esc(e)}</span>`).join(' ');
 
@@ -75,13 +76,13 @@ async function pintarLista(el: HTMLElement) {
       <button class="chip-boton ${_baja ? 'activo' : ''}" data-action="coBaja" aria-pressed="${_baja}">De baja</button>
       ${escribe ? '<a class="btn" href="#/contactos/nuevo">+ Nuevo contacto</a>' : ''}
     </div>
-    <div class="acciones mo-barra">${TIPOS.map(([k, n]) => `<button class="chip-boton ${_tipo === k ? 'activo' : ''}" data-action="coTipo" data-p0="${k}">${n}</button>`).join('')}</div>
+    <div class="acciones mo-barra">${TIPOS.map(([k, n, i]) => `<button class="chip-boton ${_tipo === k ? 'activo' : ''}" data-action="coTipo" data-p0="${k}">${i ? `${ico(i)} ` : ''}${n}</button>`).join('')}</div>
     <p class="nota">${_baja ? 'Contactos DE BAJA. ' : ''}Mostrando ${Math.min(filtrados.length, 200)} de ${filtrados.length}.</p>
     <div class="tarjeta mo-scroll"><table class="tabla" id="co-tabla"><thead><tr><th>Contacto</th><th>Cliente · sitio</th><th>Llamar / escribir</th></tr></thead>
     <tbody>${filtrados.slice(0, 200).map(c => `<tr class="fila-clic" data-action="coAbrir" data-p0="${esc(c.id)}">
-      <td><strong>${c.favorito ? '⭐ ' : ''}${esc(c.nombre)}</strong> <small class="nota">${esc(NOMBRE_TIPO[c.tipo ?? 'otro'] ?? c.tipo ?? '')}</small>
+      <td><strong>${c.favorito ? `${ico('estrella')} ` : ''}${esc(c.nombre)}</strong> <small class="nota">${esc(NOMBRE_TIPO[c.tipo ?? 'otro'] ?? c.tipo ?? '')}</small>
         ${c.empresa || c.cargo ? `<br><small class="nota">${esc([c.empresa, c.cargo].filter(Boolean).join(' · '))}</small>` : ''} ${chipsEtiquetas(c)}</td>
-      <td>${esc(_clientes.get(c.cliente_id ?? '') ?? '')}${c.local_id && _locales.get(c.local_id) ? `<br><small class="nota">📍 ${esc(_locales.get(c.local_id))}</small>` : ''}</td>
+      <td>${esc(_clientes.get(c.cliente_id ?? '') ?? '')}${c.local_id && _locales.get(c.local_id) ? `<br><small class="nota">${ico('ubicacion')} ${esc(_locales.get(c.local_id))}</small>` : ''}</td>
       <td><div class="acciones">${botones(c)}</div></td></tr>`).join('') || '<tr><td colspan="3" class="vacio">Ningún contacto con ese filtro.</td></tr>'}</tbody></table></div>`;
 }
 
@@ -92,13 +93,13 @@ function tabDatos(c: Contacto): string {
   const cliente = c.cliente_id ? _clientes.get(c.cliente_id) : null;
   const sitio = c.local_id ? _locales.get(c.local_id) : null;
   return `<div class="me-grid">
-    <section class="tarjeta"><h3>📇 Datos</h3><dl class="me-datos">
+    <section class="tarjeta"><h3>${ico('ficha')} Datos</h3><dl class="me-datos">
       ${dato('Tipo', NOMBRE_TIPO[c.tipo ?? 'otro'] ?? c.tipo)}${dato('Empresa', c.empresa)}${dato('Cargo', c.cargo)}
       ${dato('Teléfono', c.telefono)}${dato('Otro teléfono', c.telefono2)}${dato('Email', c.email)}${dato('Dirección', c.direccion)}
       ${cliente ? `<div class="me-dato"><dt>Cliente</dt><dd><a href="#/clientes/${esc(c.cliente_id)}">${esc(cliente)}</a></dd></div>` : ''}
       ${sitio ? `<div class="me-dato"><dt>Sitio</dt><dd><a href="#/sitios/${esc(c.local_id)}">${esc(sitio)}</a></dd></div>` : ''}</dl>
       ${(c.etiquetas ?? []).length ? `<p>${chipsEtiquetas(c)}</p>` : ''}</section>
-    ${c.notas ? `<section class="tarjeta"><h3>📝 Notas</h3><p class="si-pre">${esc(c.notas)}</p></section>` : ''}
+    ${c.notas ? `<section class="tarjeta"><h3>${ico('nota')} Notas</h3><p class="si-pre">${esc(c.notas)}</p></section>` : ''}
   </div>`;
 }
 
@@ -129,11 +130,11 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'datos') {
   const escribe = await esDelHub('contactos');
   const puede = escribe && (c.tipo !== 'empleado' || esAdmin());
   el.innerHTML = `<p><a href="#/contactos">← Contactos</a></p>
-    <div class="tarjeta-cab"><h2>${c.favorito ? '⭐ ' : ''}${esc(c.nombre)}${c.activo === false ? ' <span class="chip mal">De baja</span>' : ''}</h2>
+    <div class="tarjeta-cab"><h2>${c.favorito ? `${ico('estrella')} ` : ''}${esc(c.nombre)}${c.activo === false ? ' <span class="chip mal">De baja</span>' : ''}</h2>
       <div class="acciones">${botones(c)}
-        ${puede ? `<a class="btn secundario" href="#/contactos/${esc(c.id)}/editar">✎ Editar</a>
+        ${puede ? `<a class="btn secundario" href="#/contactos/${esc(c.id)}/editar">${ico('editar')} Editar</a>
           ${c.activo === false ? `<button class="btn secundario" data-action="coReactivar" data-p0="${esc(c.id)}">Reactivar</button>` : '<button class="btn secundario" data-action="coDarBaja">Dar de baja</button>'}`
-        : escribe ? '' : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los contactos se editan en la app actual">Editar en la app ↗</a>`}</div></div>
+        : escribe ? '' : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los contactos se editan en la app actual">Editar en la app ${ico('externo')}</a>`}</div></div>
     <p class="nota">${esc([NOMBRE_TIPO[c.tipo ?? 'otro'] ?? c.tipo, c.empresa, c.cargo].filter(Boolean).join(' · '))}</p>
     <nav class="pestanas" role="tablist">${PESTANAS.map(([k, n]) =>
       `<button role="tab" aria-selected="${k === p}" class="${k === p ? 'activo' : ''}" data-action="coPestana" data-p0="${esc(id)}" data-p1="${k}">${n}</button>`).join('')}</nav>

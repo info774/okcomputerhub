@@ -49,7 +49,7 @@ export function pintarShell(raiz: HTMLElement) {
 
 function pintarMenu() {
   const lista = [...visibles()];
-  const inicio = { id: 'inicio', titulo: 'Inicio', icono: '🏠', grupo: 'General' } as Modulo;
+  const inicio = { id: 'inicio', titulo: 'Inicio', icono: '', grupo: 'General' } as Modulo;
   const todos = [inicio, ...lista];
   const grupos = [...new Set(todos.map(m => m.grupo))];
   document.getElementById('menu')!.innerHTML = grupos.map(g => `

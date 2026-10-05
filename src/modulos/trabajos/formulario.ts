@@ -12,6 +12,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { buscarClientes } from '../ventas/datos';
 import type { Plantilla } from './plantillas';
 import { buscadorMaps, alElegirLugar } from '../../ui/maps';
@@ -76,8 +77,8 @@ export async function pintarFormulario(el: HTMLElement, numero?: string, desdeOp
     ${escribe ? '' : avisoSoloLectura('Los trabajos')}
     <form class="tarjeta tf-form" id="tf-form" data-modo="${modo}" data-on-submit="tfGuardar" data-prevent="1">
       <div class="segmentado tf-modo" role="tablist" aria-label="Cuántos campos">
-        <button type="button" role="tab" aria-selected="${modo === 'simple'}" class="${modo === 'simple' ? 'activo' : ''}" data-action="tfModo" data-p0="simple">⚡ Simple</button>
-        <button type="button" role="tab" aria-selected="${modo === 'completa'}" class="${modo === 'completa' ? 'activo' : ''}" data-action="tfModo" data-p0="completa">📋 Completa</button>
+        <button type="button" role="tab" aria-selected="${modo === 'simple'}" class="${modo === 'simple' ? 'activo' : ''}" data-action="tfModo" data-p0="simple">${ico('rayo')} Simple</button>
+        <button type="button" role="tab" aria-selected="${modo === 'completa'}" class="${modo === 'completa' ? 'activo' : ''}" data-action="tfModo" data-p0="completa">${ico('lista')} Completa</button>
       </div>
       <p class="nota tf-ayuda">${modo === 'simple' ? 'Lo justo para apuntarlo; el resto, desde la ficha o en «Completa».' : 'Todos los campos.'}</p>
       ${plantillas.length ? `<label class="tf-plantilla">Partir de una plantilla <select id="tf-plantilla" data-on-change="tfPlantilla:$value"><option value="">— Ninguna —</option>${plantillas.map(p => opt(p.id, p.nombre, false)).join('')}</select>
@@ -93,7 +94,7 @@ export async function pintarFormulario(el: HTMLElement, numero?: string, desdeOp
         <button type="button" class="btn secundario" data-action="tfRapido" data-p0="nl" aria-expanded="false">+ Nueva sede</button></div>
       <fieldset id="tf-nc" class="tf-rapida" hidden><legend>Cliente nuevo</legend>
         <div class="cf-nif"><input id="tf-nc-nif" autocomplete="off" placeholder="NIF / CIF" aria-label="NIF / CIF">
-          <button type="button" class="btn secundario" data-action="tfNcNif">🔎 Buscar el nombre</button></div>
+          <button type="button" class="btn secundario" data-action="tfNcNif">${ico('buscar')} Buscar el nombre</button></div>
         <p class="nota" id="tf-nc-estado" aria-live="polite"></p>
         <div class="in-campos"><label>Nombre <input id="tf-nc-nombre" maxlength="200"></label>
           <label>Teléfono <input id="tf-nc-telefono" type="tel"></label><label>Correo <input id="tf-nc-email" type="email"></label></div>
@@ -166,7 +167,7 @@ const acciones = {
     const [dup, r] = await Promise.all([clientePorNif(nif), llamarFuncion<{ nombre: string }>('clientes', { accion: 'nif', nif }, 25000)]);
     const n = document.getElementById('tf-nc-nombre') as HTMLInputElement;
     if (r.data?.nombre && !n.value.trim()) n.value = r.data.nombre;
-    if (est) est.innerHTML = dup ? `⚠️ Ese NIF ya lo tiene <strong>${esc(dup.nombre)}</strong>: elígelo en el buscador de arriba.`
+    if (est) est.innerHTML = dup ? `${ico('atencion')} Ese NIF ya lo tiene <strong>${esc(dup.nombre)}</strong>: elígelo en el buscador de arriba.`
       : r.error ? `No se pudo buscar: ${esc(r.error)}` : r.data?.nombre ? `Encontrado: <strong>${esc(r.data.nombre)}</strong>` : 'No se ha encontrado el nombre en la web: escríbelo a mano.';
   },
   async tfNcCrear() {

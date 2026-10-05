@@ -7,6 +7,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { buscarClientes } from '../ventas/datos';
 import { navPestanas } from './vista';
 import { fechaCorta, diasHasta, sinAcentos } from './datos';
@@ -51,7 +52,7 @@ export async function pintarSeguimiento(el: HTMLElement, id?: string) {
             ${s.local_id && s.cliente_id ? `<small class="nota">${esc(cli.get(s.cliente_id) ?? '')}</small>` : ''}
             ${s.notas ? `<small>${esc(s.notas.slice(0, 60))}${s.notas.length > 60 ? '…' : ''}</small>` : ''}
             ${s.tipo_respuesta ? `<small class="nota">${esc(s.tipo_respuesta)}</small>` : ''}
-            ${s.recordatorio_fecha ? `<small class="${d != null && d < 0 ? 'g-mal' : 'nota'}">⏰ ${esc(fechaCorta(s.recordatorio_fecha))}</small>` : ''}</article>`;
+            ${s.recordatorio_fecha ? `<small class="${d != null && d < 0 ? 'g-mal' : 'nota'}">${ico('reloj')} ${esc(fechaCorta(s.recordatorio_fecha))}</small>` : ''}</article>`;
         }).join('') || '<p class="vacio col-vacia">—</p>'}</div></section>`;
     }).join('')}</div>`;
 }

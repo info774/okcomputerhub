@@ -13,6 +13,7 @@ import { enApp, eur } from '../ventas/datos';
 import { esMio } from '../direccion';
 import { botonChatFicha } from '../../ui/chat-ficha';
 import { enlaceHistorial } from '../../ui/historial';
+import { ico } from '../../shell/linea';
 
 interface Presupuesto {
   id: string; created_at: string | null; cliente_id: string | null; local_id: string | null; contacto_id: string | null;
@@ -159,27 +160,27 @@ async function pintarFicha(el: HTMLElement, id: string) {
     ${delHub ? '' : avisoSoloLectura('Presupuestos')}
     <div class="tarjeta-cab"><h2>${esc(nombre(p))}</h2>
       <div class="acciones">${botonChatFicha('presupuesto', p.id, nombre(p), `#/presupuestos/${p.id}`)}${enlaceHistorial('presupuestos', p.id)}
-        <a class="btn secundario" href="#/presupuestos/${esc(p.id)}/pdf">🖨 PDF</a>
-        ${delHub ? `<a class="btn secundario" href="#/presupuestos/${esc(p.id)}/editar">✎ Editar</a>
+        <a class="btn secundario" href="#/presupuestos/${esc(p.id)}/pdf">${ico('imprimir')} PDF</a>
+        ${delHub ? `<a class="btn secundario" href="#/presupuestos/${esc(p.id)}/editar">${ico('editar')} Editar</a>
           <button class="btn secundario" data-action="ppDuplicar" data-p0="${esc(p.id)}">⧉ Duplicar</button>
-          <button class="btn secundario" data-action="ppZoho" data-p0="${esc(p.id)}" title="${p.zoho_estimate_id ? 'Ya está en Zoho: se actualiza' : 'Crea el presupuesto en Zoho Books y lo deja «Enviado»'}">📤 ${p.zoho_estimate_id ? 'Actualizar en Zoho' : 'Enviar a Zoho'}</button>
-          ${p.estado === 'Aceptado' && delTrabajos ? `<a class="btn" href="#/presupuestos/${esc(p.id)}/trabajo">🛠 Convertir en trabajo</a>` : ''}
+          <button class="btn secundario" data-action="ppZoho" data-p0="${esc(p.id)}" title="${p.zoho_estimate_id ? 'Ya está en Zoho: se actualiza' : 'Crea el presupuesto en Zoho Books y lo deja «Enviado»'}">${ico('subir')} ${p.zoho_estimate_id ? 'Actualizar en Zoho' : 'Enviar a Zoho'}</button>
+          ${p.estado === 'Aceptado' && delTrabajos ? `<a class="btn" href="#/presupuestos/${esc(p.id)}/trabajo">${ico('herramienta')} Convertir en trabajo</a>` : ''}
           ${esAdmin() ? `<button class="btn peligro" data-action="ppEliminar" data-p0="${esc(p.id)}">Eliminar</button>` : ''}`
-        : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los presupuestos se cambian y se mandan a Zoho en la app actual">Abrir en la app ↗</a>`}</div></div>
+        : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los presupuestos se cambian y se mandan a Zoho en la app actual">Abrir en la app ${ico('externo')}</a>`}</div></div>
     <p>${chipEstado(p.estado)} ${sinRespuesta(p) ? `<span class="chip mal">Enviado hace ${diasDesde(p)} días, sin respuesta</span>` : ''} ${p.zoho_estimate_id ? '<span class="chip">En Zoho Books</span>' : ''}</p>
     <div class="me-grid">
-      <section class="tarjeta pp-total"><h3>💶 Total</h3><p class="di-valor">${eur(p.total, 2)}</p>
+      <section class="tarjeta pp-total"><h3>${ico('dinero')} Total</h3><p class="di-valor">${eur(p.total, 2)}</p>
         <p class="nota">${lineas.length} ${lineas.length === 1 ? 'línea' : 'líneas'}${lineas.length && Math.abs(sumaLineas - Number(p.total ?? 0)) > 0.01 ? ` · suman ${eur(sumaLineas, 2)} sin impuestos` : ''}</p>
         <dl class="me-datos">${dato('Fecha', fechaCorta(p))}${dato('Quién', esc(p.tecnico_id ?? ''))}${dato('Creado', p.created_at ? esc(hace(p.created_at)) : '')}</dl></section>
-      <section class="tarjeta"><h3>🔗 Para quién</h3><dl class="me-datos">
+      <section class="tarjeta"><h3>${ico('enlace')} Para quién</h3><dl class="me-datos">
         ${dato('Cliente', cli ? enl(`#/clientes/${cli.id}`, cli.nombre) : '')}${dato('Sitio', loc ? enl(`#/sitios/${loc.id}`, loc.nombre) : '')}
         ${dato('Contacto', con ? `${enl(`#/contactos/${con.id}`, con.nombre)}${con.telefono ? ` · <a href="tel:${esc(con.telefono)}">${esc(con.telefono)}</a>` : ''}` : '')}
         ${dato('Oportunidad', opo ? enl(`#/oportunidades/${opo.id}`, opo.titulo) : '')}
         ${dato('Trabajos', (tra.data ?? []).map(t => enl(`#/trabajos/${t.id}`, `#${t.numero ?? '?'} ${t.titulo ?? ''}`) + (t.estado ? ` <small class="nota">${esc(t.estado)}</small>` : '')).join('<br>'))}</dl>
         ${cli || loc ? '' : '<p class="nota">Sin cliente ni sede.</p>'}</section>
-      ${p.exigencias ? `<section class="tarjeta"><h3>📝 Lo que pide el cliente</h3><p class="si-pre">${esc(p.exigencias)}</p></section>` : ''}
+      ${p.exigencias ? `<section class="tarjeta"><h3>${ico('nota')} Lo que pide el cliente</h3><p class="si-pre">${esc(p.exigencias)}</p></section>` : ''}
     </div>
-    <section class="tarjeta mo-scroll"><h3>📦 Líneas</h3>
+    <section class="tarjeta mo-scroll"><h3>${ico('caja')} Líneas</h3>
       ${lin.error ? `<p class="aviso mal">No se pudieron leer las líneas: ${esc(lin.error.message)}</p>` : ''}
       <table class="tabla" id="pp-lineas"><thead><tr><th>Concepto</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Dto.</th><th class="num">Subtotal</th></tr></thead>
       <tbody>${lineas.map(l => `<tr><td>${esc(l.nombre ?? '')}${l.categoria ? ` <small class="nota">${esc(l.categoria)}</small>` : ''}</td>

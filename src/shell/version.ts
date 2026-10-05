@@ -3,6 +3,8 @@
 // cuál arrancó y lo vuelve a leer cada 5 min y al volver a primer plano. Si
 // cambió, una barra «Nueva versión · Recargar» (que antes pide al service
 // worker que se ponga al día). Sin version.json (en local) no hace nada.
+import { ico } from './linea';
+
 let _arranque: string | null = null;
 let _avisado = false;
 
@@ -23,7 +25,7 @@ function avisar() {
   b.id = 'version-nueva';
   b.className = 'version-nueva';
   b.setAttribute('role', 'status');
-  b.innerHTML = '<span>🔄 Hay una versión nueva del hub</span><button type="button" class="btn" data-action="recargarVersion">Recargar</button>';
+  b.innerHTML = `<span>${ico('actualizar')} Hay una versión nueva del hub</span><button type="button" class="btn" data-action="recargarVersion">Recargar</button>`;
   document.body.appendChild(b);
 }
 

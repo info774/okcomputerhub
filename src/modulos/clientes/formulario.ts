@@ -14,6 +14,7 @@ import { ir } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 
 export const ESTADOS_CLIENTE: [string, string][] = [['activo', 'Activo'], ['potencial', 'Potencial'], ['cerrado', 'Cerrado']];
 export const PLANES = ['Sin mantenimiento', 'Basic', 'Premium', 'Silver', 'Gold'];
@@ -67,7 +68,7 @@ export async function pintarFormulario(el: HTMLElement, id?: string) {
         <label><input type="radio" name="cf-tipo" value="individuo" ${c?.tipo === 'individuo' ? 'checked' : ''}> Particular</label></div>
       <label for="cf-nif">NIF / CIF</label>
       <div class="cf-nif"><input id="cf-nif" value="${esc(c?.nif ?? '')}" autocomplete="off" placeholder="B12345678">
-        <button type="button" class="btn secundario" data-action="cfBuscarNif">🔎 Buscar el nombre</button></div>
+        <button type="button" class="btn secundario" data-action="cfBuscarNif">${ico('buscar')} Buscar el nombre</button></div>
       <p class="nota" id="cf-nif-estado" aria-live="polite"></p>
       <label>Nombre <span class="nota">(obligatorio)</span> <input id="cf-nombre" required maxlength="200" value="${esc(c?.nombre ?? '')}"></label>
       <div class="in-campos">
@@ -89,7 +90,7 @@ export async function pintarFormulario(el: HTMLElement, id?: string) {
 
 const val = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value.trim() ?? '';
 const estado = (html: string, mal = false) => { const e = document.getElementById('cf-nif-estado'); if (e) { e.innerHTML = html; e.classList.toggle('mal', mal); } };
-const avisoDuplicado = (d: { id: string; nombre: string }) => `⚠️ Ese NIF ya lo tiene <a href="#/clientes/${esc(d.id)}">${esc(d.nombre)}</a>. No lo dupliques.`;
+const avisoDuplicado = (d: { id: string; nombre: string }) => `${ico('atencion')} Ese NIF ya lo tiene <a href="#/clientes/${esc(d.id)}">${esc(d.nombre)}</a>. No lo dupliques.`;
 
 registrarAcciones({
   async cfBuscarNif() {

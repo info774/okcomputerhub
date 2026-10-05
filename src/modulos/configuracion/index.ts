@@ -16,6 +16,7 @@ import { API } from '../../core/api';
 import { usuario } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { eur } from '../ventas/datos';
 import { tarjetaAvisos, pintarAvisos } from '../../shell/avisos-dispositivo';
 
@@ -34,13 +35,13 @@ async function pintar(el: HTMLElement) {
   const u = usuario();
   const e = emisor ?? {};
   el.innerHTML = `
-    <form class="tarjeta" id="cfg-empresa" data-on-submit="cfgEmpresa" data-prevent="1"><h3>🏢 Empresa</h3>
+    <form class="tarjeta" id="cfg-empresa" data-on-submit="cfgEmpresa" data-prevent="1"><h3>${ico('empresa')} Empresa</h3>
       <p class="nota">Con estos datos salen el parte del trabajo, el presupuesto en PDF y las facturas del hub (la misma ficha que «Facturación → Emisor»).</p>
       <div class="in-campos">${CAMPOS.map(([k, t, tipo]) => `<label>${t} <input id="cfg-e-${k}" ${tipo ? `type="${tipo}"` : ''} value="${esc(e[k] ?? '')}"></label>`).join('')}
         <label>IGIC (%) <input id="cfg-igic" type="number" min="0" max="30" step="0.5" value="${esc(igic ?? 7)}"></label></div>
       <div class="acciones"><button class="btn" type="submit">Guardar</button></div>
     </form>
-    <section class="tarjeta"><h3>💶 Tarifas del servicio técnico presencial</h3>
+    <section class="tarjeta"><h3>${ico('dinero')} Tarifas del servicio técnico presencial</h3>
       <table class="tabla"><thead><tr><th>Plan</th><th class="num">Estándar</th><th class="num">Urgente</th></tr></thead><tbody>
         <tr><td>Sin mantenimiento</td>
           <td class="num"><input id="cfg-sin-std" type="number" min="0" step="0.01" value="${esc(sin?.estandar ?? '')}" aria-label="Sin mantenimiento, estándar"></td>
@@ -51,10 +52,10 @@ async function pintar(el: HTMLElement) {
         <a class="btn secundario" href="#/mantenimientos/plantillas">Las de los planes, en sus plantillas</a></div>
     </section>
     ${tarjetaAvisos()}
-    <section class="tarjeta"><h3>🔐 Sesión actual</h3>
+    <section class="tarjeta"><h3>${ico('candado')} Sesión actual</h3>
       <p><b>${esc(u?.nombre ?? '')}</b> · ${esc(u?.email ?? '')} · ${u?.rol === 'admin' ? 'Administrador' : 'Técnico'}</p>
-      <div class="acciones"><a class="btn secundario" href="#/usuarios">🔑 Usuarios</a><a class="btn secundario" href="#/registro">🕘 Registro de cambios</a>
-        <a class="btn secundario" href="#/datos">🔄 Datos y sincronización</a><a class="btn secundario" href="/privacidad.html" target="_blank" rel="noopener">Política de privacidad ↗</a></div>
+      <div class="acciones"><a class="btn secundario" href="#/usuarios">${ico('llave')} Usuarios</a><a class="btn secundario" href="#/registro">${ico('reloj')} Registro de cambios</a>
+        <a class="btn secundario" href="#/datos">${ico('repetir')} Datos y sincronización</a><a class="btn secundario" href="/privacidad.html" target="_blank" rel="noopener">Política de privacidad ${ico('externo')}</a></div>
     </section>`;
   void pintarAvisos();
 }

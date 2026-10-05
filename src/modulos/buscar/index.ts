@@ -10,11 +10,13 @@ import { resolver } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, toast, hace } from '../../ui/dom';
 import { markdown } from '../../ui/markdown';
+import { ico, type IconoLinea } from '../../shell/linea';
 
 interface Fuente { n: number; titulo: string; url: string | null; fuente: string; texto: string }
 interface Respuesta { respuesta: string | null; fuentes: Fuente[]; con_claude: boolean }
 const CUENTA = 'firebase-adminsdk-fbsvc@okcomputerclaude.iam.gserviceaccount.com';
-const ORIGEN: Record<string, string> = { wiki: '📚 Wiki', drive: '📁 Drive', app: '🗂 App' };
+const ORIGEN: Record<string, { ico: IconoLinea; texto: string }> = { wiki: { ico: 'libro', texto: 'Wiki' }, drive: { ico: 'carpeta', texto: 'Drive' }, app: { ico: 'carpeta', texto: 'App' } };
+const origen = (f: string) => ORIGEN[f] ? `${ico(ORIGEN[f].ico)} ${esc(ORIGEN[f].texto)}` : esc(f);
 let _ultima: { pregunta: string; r: Respuesta } | null = null;
 
 // [n] → enlace a la fuente n de la lista.
@@ -27,7 +29,7 @@ function pintarRespuesta(): string {
       : `<p class="nota">${r.fuentes.length ? 'Sin redacción (falta la clave de Claude): estos son los trozos más parecidos.' : ''}</p>`}
     ${r.fuentes.length ? `<h3>Fuentes</h3><ol class="bu-fuentes">${r.fuentes.map(f => `<li id="bu-fuente-${f.n}">
       <strong>${f.url ? `<a href="${esc(f.url)}"${f.url.startsWith('#') ? '' : ' target="_blank" rel="noopener"'}>${esc(f.titulo)}</a>` : esc(f.titulo)}</strong>
-      <span class="chip">${esc(ORIGEN[f.fuente] ?? f.fuente)}</span><p class="nota">${esc(f.texto.slice(0, 300))}${f.texto.length > 300 ? '…' : ''}</p></li>`).join('')}</ol>` : ''}</section>`;
+      <span class="chip">${origen(f.fuente)}</span><p class="nota">${esc(f.texto.slice(0, 300))}${f.texto.length > 300 ? '…' : ''}</p></li>`).join('')}</ol>` : ''}</section>`;
 }
 
 async function pintarEstado(): Promise<string> {
@@ -35,7 +37,7 @@ async function pintarEstado(): Promise<string> {
   if (r.error || !r.data) return `<p class="nota">No se pudo leer el estado del índice: ${esc(r.error ?? '')}</p>`;
   const e = r.data;
   const filas = Object.entries((e.resumen ?? {}) as Record<string, Record<string, number>>).map(([f, est]) =>
-    `<tr><td>${esc(ORIGEN[f] ?? f)}</td><td>${est.indexado ?? 0}</td><td>${est.pendiente ?? 0}</td><td>${(est.error ?? 0) + (est.omitido ?? 0)}</td></tr>`).join('');
+    `<tr><td>${origen(f)}</td><td>${est.indexado ?? 0}</td><td>${est.pendiente ?? 0}</td><td>${(est.error ?? 0) + (est.omitido ?? 0)}</td></tr>`).join('');
   const drive = e.drive ?? {};
   return `<section class="tarjeta"><h3>Qué hay en el índice</h3>
     <table class="tabla"><thead><tr><th>Fuente</th><th>Indexados</th><th>Pendientes</th><th>Error / no legibles</th></tr></thead><tbody>${filas || '<tr><td colspan="4" class="vacio">Vacío.</td></tr>'}</tbody></table>

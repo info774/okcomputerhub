@@ -14,6 +14,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { buscarClientes } from '../ventas/datos';
 import { buscadorMaps, alElegirLugar, type Lugar } from '../../ui/maps';
 import { olvidarSitios } from './vista';
@@ -94,7 +95,7 @@ export async function pintarFormulario(el: HTMLElement, id?: string, clienteId?:
       <label class="check"><input type="checkbox" id="sf-software" ${l?.tiene_software === false ? '' : 'checked'}> Tiene software nuestro (TPV, programa…)</label>
       <label>Notas <textarea id="sf-notas" rows="2">${esc(l?.notas ?? '')}</textarea></label>
       <label>Notas técnicas <textarea id="sf-notas-tecnicas" rows="3">${esc(l?.notas_tecnicas ?? '')}</textarea></label>
-      <details ${l?.alarma_empresa || l?.alarma_codigo ? 'open' : ''}><summary>🚨 Alarma</summary>
+      <details ${l?.alarma_empresa || l?.alarma_codigo ? 'open' : ''}><summary>${ico('alarma')} Alarma</summary>
         <div class="in-campos">
           ${campo('sf-alarma-empresa', 'Empresa', l?.alarma_empresa)}
           ${campo('sf-alarma-telefono', 'Teléfono', l?.alarma_telefono, 'type="tel"')}

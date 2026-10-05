@@ -6,6 +6,7 @@ import { API } from '../../core/api';
 import { ir, resolver } from '../../core/router';
 import { registrarAcciones } from '../../core/dispatcher';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { tablaAlertas } from './lista';
 import {
   type Equipo, type Metrica, type Script,
@@ -183,7 +184,7 @@ async function tabAcciones(e: Equipo): Promise<string> {
       <tbody>${(ej.data ?? []).map(x => `<tr><td>${esc(fechaHora(x.pedido))}</td><td>${esc(x.script ?? '')}</td>
         <td>${esc(x.estado)}${x.codigo_salida != null ? ` <small>(código ${esc(x.codigo_salida)})</small>` : ''}</td>
         <td>${x.salida || x.errores || x.error ? `<details><summary>Ver</summary><pre class="me-salida">${esc([x.salida, x.errores, x.error].filter(Boolean).join('\n--\n'))}</pre></details>` : ''}
-          <a href="${esc(enBreeze.ejecucion(e.id, x.id))}" target="_blank" rel="noopener">Breeze ↗</a></td></tr>`).join('')}</tbody></table></div>`
+          <a href="${esc(enBreeze.ejecucion(e.id, x.id))}" target="_blank" rel="noopener">Breeze ${ico('externo')}</a></td></tr>`).join('')}</tbody></table></div>`
       : '<p class="vacio">Ninguno en los últimos 30 días.</p>'}
     <h3>Comandos recientes</h3>
     ${(cmd.data ?? []).length ? `<div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Cuándo</th><th>Comando</th><th>Estado</th><th>Quién</th></tr></thead>
@@ -196,9 +197,9 @@ function tabRemoto(e: Equipo): string {
     <section class="tarjeta"><h3>Desde Breeze</h3>
       <p class="nota">El control remoto se abre en el panel de Breeze con tu propio usuario (el del hub no tiene permiso de acceso remoto, a propósito).</p>
       <div class="acciones">
-        <a class="btn" href="${esc(enBreeze.equipo(e.id))}" target="_blank" rel="noopener">Abrir el equipo en Breeze ↗</a>
-        <a class="btn secundario" href="${esc(enBreeze.terminal(e.id))}" target="_blank" rel="noopener">Terminal ↗</a>
-        <a class="btn secundario" href="${esc(enBreeze.archivos(e.id))}" target="_blank" rel="noopener">Archivos ↗</a>
+        <a class="btn" href="${esc(enBreeze.equipo(e.id))}" target="_blank" rel="noopener">Abrir el equipo en Breeze ${ico('externo')}</a>
+        <a class="btn secundario" href="${esc(enBreeze.terminal(e.id))}" target="_blank" rel="noopener">Terminal ${ico('externo')}</a>
+        <a class="btn secundario" href="${esc(enBreeze.archivos(e.id))}" target="_blank" rel="noopener">Archivos ${ico('externo')}</a>
       </div>
       <p class="nota">Escritorio remoto: en la ficha del equipo en Breeze, botón «Connect Desktop» (abre el visor de Breeze).</p>
     </section>
@@ -229,7 +230,7 @@ export async function pintarEquipo(el: HTMLElement, id: string, pestana = 'resum
   _e = data;
   const p = PESTANAS.some(([k]) => k === pestana) ? pestana : 'resumen';
   el.innerHTML = `<p><a href="#/monitorizacion/equipos">← Equipos</a>${data.local_id ? ` · <a href="#/monitorizacion/sede/${esc(data.local_id)}">Su sede</a>` : ''}</p>
-    <div class="tarjeta-cab"><h2>🖥 ${esc(data.nombre)}</h2>
+    <div class="tarjeta-cab"><h2>${ico('monitor')} ${esc(data.nombre)}</h2>
       <span>${data.conectado ? chip('Conectado', 'bien') : chip(`Sin conexión · ${hace(data.visto_ultimo)}`, 'mal')}
       ${data.alertas_abiertas ? chip(`${data.alertas_abiertas} alerta(s)`, 'mal') : ''}${data.reinicio_pendiente ? chip('Reinicio pendiente', 'aviso') : ''}</span></div>
     <nav class="pestanas" role="tablist">${PESTANAS.map(([k, n]) =>

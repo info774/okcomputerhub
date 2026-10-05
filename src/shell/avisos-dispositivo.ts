@@ -7,6 +7,7 @@
 import { registrarAcciones } from '../core/dispatcher';
 import { activarPush, desactivarPush, estadoPush, probarPush, type EstadoPush } from '../core/push';
 import { toast } from '../ui/dom';
+import { ico } from './linea';
 
 const TEXTO: Record<EstadoPush, string> = {
   'no-soportado': 'Este navegador no admite avisos',
@@ -21,9 +22,9 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _insta
 window.addEventListener('appinstalled', () => { _instalar = null; void pintarAvisos(); });
 const instalada = () => matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
-export const controlAvisos = () => `<button type="button" class="menu-avisos" data-action="pushMenu" data-estado="inactivo">🔔 <span>${TEXTO.inactivo}</span></button>`;
+export const controlAvisos = () => `<button type="button" class="menu-avisos" data-action="pushMenu" data-estado="inactivo">${ico('campana')}<span>${TEXTO.inactivo}</span></button>`;
 
-export const tarjetaAvisos = () => `<section class="tarjeta" id="av-tarjeta"><h3>🔔 Avisos y app en este dispositivo</h3>
+export const tarjetaAvisos = () => `<section class="tarjeta" id="av-tarjeta"><h3>${ico('campana')} Avisos y app en este dispositivo</h3>
   <p class="nota">Comandas que te pasan, mensajes del chat y, cuando la agenda sea del hub, los trabajos que empiezan en una hora. Es por dispositivo: actívalo en cada móvil u ordenador en el que quieras enterarte.</p>
   <p id="av-estado" class="cargando">Mirando…</p>
   <div class="acciones" id="av-botones"></div></section>`;
@@ -43,7 +44,7 @@ export async function pintarAvisos() {
   bot.innerHTML = (e === 'activo'
     ? '<button class="btn" data-action="pushProbar">Mandarme una prueba</button><button class="btn secundario" data-action="pushDesactivar">Desactivar aquí</button>'
     : e === 'inactivo' ? '<button class="btn" data-action="pushActivar">Activar los avisos</button>' : '')
-    + (_instalar && !instalada() ? '<button class="btn secundario" data-action="instalarApp">📲 Instalar el hub como app</button>' : '')
+    + (_instalar && !instalada() ? `<button class="btn secundario" data-action="instalarApp">${ico('descargar')} Instalar el hub como app</button>` : '')
     + (instalada() ? '<span class="chip">Instalado como app</span>' : '');
 }
 

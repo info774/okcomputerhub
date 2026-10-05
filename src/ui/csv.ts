@@ -1,4 +1,4 @@
-// «⬇ Excel»: CSV con BOM y «;», que Excel en español abre con las columnas
+// «Excel»: CSV con BOM y «;», que Excel en español abre con las columnas
 // bien (lo que hacían los export*Excel de la app sin la librería XLSX).
 export function descargarCsv(nombre: string, cabecera: string[], filas: unknown[][]) {
   const celda = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;

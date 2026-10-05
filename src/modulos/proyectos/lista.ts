@@ -6,6 +6,7 @@ import { equipo, nombreDe } from '../../core/equipo';
 import { ir } from '../../core/router';
 import { registrarAcciones } from '../../core/dispatcher';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { FASES, nombreFase, listarProyectos, crearProyecto, actualizarProyecto, type Proyecto, type TareaP } from './datos';
 
 type Vista = 'kanban' | 'lista' | 'personas';
@@ -31,8 +32,8 @@ function tarjeta(p: Proyecto): string {
       <span class="chip ${p.tipo === 'cliente' ? 'aviso' : 'neutro'}">${p.tipo === 'cliente' ? 'Cliente' : 'Interno'}</span></div>
     <h4>${esc(p.titulo)}</h4>
     <div class="pr-tarjeta-pie">
-      ${resp ? `<span>👤 ${esc(resp)}</span>` : '<span class="nota">Sin responsable</span>'}
-      ${p.fecha_objetivo ? `<span class="${vencido(p.fecha_objetivo) && p.estado !== 'cerrado' ? 'mal' : ''}">📅 ${esc(p.fecha_objetivo)}</span>` : ''}
+      ${resp ? `<span>${ico('persona')} ${esc(resp)}</span>` : '<span class="nota">Sin responsable</span>'}
+      ${p.fecha_objetivo ? `<span class="${vencido(p.fecha_objetivo) && p.estado !== 'cerrado' ? 'mal' : ''}">${ico('calendario')} ${esc(p.fecha_objetivo)}</span>` : ''}
     </div>
   </article>`;
 }
@@ -84,7 +85,7 @@ async function pintarPersonas(): Promise<string> {
       return `<li class="fila-clic" data-action="abrirProyecto" data-p0="${p?.numero ?? ''}" data-p1="tareas">
         <span class="chip ${t.estado === 'en_curso' ? 'aviso' : 'neutro'}">${t.estado === 'en_curso' ? 'En curso' : 'Pendiente'}</span>
         ${esc(t.titulo)} <small>· #${p?.numero ?? '?'} ${esc(p?.titulo ?? '')}</small>
-        ${t.fecha_limite ? `<small class="${vencido(t.fecha_limite) ? 'mal' : ''}"> · 📅 ${esc(t.fecha_limite)}</small>` : ''}
+        ${t.fecha_limite ? `<small class="${vencido(t.fecha_limite) ? 'mal' : ''}"> · ${ico('calendario')} ${esc(t.fecha_limite)}</small>` : ''}
       </li>`;
     }).join('')}</ul></section>`).join('')}</div>`;
 }
@@ -101,7 +102,7 @@ export async function pintarListaProyectos(el: HTMLElement) {
   const cuerpo = vista === 'lista' ? pintarLista() : vista === 'personas' ? await pintarPersonas() : pintarKanban(verCerrados);
   el.innerHTML = `
     <form class="pr-idea tarjeta" data-on-submit="apuntarIdea" data-prevent="1">
-      <label for="pri-titulo">💡 Apuntar una idea</label>
+      <label for="pri-titulo">${ico('idea')} Apuntar una idea</label>
       <div class="acciones">
         <input id="pri-titulo" maxlength="200" placeholder="p. ej. Ofrecer copias en la nube a los restaurantes" autocomplete="off">
         <select id="pri-tipo" aria-label="Tipo"><option value="interno">Interno</option><option value="cliente">De cliente</option></select>

@@ -2,7 +2,7 @@
 // Tanda 1: usuarios (solo lectura con el área de la app; con el corte, alta,
 // rol y teléfono, activar/desactivar y nunca a uno mismo), registro de cambios
 // (global con filtros, «Cargar más» por la fecha del último, de una ficha y el
-// enlace «🕘 Historial» de las fichas, solo admin; la función `historial`
+// enlace «Historial» de las fichas, solo admin; la función `historial`
 // SIMULADA) y el modo empleado (menú reducido del técnico y, en el móvil,
 // entrada a «Hoy»).
 // Tanda 2: aviso de versión nueva (version.json cambia → barra «Recargar»),
@@ -12,7 +12,7 @@
 // mantenimiento y las de los planes desde su plantilla).
 // Tanda 3: deshacer (el chip, Ctrl+Z devuelve el cambio, el panel deshace un
 // alta y lo de otros no se toca) y la cola sin red (fichar sin conexión: se
-// ve al momento con la última copia, «☁ 1 sin enviar», y al volver la red sale
+// ve al momento con la última copia, «1 sin enviar» (chip de la nube), y al volver la red sale
 // solo con la hora de la pulsación).
 // Tanda 4: avisos push (con el navegador SIMULADO: permiso, suscripción con la
 // clave VAPID del hub → `push` registrar; «Mandarme una prueba») y Feedback
@@ -133,7 +133,7 @@ try {
   await page.waitForSelector('a[href="#/registro/clientes/cl1"]');
   await page.click('a[href="#/registro/clientes/cl1"]');
   await page.waitForSelector('.rg-item');
-  ok(llamadas.at(-1)?.tabla === 'clientes' && llamadas.at(-1)?.registro_id === 'cl1' && await page.locator('#rg-tabla').count() === 0, 'ficha: «🕘 Historial» abre el de esa ficha, sin filtros');
+  ok(llamadas.at(-1)?.tabla === 'clientes' && llamadas.at(-1)?.registro_id === 'cl1' && await page.locator('#rg-tabla').count() === 0, 'ficha: «Historial» abre el de esa ficha, sin filtros');
   await page.screenshot({ path: `${CAPTURAS}/sistema-registro.png`, fullPage: true });
   await ctx.close();
 
@@ -177,7 +177,7 @@ try {
   ok(!['clientes', 'direccion', 'oportunidades', 'cobros', 'usuarios', 'registro', 'facturacion'].some(m => mods.includes(m)), 'modo empleado: sin Clientes, Dirección, Oportunidades, Cobros, Usuarios, Registro ni Facturación');
   await page.goto(`${srv.base}/#/clientes/cl1`);
   await page.waitForSelector('.tarjeta-cab');
-  ok(await page.locator('a[href^="#/registro/"]').count() === 0, 'técnico: sin «🕘 Historial» en las fichas');
+  ok(await page.locator('a[href^="#/registro/"]').count() === 0, 'técnico: sin «Historial» en las fichas');
   // Tamaño del texto (solo móvil): al pie del menú, y se recuerda
   await page.click('[data-action="alternarMenu"]');
   const antes = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
@@ -204,7 +204,7 @@ try {
   ok(await page.isHidden('#sis-deshacer'), 'deshacer: sin cambios, sin chip');
   await page.selectOption('#tk-estado', 'Cerrado');
   await page.waitForFunction(() => !document.getElementById('sis-deshacer')?.hidden);
-  ok(base.db.tickets[0].estado === 'Cerrado', 'deshacer: el cambio se guarda y sale el chip «↩ Deshacer»');
+  ok(base.db.tickets[0].estado === 'Cerrado', 'deshacer: el cambio se guarda y sale el chip «Deshacer»');
   await page.click('body');
   await page.keyboard.press('Control+z');
   await page.waitForFunction(() => document.body.textContent.includes('Deshecho'));
@@ -244,7 +244,7 @@ try {
   await page.click('[data-action="hoTraslado"]');
   await page.waitForFunction(() => document.querySelector('.ho-fichaje')?.textContent.includes('En traslado'));
   ok(!rpcs.length && await page.isVisible('#sis-cola'), 'sin red: el traslado se ve al momento (última copia + lo pendiente) y no sale');
-  ok((await page.getAttribute('#sis-cola', 'title')).includes('Sin conexión'), 'sin red: el chip «☁» dice que saldrá solo');
+  ok((await page.getAttribute('#sis-cola', 'title')).includes('Sin conexión'), 'sin red: el chip de la nube dice que saldrá solo');
   await ctx.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await page.waitForFunction(() => document.getElementById('sis-cola')?.hidden);
@@ -333,6 +333,8 @@ try {
   await page.goto(`${srv.base}/#/feedback`);
   await page.waitForSelector('.fb-item');
   ok(await page.locator('.fb-item').count() === 1 && (await page.textContent('.fb-item')).includes('TypeError: x is null'), 'feedback: el admin ve lo abierto con su contexto y errores');
+  ok(!(await page.$eval('.principal', e => /\p{Extended_Pictographic}/u.test(e.textContent))) && !(await page.$eval('.menu-avisos', e => /\p{Extended_Pictographic}/u.test(e.textContent))),
+    'feedback y avisos: sin emojis (iconos de línea)');
   await page.fill('#fb-notas-fb1', 'Mira sitios/formulario.ts');
   await page.click('[data-action="fbClaude"][data-p0="fb1"]');
   await page.waitForFunction(() => document.getElementById('toast')?.textContent.includes('Pasada a Claude'));

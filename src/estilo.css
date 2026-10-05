@@ -478,7 +478,7 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 .op-cierre { position: sticky; bottom: 0; z-index: 2; display: flex; gap: .5rem; align-items: stretch; flex-wrap: wrap;
   margin-top: .75rem; padding: .5rem; background: var(--fondo); border-top: 1px solid var(--borde); }
 .op-cierre > span { align-self: center; font-size: .85rem; color: var(--texto-suave); }
-.op-zona { flex: 1 1 160px; display: grid; place-items: center; min-height: 48px; border: 2px dashed var(--borde); border-radius: var(--radio);
+.op-zona { flex: 1 1 160px; display: flex; align-items: center; justify-content: center; gap: .4rem; min-height: 48px; border: 2px dashed var(--borde); border-radius: var(--radio);
   font-weight: 600; transition: background-color .15s, border-color .15s; }
 .op-zona.op-ganada { color: var(--bien); }
 .op-zona.op-perdida { color: var(--mal); }
@@ -904,6 +904,9 @@ kbd { font-size: .75rem; border: 1px solid var(--borde); border-radius: 4px; pad
 * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--texto-suave) 35%, transparent) transparent; }
 :focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
 .os-bico { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* Icono de línea dentro de un texto o botón (ico() de shell/linea.ts): el
+   tamaño y el color de la letra que lo rodea. Sustituye a los emojis. */
+.ico { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -.17em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .os-bico-sol { display: none; }
 :root[data-theme="dark"] .os-tema .os-bico-luna { display: none; }
 :root[data-theme="dark"] .os-tema .os-bico-sol { display: block; }
@@ -1124,3 +1127,13 @@ body.os-modo .sis { bottom: 108px; }
 .fb-resultado { border-left: 3px solid var(--accion); padding-left: .75rem; }
 .fb-resultado h4 { margin: 0 0 .25rem; font-size: .85rem; color: var(--texto-suave); }
 .fb-notas textarea { width: 100%; }
+
+/* ---- Sin emojis: hexágono de la pantalla en baldosas y paleta (shell, inicio) ----
+   Las baldosas de Inicio y la paleta Ctrl+K pintan el icono del dock
+   (iconoHex) en vez del emoji del módulo; el tono de la baldosa tiñe el hexágono. */
+.baldosa-hex { grid-area: icono; display: inline-flex; align-items: center; }
+.baldosa-hex .os-ico { width: 32px; height: auto; display: block; }
+.baldosa[data-tono="bien"] .baldosa-hex .os-ico-hex { fill: var(--bien-fondo); }
+.baldosa[data-tono="aviso"] .baldosa-hex .os-ico-hex { fill: var(--aviso-fondo); }
+.baldosa[data-tono="mal"] .baldosa-hex .os-ico-hex { fill: var(--mal-fondo); }
+.bus-ico { width: 26px; height: auto; flex: none; display: block; }

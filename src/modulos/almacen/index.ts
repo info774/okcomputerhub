@@ -10,6 +10,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { APP_ACTUAL_URL } from '../../core/config';
 import { esc, toast, hace } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { eur, limpio } from '../ventas/datos';
 
 interface Mrp { clave: string; catalogo_id: string | null; nombre: string; categoria: string | null; stock: number; minimo: number; consumo_90: number;
@@ -67,7 +68,7 @@ async function vistaStock(): Promise<string> {
   if (r.error) return `<p class="aviso mal">${esc(r.error.message)}</p>`;
   _mrp = r.data ?? [];
   const bajo = _mrp.filter(m => m.stock < m.minimo).length, urg = _mrp.filter(m => m.urgente).length;
-  return `<p class="nota">El stock se mueve en la <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">app ↗</a> (entradas, salidas, trasvases); por ubicación y con
+  return `<p class="nota">El stock se mueve en la <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">app ${ico('externo')}</a> (entradas, salidas, trasvases); por ubicación y con
       su libro de movimientos está en <a href="#/inventario">Inventario</a>. Aquí se ve junto, con lo que se gasta y lo que viene. Se refresca cada 15 minutos (los movimientos, cada noche).</p>
     <div class="di-cifras"><article class="tarjeta di-cifra"><h3>Materiales</h3><p class="di-valor">${_mrp.length}</p></article>
       <article class="tarjeta di-cifra"><h3>Bajo mínimo</h3><p class="di-valor ${bajo ? 'mal' : ''}">${bajo}</p></article>
@@ -95,7 +96,7 @@ async function vistaCompras(): Promise<string> {
         <td>${esc(m.nombre)}${m.urgente ? ' <span class="chip mal">urgente</span>' : ''}</td><td>${num(m.stock)}${m.en_camino ? ` <small class="nota">(+${num(m.en_camino)} en camino)</small>` : ''}</td>
         <td>${num(m.consumo_dia)}</td><td>${pid && m.catalogo_id ? `<input type="number" min="1" step="1" class="al-cant" data-cat="${esc(m.catalogo_id)}" value="${m.sugerido}" aria-label="Cantidad de ${esc(m.nombre)}">` : num(m.sugerido)}</td>
         <td>${m.precio_compra != null ? eur(m.precio_compra, 2) : '—'}</td></tr>`).join('')}</tbody></table></div></section>`).join('')
-      : '<p class="vacio">No hace falta pedir nada ahora mismo. 🎉</p>'}`;
+      : `<p class="vacio">No hace falta pedir nada ahora mismo. ${ico('trofeo')}</p>`}`;
 }
 
 // ── Pedidos ────────────────────────────────────────────────────────────────
@@ -129,7 +130,7 @@ async function vistaPedido(numero: string): Promise<string> {
     <div class="tarjeta-cab"><h2>PC-${p.numero} · ${esc(prov?.nombre ?? 'sin proveedor')}</h2><span class="chip ${TONO_PEDIDO[p.estado] ?? ''}">${esc(p.estado)}</span></div>
     <p class="nota">Creado ${esc(hace(p.created_at))}${p.enviado_at ? ` · enviado ${esc(hace(p.enviado_at))}` : ''}${p.esperado_para ? ` · se espera el ${esc(p.esperado_para)}` : ''}${p.recibido_at ? ` · recibido ${esc(hace(p.recibido_at))}` : ''}</p>
     ${p.estado === 'Recibido' ? `<p class="aviso ${p.entrada_app_at ? '' : 'mal'}">${p.entrada_app_at ? `Entrada dada en el inventario de la app ${esc(hace(p.entrada_app_at))}.`
-      : `Da la entrada del material en el <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">Inventario de la app ↗</a> y márcalo:
+      : `Da la entrada del material en el <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">Inventario de la app ${ico('externo')}</a> y márcalo:
         <button class="btn secundario" data-action="alEntradaDada">Entrada dada</button>`}</p>` : ''}
     <div class="op-ficha"><div>
       <section class="tarjeta mo-scroll"><h3>Líneas</h3><table class="tabla"><thead><tr><th>Material</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th>${editable ? '<th></th>' : ''}</tr></thead><tbody>
@@ -207,7 +208,7 @@ async function vistaEnvios(): Promise<string> {
       <div class="acciones"><button class="btn" type="submit">Apuntar</button></div></form>
     <div class="acciones pr-barra"><label class="check"><input type="checkbox" ${todos ? 'checked' : ''} data-on-change="alEnviosTodos:$checked"> Ver también los entregados</label></div>
     <div class="tarjeta mo-scroll">${(data ?? []).length ? `<table class="tabla"><thead><tr><th></th><th>Agencia</th><th>Seguimiento</th><th>Quién / qué</th><th>Estado</th></tr></thead><tbody>
-      ${(data ?? []).map(e => { const url = e.seguimiento ? AGENCIAS[e.agencia]?.(e.seguimiento) : ''; return `<tr><td>${e.sentido === 'entrada' ? '📥' : '📤'}</td><td>${esc(e.agencia)}</td>
+      ${(data ?? []).map(e => { const url = e.seguimiento ? AGENCIAS[e.agencia]?.(e.seguimiento) : ''; return `<tr><td title="${e.sentido === 'entrada' ? 'Entrada' : 'Salida'}">${e.sentido === 'entrada' ? ico('recibir') : ico('enviar')}</td><td>${esc(e.agencia)}</td>
         <td>${e.seguimiento ? (url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(e.seguimiento)}</a>` : esc(e.seguimiento)) : '—'}</td>
         <td>${esc(e.destinatario ?? '')}${e.contenido ? `<br><small class="nota">${esc(e.contenido)}</small>` : ''}</td>
         <td><select aria-label="Estado del envío" data-on-change="alEstadoEnvio:${e.id},$value">${Object.entries(ESTADOS_ENVIO).map(([k, t]) => `<option value="${k}" ${k === e.estado ? 'selected' : ''}>${t}</option>`).join('')}</select>

@@ -6,6 +6,7 @@ import '../portal/portal.css';
 import { FUNCIONES_URL, SUPABASE_ANON_KEY } from '../core/config';
 import { esc, fechaHora } from '../ui/dom';
 import { markdown } from '../ui/markdown';
+import { ico } from '../shell/linea';
 
 const raiz = document.getElementById('firmar')!;
 const token = new URLSearchParams(location.search).get('t') ?? '';
@@ -36,7 +37,7 @@ async function arrancar() {
   try { d = await llamar({ accion: 'ver' }); } catch (e) { raiz.innerHTML = `<main><div class="po-tarjeta"><p class="po-mal">${esc((e as Error).message)}</p></div></main>`; return; }
   const cab = `<header class="po-cab"><span class="po-marca">Ok Computer Tenerife</span></header>`;
   if (d.estado !== 'pendiente' || d.caducado) {
-    raiz.innerHTML = `${cab}<main><div class="po-tarjeta"><h1>${esc(d.titulo)}</h1><p>${d.estado === 'firmado' ? `✅ Firmado el ${esc(fechaHora(d.firmado_at))}. ¡Gracias!`
+    raiz.innerHTML = `${cab}<main><div class="po-tarjeta"><h1>${esc(d.titulo)}</h1><p>${d.estado === 'firmado' ? `${ico('hecho')} Firmado el ${esc(fechaHora(d.firmado_at))}. ¡Gracias!`
       : d.estado === 'anulado' ? 'Este documento se ha anulado.' : 'El enlace ha caducado: pídenos otro.'}</p></div></main>`;
     return;
   }
@@ -63,7 +64,7 @@ async function arrancar() {
     try {
       const r = await llamar({ accion: 'firmar', hash: d.contenido_hash, nombre: (document.getElementById('fr-nombre') as HTMLInputElement).value,
         dni: (document.getElementById('fr-dni') as HTMLInputElement).value, firma: c.toDataURL('image/png') });
-      raiz.innerHTML = `${cab}<main><div class="po-tarjeta"><h1>✅ Firmado</h1><p>${esc(d.titulo)}</p><p class="po-nota">Firmado el ${esc(fechaHora(r.firmado_at))}. Te enviaremos una copia. ¡Gracias!</p></div></main>`;
+      raiz.innerHTML = `${cab}<main><div class="po-tarjeta"><h1>${ico('hecho')} Firmado</h1><p>${esc(d.titulo)}</p><p class="po-nota">Firmado el ${esc(fechaHora(r.firmado_at))}. Te enviaremos una copia. ¡Gracias!</p></div></main>`;
     } catch (err) { aviso.textContent = (err as Error).message; btn.disabled = false; }
   });
 }

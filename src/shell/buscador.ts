@@ -10,13 +10,15 @@ import { API } from '../core/api';
 import { ir } from '../core/router';
 import { visibles, hrefDe } from '../modulos/inicio';
 import { APP_ACTUAL_URL } from '../core/config';
+import { ico, type IconoLinea } from './linea';
+import { iconoHex } from './iconos';
 
 type Modo = 'pantallas' | 'datos' | 'preguntar' | 'claude';
-const MODOS: { id: Modo; nombre: string; icono: string; placeholder: string }[] = [
-  { id: 'pantallas', nombre: 'Pantallas', icono: '🔎', placeholder: '¿Qué pantalla?' },
-  { id: 'datos', nombre: 'Datos', icono: '🗂', placeholder: 'Cliente, sede, proyecto, trabajo o ticket…' },
-  { id: 'preguntar', nombre: 'Preguntar', icono: '📚', placeholder: 'Pregunta a los documentos, p. ej. «¿qué TPV tiene el Bar Pepe?»' },
-  { id: 'claude', nombre: 'Pedir a Claude', icono: '✨', placeholder: '¿Sobre qué proyecto? (se abre su pestaña Claude)' },
+const MODOS: { id: Modo; nombre: string; icono: IconoLinea; placeholder: string }[] = [
+  { id: 'pantallas', nombre: 'Pantallas', icono: 'buscar', placeholder: '¿Qué pantalla?' },
+  { id: 'datos', nombre: 'Datos', icono: 'carpeta', placeholder: 'Cliente, sede, proyecto, trabajo o ticket…' },
+  { id: 'preguntar', nombre: 'Preguntar', icono: 'libro', placeholder: 'Pregunta a los documentos, p. ej. «¿qué TPV tiene el Bar Pepe?»' },
+  { id: 'claude', nombre: 'Pedir a Claude', icono: 'chispa', placeholder: '¿Sobre qué proyecto? (se abre su pestaña Claude)' },
 ];
 let _modo: Modo = 'pantallas';
 let _timer: number | undefined;
@@ -43,7 +45,7 @@ function ponerModo(modo: Modo) {
   campo.placeholder = MODOS.find(m => m.id === modo)!.placeholder;
   document.getElementById('bus-modos')!.innerHTML = MODOS.map(m => `
     <button role="tab" aria-selected="${m.id === modo}" class="bus-modo ${m.id === modo ? 'activo' : ''}" data-action="busModo" data-p0="${m.id}">
-      <span aria-hidden="true">${m.icono}</span> ${esc(m.nombre)}</button>`).join('');
+      <span aria-hidden="true">${ico(m.icono)}</span> ${esc(m.nombre)}</button>`).join('');
   void filtrarBuscador(campo.value);
 }
 
@@ -63,9 +65,12 @@ export function buscadorTecla(ev: KeyboardEvent) {
   }
 }
 
-const fila = (href: string, icono: string, texto: string, sub: string, externo = false, i = 0) =>
+// `icono`: HTML ya seguro (el hexágono de la pantalla o `icoBus(...)`); `subExt`
+// añade la flecha de «se abre en la app» al final del subtítulo.
+const fila = (href: string, icono: string, texto: string, sub: string, externo = false, i = 0, subExt = false) =>
   `<li><a href="${esc(href)}" class="${i === 0 ? 'activo' : ''}"${externo ? ' target="_blank" rel="noopener"' : ''} data-action="cerrarBuscador">
-    <span class="hex bus-ic" aria-hidden="true">${esc(icono)}</span> <span class="bus-texto">${esc(texto)}</span> <small>${esc(sub)}</small></a></li>`;
+    ${icono} <span class="bus-texto">${esc(texto)}</span> <small>${esc(sub)}${subExt ? ` ${ico('externo')}` : ''}</small></a></li>`;
+const icoBus = (n: IconoLinea) => `<span class="hex bus-ic" aria-hidden="true">${ico(n)}</span>`;
 
 export function filtrarBuscador(q: string): void {
   const t = q.trim();
@@ -74,13 +79,13 @@ export function filtrarBuscador(q: string): void {
   if (_modo === 'pantallas') {
     const n = normal(t);
     const lista = visibles().filter(m => !n || normal(`${m.titulo} ${m.grupo} ${m.explicacion}`).includes(n));
-    ul.innerHTML = lista.map((m, i) => fila(hrefDe(m), m.icono, m.titulo, m.grupo, !!m.enlaceExterno, i)).join('')
+    ul.innerHTML = lista.map((m, i) => fila(hrefDe(m), iconoHex(m.id === 'inicio' ? 'panel' : m.id, m.titulo, 'bus-ico'), m.titulo, m.grupo, !!m.enlaceExterno, i)).join('')
       || '<li class="vacio">Nada con ese nombre.</li>';
     return;
   }
   if (_modo === 'preguntar') {
     ul.innerHTML = t
-      ? `<li><a href="#/buscar/${encodeURIComponent(t)}" class="activo" data-action="cerrarBuscador"><span class="hex bus-ic" aria-hidden="true">📚</span> <span class="bus-texto">Preguntar «${esc(t)}»</span> <small>Buscar</small></a></li>`
+      ? `<li><a href="#/buscar/${encodeURIComponent(t)}" class="activo" data-action="cerrarBuscador">${icoBus('libro')} <span class="bus-texto">Preguntar «${esc(t)}»</span> <small>Buscar</small></a></li>`
       : '<li class="vacio">Escribe la pregunta y pulsa Enter: responde con lo que hay en la wiki, los proyectos y Drive.</li>';
     return;
   }
@@ -106,11 +111,11 @@ async function buscarDatos(t: string): Promise<string> {
     API.get<any[]>('tickets', { select: 'id,numero,titulo,estado', ...(num ? { numero: `eq.${t}` } : { titulo: like(t) }), order: 'numero.desc', limit: '5' }),
   ]);
   const filas: string[] = [];
-  for (const c of cl.data ?? []) filas.push(fila(`#/clientes/${c.id}`, '🤝', c.nombre, `Cliente${c.telefono ? ' · ' + c.telefono : ''}`, false, filas.length));
-  for (const l of lo.data ?? []) filas.push(fila(l.cliente_id ? `#/clientes/${l.cliente_id}` : APP_ACTUAL_URL, '📍', l.nombre, `Sede${l.direccion ? ' · ' + l.direccion : ''}`, !l.cliente_id, filas.length));
-  for (const p of pr.data ?? []) filas.push(fila(`#/proyectos/${p.numero}`, '🧭', `#${p.numero} ${p.titulo}`, `Proyecto · ${p.estado}`, false, filas.length));
-  for (const w of tr.data ?? []) filas.push(fila(APP_ACTUAL_URL, '🛠', `#${w.numero ?? '?'} ${w.titulo || (w.descripcion ?? '').slice(0, 60)}`, `Trabajo · ${w.estado ?? ''} · app ↗`, true, filas.length));
-  for (const k of ti.data ?? []) filas.push(fila(APP_ACTUAL_URL, '🎫', `#${k.numero ?? '?'} ${k.titulo ?? ''}`, `Ticket · ${k.estado ?? ''} · app ↗`, true, filas.length));
+  for (const c of cl.data ?? []) filas.push(fila(`#/clientes/${c.id}`, icoBus('trato'), c.nombre, `Cliente${c.telefono ? ' · ' + c.telefono : ''}`, false, filas.length));
+  for (const l of lo.data ?? []) filas.push(fila(l.cliente_id ? `#/clientes/${l.cliente_id}` : APP_ACTUAL_URL, icoBus('ubicacion'), l.nombre, `Sede${l.direccion ? ' · ' + l.direccion : ''}`, !l.cliente_id, filas.length));
+  for (const p of pr.data ?? []) filas.push(fila(`#/proyectos/${p.numero}`, icoBus('brujula'), `#${p.numero} ${p.titulo}`, `Proyecto · ${p.estado}`, false, filas.length));
+  for (const w of tr.data ?? []) filas.push(fila(APP_ACTUAL_URL, icoBus('herramienta'), `#${w.numero ?? '?'} ${w.titulo || (w.descripcion ?? '').slice(0, 60)}`, `Trabajo · ${w.estado ?? ''} · app`, true, filas.length, true));
+  for (const k of ti.data ?? []) filas.push(fila(APP_ACTUAL_URL, icoBus('etiqueta'), `#${k.numero ?? '?'} ${k.titulo ?? ''}`, `Ticket · ${k.estado ?? ''} · app`, true, filas.length, true));
   const err = cl.error ?? lo.error ?? pr.error ?? tr.error ?? ti.error;
   return filas.join('') || `<li class="vacio">${err ? 'No se pudo buscar: ' + esc(err.message) : 'Nada con ese nombre.'}</li>`;
 }
@@ -120,7 +125,7 @@ async function buscarProyectos(t: string): Promise<string> {
   const { data, error } = await API.get<any[]>('proyectos', { select: 'id,numero,titulo,estado',
     ...(t ? (num ? { numero: `eq.${t}` } : { titulo: like(t) }) : {}), estado: 'neq.cerrado', order: 'numero.desc', limit: '12' });
   if (error) return `<li class="vacio">No se pudieron leer los proyectos: ${esc(error.message)}</li>`;
-  const lista = (data ?? []).map((p, i) => fila(`#/proyectos/${p.numero}/claude`, '✨', `#${p.numero} ${p.titulo}`, `Pedir a Claude · ${p.estado}`, false, i));
+  const lista = (data ?? []).map((p, i) => fila(`#/proyectos/${p.numero}/claude`, icoBus('chispa'), `#${p.numero} ${p.titulo}`, `Pedir a Claude · ${p.estado}`, false, i));
   return lista.join('') || '<li class="vacio">Ningún proyecto abierto con ese nombre. Claude trabaja siempre sobre un proyecto.</li>';
 }
 

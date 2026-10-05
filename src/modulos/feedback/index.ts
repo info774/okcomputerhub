@@ -17,6 +17,7 @@ import { buildActual } from '../../shell/version';
 import { alternarDictado, puedeDictar } from '../../ui/dictado';
 import { markdown } from '../../ui/markdown';
 import { esc, toast } from '../../ui/dom';
+import { ico, type IconoLinea } from '../../shell/linea';
 
 interface Feedback {
   id: string; numero: number; created_at: string; tipo: string; descripcion: string; seccion: string | null; ruta: string | null;
@@ -24,7 +25,8 @@ interface Feedback {
   pasada_at: string | null; terminada_at: string | null; resultado: string | null;
 }
 
-const TIPOS: Record<string, string> = { bug: '🐞 Fallo', mejora: '✨ Mejora', idea: '💡 Idea' };
+const TIPOS: Record<string, string> = { bug: 'Fallo', mejora: 'Mejora', idea: 'Idea' };
+const ICO_TIPO: Record<string, IconoLinea> = { bug: 'atencion', mejora: 'chispa', idea: 'idea' };
 const ESTADOS: Record<string, [string, string]> = {
   nueva: ['Nueva', 'aviso'], claude: ['Para Claude', ''], en_curso: ['Claude trabajando', ''], hecha: ['Hecha', 'bien'], descartada: ['Descartada', ''],
 };
@@ -44,7 +46,7 @@ function tarjeta(f: Feedback, admin: boolean) {
   const [et, tono] = ESTADOS[f.estado] ?? [f.estado, ''];
   const errores = (f.contexto?.errores as any[] | undefined) ?? [];
   return `<article class="tarjeta fb-item" data-estado="${esc(f.estado)}">
-    <header class="fb-cab"><b>#${f.numero}</b> <span class="chip">${TIPOS[f.tipo] ?? esc(f.tipo)}</span> <span class="chip ${tono}">${esc(et)}</span>
+    <header class="fb-cab"><b>#${f.numero}</b> <span class="chip">${ICO_TIPO[f.tipo] ? ico(ICO_TIPO[f.tipo]) + ' ' : ''}${TIPOS[f.tipo] ?? esc(f.tipo)}</span> <span class="chip ${tono}">${esc(et)}</span>
       <small class="nota">${esc(f.autor_nombre ?? '')} · ${fecha(f.created_at)}${f.seccion ? ` · ${esc(f.seccion)}` : ''}</small></header>
     <div class="md">${markdown(f.descripcion)}</div>
     ${admin ? `<details class="fb-ctx"><summary>Contexto${errores.length ? ` · ${errores.length} error${errores.length === 1 ? '' : 'es'} de JavaScript` : ''}</summary>
@@ -53,7 +55,7 @@ function tarjeta(f: Feedback, admin: boolean) {
     ${f.resultado ? `<div class="fb-resultado"><h4>Lo que hizo Claude${f.terminada_at ? ` · ${fecha(f.terminada_at)}` : ''}</h4><div class="md">${markdown(f.resultado)}</div></div>` : ''}
     ${admin && ['nueva', 'claude'].includes(f.estado) ? `<label class="fb-notas">Notas para Claude <textarea id="fb-notas-${esc(f.id)}" rows="2" placeholder="Opcional: por dónde mirar, qué esperas…">${esc(f.notas ?? '')}</textarea></label>` : ''}
     ${admin ? `<div class="acciones">
-      ${f.estado === 'nueva' ? `<button class="btn" data-action="fbClaude" data-p0="${esc(f.id)}">🤖 Pasar a Claude</button>` : ''}
+      ${f.estado === 'nueva' ? `<button class="btn" data-action="fbClaude" data-p0="${esc(f.id)}">${ico('robot')} Pasar a Claude</button>` : ''}
       ${f.estado === 'claude' ? `<button class="btn secundario" data-action="fbEstado" data-p0="${esc(f.id)}" data-p1="nueva">Quitársela a Claude</button>` : ''}
       ${['nueva', 'claude', 'en_curso'].includes(f.estado) ? `<button class="btn secundario" data-action="fbEstado" data-p0="${esc(f.id)}" data-p1="hecha">Marcar hecha</button>
         <button class="btn secundario" data-action="fbEstado" data-p0="${esc(f.id)}" data-p1="descartada">Descartar</button>` : `<button class="btn secundario" data-action="fbEstado" data-p0="${esc(f.id)}" data-p1="nueva">Reabrir</button>`}
@@ -89,7 +91,7 @@ async function pintar(el: HTMLElement) {
       <label>Qué pasa o qué te gustaría <textarea id="fb-desc" rows="5" required maxlength="8000" placeholder="Qué hacías, qué esperabas y qué salió. Si es una idea, para qué te serviría."></textarea></label>
       <p class="nota">Se adjunta solo: la pantalla (${esc(antes || '—')}), la versión del hub, el tipo de dispositivo y los últimos errores que haya habido.</p>
       <div class="acciones"><button class="btn" type="submit">Enviar</button>
-        ${puedeDictar() ? '<button type="button" class="btn secundario" id="fb-dictar" data-action="fbDictar" aria-pressed="false">🎤 Dictar</button>' : ''}</div>
+        ${puedeDictar() ? `<button type="button" class="btn secundario" id="fb-dictar" data-action="fbDictar" aria-pressed="false">${ico('micro')} Dictar</button>` : ''}</div>
     </form>
     <section class="fb-zona"><div class="acciones"><h3>${esAdmin() ? 'Lo que ha contado el equipo' : 'Lo que has contado'}</h3>
       <div class="segmentado fb-filtros" role="tablist">${FILTROS.map(([k, t]) => `<button type="button" data-action="fbFiltro" data-p0="${k}" class="${k === _filtro ? 'activo' : ''}">${t}</button>`).join('')}</div></div>

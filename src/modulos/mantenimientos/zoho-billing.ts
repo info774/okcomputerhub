@@ -9,6 +9,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { llamarFuncion } from '../../core/funciones';
 import { resolver } from '../../core/router';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 
 interface Sub { subscription_id: string; plan_name: string; status: string; status_label: string; amount: number | null; next_billing_at: string | null; url: string }
 const TONO: Record<string, string> = { live: 'bien', active: 'bien', trial: '', paused: 'aviso', cancelled: 'mal', expired: 'mal', future: '', non_renewing: 'aviso' };
@@ -18,7 +19,7 @@ export function bloqueZohoBilling(zohoId: string, sedes: { id: string; nombre: s
   _sedes = sedes;
   return `<section class="tarjeta" id="czb"><h3>Zoho Billing</h3>
     <p class="nota">Las suscripciones de la cartera vieja de este cliente: cada una se vincula a la sede que paga.</p>
-    <button class="btn secundario" data-action="czbBuscar" data-p0="${esc(zohoId)}">⬇ Buscar sus suscripciones en Zoho Billing</button>
+    <button class="btn secundario" data-action="czbBuscar" data-p0="${esc(zohoId)}">${ico('descargar')} Buscar sus suscripciones en Zoho Billing</button>
     <div id="czb-lista"></div></section>`;
 }
 
@@ -32,7 +33,7 @@ registrarAcciones({
     const opciones = `<option value="">— Asignar a la sede —</option>${_sedes.map(s => `<option value="${esc(s.id)}">${esc(s.nombre)}</option>`).join('')}`;
     caja.innerHTML = subs.length ? `<ul class="mdo-lista" id="czb-subs">${subs.map(s => `<li data-sub="${esc(s.subscription_id)}">
         <div class="mdo-cab"><strong>${esc(s.plan_name || 'Sin plan')}</strong> <span class="chip ${TONO[s.status] ?? ''}">${esc(s.status_label)}</span>
-          <small class="nota">${s.amount != null ? `${esc(String(s.amount))} € · ` : ''}${s.next_billing_at ? `próx. renovación ${esc(s.next_billing_at)} · ` : ''}<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.subscription_id)} ↗</a></small></div>
+          <small class="nota">${s.amount != null ? `${esc(String(s.amount))} € · ` : ''}${s.next_billing_at ? `próx. renovación ${esc(s.next_billing_at)} · ` : ''}<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.subscription_id)} ${ico('externo')}</a></small></div>
         ${puede ? `<div class="acciones"><select id="czb-sede-${esc(s.subscription_id)}" aria-label="Sede">${opciones}</select>
           <button class="btn secundario" data-action="czbVincular" data-p0="${esc(s.subscription_id)}">Vincular</button></div>` : ''}</li>`).join('')}</ul>
         ${puede ? '' : '<p class="nota">Vincular una suscripción a una sede se sigue haciendo en la app hasta el cambio.</p>'}`

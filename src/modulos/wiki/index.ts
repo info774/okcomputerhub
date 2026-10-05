@@ -4,6 +4,7 @@
 // enlace a un proyecto. Al guardar se reindexa la página en el buscador.
 // Prefijo de ids: wk-.
 import type { Modulo, Contador } from '../../core/modulo';
+import { ico } from '../../shell/linea';
 import { API } from '../../core/api';
 import { esAdmin, usuario } from '../../core/estado';
 import { equipo, nombreDe } from '../../core/equipo';
@@ -31,7 +32,7 @@ function arbol(padre: string | null = null, nivel = 0): string {
   const hijas = _arbol.filter(p => p.padre_id === padre || (padre === null && p.padre_id && !_arbol.some(x => x.id === p.padre_id)));
   if (!hijas.length) return '';
   return `<ul class="wk-arbol" ${nivel ? '' : 'role="tree"'}>${hijas.map(p => `<li role="treeitem">
-    <a href="#/wiki/${esc(p.id)}" class="${_actual?.id === p.id ? 'activo' : ''} ${p.archivada ? 'in-pausado' : ''}">${esc(p.icono ?? '📄')} ${esc(p.titulo)}</a>
+    <a href="#/wiki/${esc(p.id)}" class="${_actual?.id === p.id ? 'activo' : ''} ${p.archivada ? 'in-pausado' : ''}">${p.icono != null ? esc(p.icono) : ico('documento')} ${esc(p.titulo)}</a>
     ${nivel < 6 ? arbol(p.id, nivel + 1) : ''}</li>`).join('')}</ul>`;
 }
 
@@ -74,7 +75,7 @@ async function vistaPagina(id: string): Promise<string> {
   const proyecto = p.proyecto_id ? (await API.single<any>('proyectos', { select: 'numero,titulo', id: `eq.${p.proyecto_id}` })).data : null;
   const puedeBorrar = esAdmin() || p.creado_por === usuario()?.id;
   return `${migas(p)}
-    <div class="tarjeta-cab"><h2>${esc(p.icono ?? '📄')} ${esc(p.titulo)}</h2>
+    <div class="tarjeta-cab"><h2>${p.icono != null ? esc(p.icono) : ico('documento')} ${esc(p.titulo)}</h2>
       <div class="acciones"><a class="btn" href="#/wiki/${esc(p.id)}/editar">Editar</a>
         <button class="btn secundario" data-action="wkNueva" data-p0="${esc(p.id)}">+ Subpágina</button>
         <a class="btn secundario" href="#/wiki/${esc(p.id)}/historial">Historial (${p.version - 1})</a></div></div>
@@ -98,7 +99,7 @@ async function vistaEditor(id: string | null, padre?: string): Promise<string> {
   } else _actual = null;
   const { data: proys } = await API.get<any[]>('proyectos', { select: 'id,numero,titulo', estado: 'neq.cerrado', order: 'numero.desc' });
   return `<form class="wk-editor" data-on-submit="wkGuardar" data-prevent="1">
-    <div class="in-campos"><label>Icono <input id="wk-icono" maxlength="4" value="${esc(p.icono ?? '')}" placeholder="📄"></label>
+    <div class="in-campos"><label>Icono <input id="wk-icono" maxlength="4" value="${esc(p.icono ?? '')}"></label>
       <label>Proyecto <select id="wk-proyecto"><option value="">—</option>${(proys ?? []).map(x => `<option value="${esc(x.id)}" ${x.id === p.proyecto_id ? 'selected' : ''}>#${x.numero} ${esc(x.titulo)}</option>`).join('')}</select></label></div>
     <label>Título <input id="wk-titulo" required maxlength="200" value="${esc(p.titulo ?? '')}"></label>
     <input type="hidden" id="wk-padre-nuevo" value="${esc(p.padre_id ?? '')}">

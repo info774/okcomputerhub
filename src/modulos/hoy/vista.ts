@@ -11,6 +11,7 @@ import { resolver } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { telWhatsApp } from '../ventas/datos';
 import { esMio } from '../trabajos/vista';
 
@@ -68,19 +69,19 @@ export async function pintar(el: HTMLElement) {
         ${t ? `<span class="chip">${esc(t.estado)}</span>` : ''}</header>
       <p class="nota">${esc(p.cliente?.nombre ?? '')}${p.local ? ` · ${esc(p.local.nombre)}${p.local.direccion ? ` · ${esc(p.local.direccion)}` : ''}` : ''}</p>
       ${grande && t?.descripcion ? `<p>${esc(t.descripcion.slice(0, 280))}</p>` : ''}
-      <div class="acciones ho-botones">${p.tel ? `<a class="btn secundario" href="tel:${esc(p.tel)}">📞 Llamar</a>` : ''}${wa && grande ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬</a>` : ''}
-        ${m ? `<a class="btn secundario" href="${esc(m)}" target="_blank" rel="noopener">🗺 Cómo llegar</a>` : ''}
-        ${escribe && t && !activo ? `<button class="btn" data-action="hoInicio" data-p0="${t.id}">▶ Empezar</button>` : ''}
+      <div class="acciones ho-botones">${p.tel ? `<a class="btn secundario" href="tel:${esc(p.tel)}">${ico('telefono')} Llamar</a>` : ''}${wa && grande ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener" aria-label="WhatsApp">${ico('mensaje')}</a>` : ''}
+        ${m ? `<a class="btn secundario" href="${esc(m)}" target="_blank" rel="noopener">${ico('mapa')} Cómo llegar</a>` : ''}
+        ${escribe && t && !activo ? `<button class="btn" data-action="hoInicio" data-p0="${t.id}">${ico('play')} Empezar</button>` : ''}
         ${escribe && t && (activo || grande) ? `<button class="btn secundario" data-action="hoTerminar" data-p0="${t.id}">✓ Terminar</button>` : ''}</div>
       ${_terminar === t?.id ? `<form class="ho-terminar" data-on-submit="hoGuardarTerminar:${t.id}" data-prevent="1"><label>Qué se hizo <textarea id="ho-hecho" rows="3" required></textarea></label>
         <label>Foto (obligatoria) <input type="file" id="ho-foto" accept="image/*" capture="environment" required></label>
         <div class="acciones"><button class="btn" type="submit">Terminar trabajo</button></div></form>` : ''}</article>`;
   };
   el.innerHTML = `${escribe ? '' : avisoSoloLectura('El fichaje')}
-    <section class="tarjeta ho-fichaje">${_sesion ? `<p>⏱ ${_sesion.inicio ? `Trabajando en <strong>${esc(enCurso ? `#${enCurso.numero} ${enCurso.titulo ?? ''}` : _sesion.entidad_tipo ?? '')}</strong> desde las ${hora(_sesion.inicio)} (${minutos(_sesion.inicio)} min)`
-        : `🚗 En traslado desde las ${hora(_sesion.traslado)}`}</p>${escribe && _sesion.inicio ? '<button class="btn" data-action="hoFin">■ Fichar fin</button>' : ''}`
-      : `<p>No tienes nada fichado ahora.</p>${escribe ? '<button class="btn secundario" data-action="hoTraslado">🚗 Salgo para allá (traslado)</button>' : ''}`}</section>
-    ${siguiente ? `<h3>Siguiente</h3>${tarjeta(siguiente, true)}` : '<p class="vacio">No tienes más paradas hoy. 🎉</p>'}
+    <section class="tarjeta ho-fichaje">${_sesion ? `<p>${ico('cronometro')} ${_sesion.inicio ? `Trabajando en <strong>${esc(enCurso ? `#${enCurso.numero} ${enCurso.titulo ?? ''}` : _sesion.entidad_tipo ?? '')}</strong> desde las ${hora(_sesion.inicio)} (${minutos(_sesion.inicio)} min)`
+        : `${ico('coche')} En traslado desde las ${hora(_sesion.traslado)}`}</p>${escribe && _sesion.inicio ? `<button class="btn" data-action="hoFin">${ico('parar')} Fichar fin</button>` : ''}`
+      : `<p>No tienes nada fichado ahora.</p>${escribe ? `<button class="btn secundario" data-action="hoTraslado">${ico('coche')} Salgo para allá (traslado)</button>` : ''}`}</section>
+    ${siguiente ? `<h3>Siguiente</h3>${tarjeta(siguiente, true)}` : `<p class="vacio">No tienes más paradas hoy. ${ico('trofeo')}</p>`}
     ${paradas.length > 1 ? `<h3>Todo el día (${paradas.length})</h3>${paradas.filter(p => p !== siguiente).map(p => tarjeta(p)).join('')}` : ''}`;
 }
 
@@ -89,11 +90,11 @@ const aBase64 = (f: Blob) => new Promise<string>((ok, mal) => { const r = new Fi
 registrarAcciones({
   async hoTraslado() {
     const r = await API.rpc('fichar', { p_accion: 'traslado', ...(await gps()) });
-    if (r.error) toast(r.error.message, 'error'); else { toast('🚗 Traslado iniciado'); resolver(); }
+    if (r.error) toast(r.error.message, 'error'); else { toast('Traslado iniciado'); resolver(); }
   },
   async hoInicio(id: string) {
     const r = await API.rpc('fichar', { p_accion: 'inicio', p_tipo: 'trabajo', p_id: id, ...(await gps()) });
-    if (r.error) toast(r.error.message, 'error'); else { toast('▶ Inicio fichado'); resolver(); }
+    if (r.error) toast(r.error.message, 'error'); else { toast('Inicio fichado'); resolver(); }
   },
   async hoFin() {
     if (!confirm('¿Fichar el fin? Las horas ya no se recuperan sin corregirlas a mano.')) return;
