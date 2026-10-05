@@ -8,6 +8,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { eur } from '../ventas/datos';
 import { editorLineas, lineasDe, aLinea, totalDe } from './lineas';
 import { plantillasActivas, type Plantilla } from './formulario';
@@ -26,9 +27,9 @@ export async function pintarPlantillas(el: HTMLElement, id?: string) {
     <div class="tarjeta mo-scroll"><table class="tabla" id="ppl-tabla"><thead><tr><th>Plantilla</th><th class="num">Líneas</th><th class="num">Total</th>${escribe ? '<th></th>' : ''}</tr></thead>
       <tbody>${ps.map(p => {
         const ls = (p.lineas ?? []).map(aLinea);
-        return `<tr data-plantilla="${esc(p.id)}"><td><strong>${esc(p.icono ?? '📄')} ${esc(p.nombre)}</strong>${p.descripcion ? `<br><small class="nota">${esc(p.descripcion)}</small>` : ''}</td>
+        return `<tr data-plantilla="${esc(p.id)}"><td><strong>${p.icono ? esc(p.icono) : ico('documento')} ${esc(p.nombre)}</strong>${p.descripcion ? `<br><small class="nota">${esc(p.descripcion)}</small>` : ''}</td>
           <td class="num">${ls.length}</td><td class="num">${eur(totalDe(ls), 2)}</td>
-          ${escribe ? `<td class="acciones"><a class="btn secundario" href="#/presupuestos/plantillas/${esc(p.id)}">✎ Editar</a>
+          ${escribe ? `<td class="acciones"><a class="btn secundario" href="#/presupuestos/plantillas/${esc(p.id)}">${ico('editar')} Editar</a>
             <button class="btn secundario" data-action="pplQuitar" data-p0="${esc(p.id)}">Quitar</button></td>` : ''}</tr>`;
       }).join('') || `<tr><td colspan="${escribe ? 4 : 3}" class="vacio">Sin plantillas.</td></tr>`}</tbody></table></div>`;
 }
@@ -42,7 +43,7 @@ async function pintarEdicion(el: HTMLElement, id: string | null, escribe: boolea
     ${escribe ? '' : avisoSoloLectura('Las plantillas de presupuesto')}
     <form class="tarjeta" id="ppl-form" data-on-submit="pplGuardar" data-prevent="1">
       <div class="in-campos">
-        <label>Icono <input id="ppl-icono" maxlength="4" value="${esc(p?.icono ?? '📄')}"></label>
+        <label>Icono <input id="ppl-icono" maxlength="4" value="${esc(p?.icono ?? '')}"></label>
         <label>Nombre <span class="nota">(obligatorio)</span> <input id="ppl-nombre" required maxlength="120" value="${esc(p?.nombre ?? '')}"></label>
       </div>
       <label>Descripción <input id="ppl-descripcion" value="${esc(p?.descripcion ?? '')}" placeholder="Qué incluye"></label>
@@ -59,7 +60,7 @@ registrarAcciones({
   async pplGuardar() {
     const nombre = val('ppl-nombre');
     if (!nombre) { toast('El nombre es obligatorio', 'error'); return; }
-    const cuerpo = { nombre, icono: val('ppl-icono') || '📄', descripcion: val('ppl-descripcion') || null, lineas: lineasDe('ppl'), activa: true };
+    const cuerpo = { nombre, icono: val('ppl-icono') || null, descripcion: val('ppl-descripcion') || null, lineas: lineasDe('ppl'), activa: true };
     const r = _id ? await API.patch('presupuesto_plantillas', { id: `eq.${_id}` }, cuerpo) : await API.post('presupuesto_plantillas', cuerpo);
     if (r.error) { toast(`No se pudo guardar: ${r.error.message}`, 'error'); return; }
     toast(_id ? 'Plantilla guardada' : 'Plantilla creada');

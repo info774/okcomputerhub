@@ -110,7 +110,7 @@ try {
   await page.waitForFunction(() => document.getElementById('toast')?.textContent.includes('Rol cambiado'));
   ok(escr(base, 'PATCH', 'local_telefonos').at(-1)?.cuerpo?.rol === 'encargado', 'teléfonos: el rol se cambia en la fila');
   await page.click('tr[data-tel="t1"] [data-action="siTelEditar"]');
-  ok((await page.inputValue('#si-tel-numero')) === '600111222' && (await page.textContent('#si-tel-titulo')) === 'Editar teléfono', 'teléfonos: «✎» lo sube al formulario');
+  ok((await page.inputValue('#si-tel-numero')) === '600111222' && (await page.textContent('#si-tel-titulo')) === 'Editar teléfono', 'teléfonos: «Editar» lo sube al formulario');
   await page.fill('#si-tel-numero', '600999888');
   await page.click('#si-tel-form button[type=submit]');
   await page.waitForFunction(() => document.getElementById('si-tels')?.textContent.includes('600999888'));

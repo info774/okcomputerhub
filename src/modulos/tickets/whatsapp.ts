@@ -14,6 +14,7 @@ import { ir } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, toast } from '../../ui/dom';
 import { dejarBorrador } from '../../ui/borrador';
+import { ico, type IconoLinea } from '../../shell/linea';
 
 interface Analisis {
   tipo: 'ticket' | 'trabajo'; titulo: string; descripcion: string; prioridad: string;
@@ -43,8 +44,8 @@ export async function pintarDesdeWhatsapp(el: HTMLElement) {
       <div class="wai-captura" id="wai-captura" hidden><img id="wai-captura-img" alt="Captura del chat"><button type="button" class="btn secundario" data-action="waiQuitarCaptura">Quitar la captura</button></div>
       <input type="file" id="wai-file" accept="image/*" hidden data-on-change="waiArchivo:$this">
       <div class="acciones">
-        <button type="button" class="btn secundario" data-action="waiPegar">📋 Pegar</button>
-        <button type="button" class="btn secundario" data-action="waiElegirCaptura">🖼 Captura</button>
+        <button type="button" class="btn secundario" data-action="waiPegar">${ico('lista')} Pegar</button>
+        <button type="button" class="btn secundario" data-action="waiElegirCaptura">${ico('imagen')} Captura</button>
         <button type="button" class="btn" data-action="waiAnalizar" id="wai-analizar">Analizar</button>
       </div>
       <p class="nota" id="wai-estado" aria-live="polite"></p>
@@ -209,20 +210,20 @@ async function buscarCandidatos(a: Analisis): Promise<Candidato[]> {
 }
 
 // ── El resultado ──────────────────────────────────────────────────────────
-const ICONO: Record<Candidato['tipo'], string> = { local: '📍', cliente: '🏢', contacto: '👤' };
+const ICONO: Record<Candidato['tipo'], IconoLinea> = { local: 'ubicacion', cliente: 'empresa', contacto: 'persona' };
 
 function pintarResultado() {
   const a = _analisis!, el = $('wai-resultado')!;
   const cuando = [a.fecha, a.hora].filter(Boolean).join(' ');
   el.innerHTML = `<h3>Resumen</h3>
     <div class="segmentado" role="radiogroup" aria-label="Qué crear">
-      <button type="button" role="radio" id="wai-tipo-ticket" data-action="waiTipo" data-p0="ticket">🎫 Ticket</button>
-      <button type="button" role="radio" id="wai-tipo-trabajo" data-action="waiTipo" data-p0="trabajo">🛠 Trabajo</button></div>
+      <button type="button" role="radio" id="wai-tipo-ticket" data-action="waiTipo" data-p0="ticket">${ico('etiqueta')} Ticket</button>
+      <button type="button" role="radio" id="wai-tipo-trabajo" data-action="waiTipo" data-p0="trabajo">${ico('herramienta')} Trabajo</button></div>
     <input type="hidden" id="wai-tipo">
     <label>Título <input id="wai-titulo" maxlength="200" value="${esc(a.titulo)}"></label>
     <label>Descripción <textarea id="wai-desc" rows="4">${esc(a.descripcion)}</textarea></label>
     <label>Prioridad <select id="wai-prioridad">${['Alta', 'Media', 'Baja'].map(p => `<option ${p === a.prioridad ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
-    ${cuando ? `<p class="nota" id="wai-cuando">📅 El cliente pide <b>${esc(cuando)}</b>: se rellenará en el trabajo.</p>` : ''}
+    ${cuando ? `<p class="nota" id="wai-cuando">${ico('calendario')} El cliente pide <b>${esc(cuando)}</b>: se rellenará en el trabajo.</p>` : ''}
     <h3>¿De quién es?</h3><div id="wai-candidatos" class="wai-cands"></div>
     <div class="acciones"><button type="button" class="btn" data-action="waiContinuar">Continuar</button></div>`;
   ponerTipo(a.tipo);
@@ -238,10 +239,10 @@ function pintarCandidatos() {
     el.innerHTML = `<p class="nota">No he reconocido al cliente${quien ? ` (${esc(quien)})` : ''}. Lo podrás buscar en el formulario.</p>`;
     return;
   }
-  const fila = (i: number, icono: string, nombre: string, sub: string) => `<button type="button" class="wai-cand" role="radio" aria-checked="${i === _sel}" data-action="waiElegir" data-p0="${i}">
-    <span aria-hidden="true">${icono}</span><span class="wai-cand-txt"><b>${esc(nombre)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="wai-cand-ok">${i === _sel ? '✓' : ''}</span></button>`;
+  const fila = (i: number, icono: IconoLinea, nombre: string, sub: string) => `<button type="button" class="wai-cand" role="radio" aria-checked="${i === _sel}" data-action="waiElegir" data-p0="${i}">
+    <span aria-hidden="true">${ico(icono)}</span><span class="wai-cand-txt"><b>${esc(nombre)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="wai-cand-ok">${i === _sel ? '✓' : ''}</span></button>`;
   el.innerHTML = _candidatos.map((c, i) => fila(i, ICONO[c.tipo], c.nombre, `${c.sub ? c.sub + ' · ' : ''}coincide por ${c.motivo}`)).join('')
-    + fila(-1, '🔎', 'Ninguno / buscarlo yo', '');
+    + fila(-1, 'buscar', 'Ninguno / buscarlo yo', '');
 }
 
 function ponerTipo(t: string) {

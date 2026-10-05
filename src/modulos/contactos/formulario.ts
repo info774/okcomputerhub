@@ -12,10 +12,11 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico, type IconoLinea } from '../../shell/linea';
 import { buscarClientes } from '../ventas/datos';
 import { olvidarContactos } from './vista';
 
-export const TIPOS_CONTACTO: [string, string][] = [['otro', '👤 Otro'], ['empleado', '👷 Empleado'], ['proveedor', '🚚 Proveedor'], ['cliente', '🏢 Cliente']];
+export const TIPOS_CONTACTO: [string, string, IconoLinea][] = [['otro', 'Otro', 'persona'], ['empleado', 'Empleado', 'tecnico'], ['proveedor', 'Proveedor', 'furgoneta'], ['cliente', 'Cliente', 'empresa']];
 
 let _id: string | null = null;
 let _tipoOriginal: string | null = null;
@@ -53,7 +54,7 @@ export async function pintarFormulario(el: HTMLElement, id?: string, desde?: { c
     <form class="tarjeta" id="ctf-form" data-on-submit="ctfGuardar" data-prevent="1">
       <div class="segmentado" role="radiogroup" aria-label="Tipo">${TIPOS_CONTACTO
         .filter(([k]) => k !== 'empleado' || esAdmin() || tipo === 'empleado')
-        .map(([k, n]) => `<label><input type="radio" name="ctf-tipo" value="${k}" ${k === tipo ? 'checked' : ''}> ${n}</label>`).join('')}</div>
+        .map(([k, n, i]) => `<label><input type="radio" name="ctf-tipo" value="${k}" ${k === tipo ? 'checked' : ''}> ${ico(i)} ${n}</label>`).join('')}</div>
       ${campo('nombre', 'Nombre <span class="nota">(obligatorio)</span>', c?.nombre, 'required maxlength="200" placeholder="Nombre y apellidos"')}
       <div class="in-campos">
         ${campo('empresa', 'Empresa', c?.empresa)}
@@ -68,7 +69,7 @@ export async function pintarFormulario(el: HTMLElement, id?: string, desde?: { c
       <label>Sede <select id="ctf-sede">${await opcionesSedes(cli?.id ?? null, sede)}</select></label>
       ${campo('etiquetas', 'Etiquetas <span class="nota">(separadas por comas)</span>', (c?.etiquetas ?? []).join(', '))}
       <label>Notas <textarea id="ctf-notas" rows="3">${esc(c?.notas ?? '')}</textarea></label>
-      <label class="check"><input type="checkbox" id="ctf-favorito" ${c?.favorito ? 'checked' : ''}> ⭐ Favorito</label>
+      <label class="check"><input type="checkbox" id="ctf-favorito" ${c?.favorito ? 'checked' : ''}> ${ico('estrella')} Favorito</label>
       <div class="acciones"><button class="btn" type="submit" ${escribe && !bloqueado ? '' : 'disabled'}>${c ? 'Guardar' : 'Crear contacto'}</button>
         <a class="btn secundario" href="${atras}">Cancelar</a></div>
     </form>`;

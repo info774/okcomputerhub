@@ -19,6 +19,7 @@ import { botonChatFicha } from '../../ui/chat-ficha';
 import { esDelHub } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
 import { esqueleto } from '../../ui/esqueleto';
+import { ico } from '../../shell/linea';
 import {
   type Oportunidad, type Pipeline, type Etapa, type Propuesta,
   TIPOS_ACTIVIDAD, ICONO_EVENTO, ORIGENES, eur, pipelines, buscarClientes, nombresClientes, enApp,
@@ -41,12 +42,14 @@ let _verCerradas = false;
 
 const etapaDe = (o: Oportunidad): Etapa | undefined => _pipes.find(p => p.id === o.pipeline_id)?.etapas.find(e => e.clave === o.estado);
 const pipeActual = () => _pipes.find(p => p.id === leer(CLAVE_PIPE, '')) ?? _pipes[0];
+// Icono de una actividad (los tipos de ventas/datos.ts; «etapa» y demás, por la línea de tiempo).
+const iconoActividad = (tipo: string) => { const n = TIPOS_ACTIVIDAD[tipo]?.icono ?? ICONO_EVENTO[`actividad_${tipo}`]; return n ? ico(n) : ''; };
 
 // El próximo paso de la tarjeta: sin fecha, aviso (toda abierta necesita el siguiente).
 function paso(o: Oportunidad): string {
   if (o.cerrada_at) return '';
-  if (!o.fecha_seguimiento) return '<span class="op-paso falta">⚠ Sin próximo paso</span>';
-  return `<span class="op-paso ${o.fecha_seguimiento < hoy() ? 'mal' : ''}">➡️ ${esc(o.fecha_seguimiento)}${o.siguiente_texto ? ` · ${esc(o.siguiente_texto)}` : ''}</span>`;
+  if (!o.fecha_seguimiento) return `<span class="op-paso falta">${ico('atencion')} Sin próximo paso</span>`;
+  return `<span class="op-paso ${o.fecha_seguimiento < hoy() ? 'mal' : ''}">${ico('flecha')} ${esc(o.fecha_seguimiento)}${o.siguiente_texto ? ` · ${esc(o.siguiente_texto)}` : ''}</span>`;
 }
 
 function tarjeta(o: Oportunidad): string {
@@ -55,7 +58,7 @@ function tarjeta(o: Oportunidad): string {
     <div class="pr-tarjeta-cab"><strong>${eur(o.valor_estimado)}</strong>${o.origen ? `<span class="chip">${esc(o.origen)}</span>` : ''}</div>
     <h4>${esc(o.titulo)}</h4>
     <div class="pr-tarjeta-pie"><span>${esc(o.cliente_id ? _nombres.get(o.cliente_id) ?? '' : 'Sin cliente')}</span>
-      ${o.tecnico_id ? `<span>👤 ${esc(o.tecnico_id)}</span>` : ''}</div>
+      ${o.tecnico_id ? `<span>${ico('persona')} ${esc(o.tecnico_id)}</span>` : ''}</div>
     ${paso(o)}
   </article>`;
 }
@@ -73,7 +76,7 @@ function vistaEmbudo(p: Pipeline): string {
   // Con las cerradas escondidas, al arrastrar se cierra soltando en estas zonas.
   const zonas = _verCerradas || !cierres.length ? '' : `<div class="op-cierre" role="group" aria-label="Cerrar arrastrando"><span>Suelta aquí para cerrar:</span>
     ${cierres.map(e => `<div class="op-zona op-${e.tipo}" data-etapa="${esc(e.clave)}" data-on-dragover="opSobre:$this" data-prevent="1"
-      data-on-dragleave="opFuera:$this" data-on-drop="opSoltar:${esc(e.clave)}">${e.tipo === 'ganada' ? '🎉' : '✖'} ${esc(e.nombre)}</div>`).join('')}</div>`;
+      data-on-dragleave="opFuera:$this" data-on-drop="opSoltar:${esc(e.clave)}">${ico(e.tipo === 'ganada' ? 'trofeo' : 'cerrar')} ${esc(e.nombre)}</div>`).join('')}</div>`;
   return `<div class="pr-kanban">${etapas.map(e => {
     const col = ops.filter(o => o.estado === e.clave).sort((a, b) => a.orden - b.orden || b.created_at.localeCompare(a.created_at));
     const suma = col.reduce((s, o) => s + Number(o.valor_estimado ?? 0), 0);
@@ -205,13 +208,13 @@ function barraEtapas(pipe: Pipeline, o: Oportunidad): string {
     data-action="opEtapa" data-p0="${esc(e.clave)}" aria-pressed="${e.clave === o.estado}" title="${esc(e.nombre)} · ${e.probabilidad} %">${txt}</button>`;
   return `<div class="op-etapas" role="group" aria-label="Etapa">
     <div class="op-flechas">${abiertas.map((e, i) => boton(e, tipo === 'ganada' || (idx >= 0 && i < idx) ? 'hecha' : '', esc(e.nombre))).join('')}</div>
-    <div class="op-cierres">${cierres.map(e => boton(e, '', `${e.tipo === 'ganada' ? '🎉' : '✖'} ${esc(e.nombre)}`)).join('')}</div></div>`;
+    <div class="op-cierres">${cierres.map(e => boton(e, '', `${ico(e.tipo === 'ganada' ? 'trofeo' : 'cerrar')} ${esc(e.nombre)}`)).join('')}</div></div>`;
 }
 
 function proximoPaso(o: Oportunidad): string {
   if (o.cerrada_at) return '';
   const vencido = o.fecha_seguimiento && o.fecha_seguimiento < hoy();
-  return `<section class="tarjeta"><h3>➡️ Próximo paso</h3>
+  return `<section class="tarjeta"><h3>${ico('flecha')} Próximo paso</h3>
     ${!o.fecha_seguimiento ? '<p class="aviso">Sin próximo paso: toda oportunidad abierta necesita el siguiente. Ponle cuándo y qué.</p>'
       : vencido ? `<p class="aviso g-mal">Tocaba el ${esc(o.fecha_seguimiento)}.</p>` : ''}
     <form data-on-submit="opPaso" data-prevent="1">
@@ -236,25 +239,25 @@ async function pintarFicha(el: HTMLElement, id: string) {
     API.get<any[]>('tareas', { select: 'id,numero,titulo,estado', oportunidad_id: `eq.${o.id}` }),
   ]);
   const [, presHub] = await Promise.all([equipo(), esDelHub('presupuestos')]);
-  const vinc = [...(pres.data ?? []).map(p => `📄 Presupuesto ${esc(p.numero_presupuesto ?? '')} ${esc(p.titulo ?? '')} · ${esc(p.estado)} · ${eur(p.total, 2)}`),
-    ...(trab.data ?? []).map(t => `🛠 Trabajo #${t.numero} ${esc(t.titulo ?? '')} · ${esc(t.estado)}`),
-    ...(tar.data ?? []).map(t => `✅ Tarea #${t.numero ?? ''} ${esc(t.titulo)} · ${esc(t.estado)}`)];
+  const vinc = [...(pres.data ?? []).map(p => `${ico('documento')} Presupuesto ${esc(p.numero_presupuesto ?? '')} ${esc(p.titulo ?? '')} · ${esc(p.estado)} · ${eur(p.total, 2)}`),
+    ...(trab.data ?? []).map(t => `${ico('herramienta')} Trabajo #${t.numero} ${esc(t.titulo ?? '')} · ${esc(t.estado)}`),
+    ...(tar.data ?? []).map(t => `${ico('hecho')} Tarea #${t.numero ?? ''} ${esc(t.titulo)} · ${esc(t.estado)}`)];
   el.innerHTML = `<p><a href="#/oportunidades">← Oportunidades</a>${o.cliente_id ? ` · <a href="#/clientes/${esc(o.cliente_id)}">Ficha del cliente</a>` : ''}</p>
-    <div class="tarjeta-cab"><h2>🎯 ${esc(o.titulo)}</h2><span class="nota">Creada ${esc(hace(o.created_at))}${o.origen ? ` · entró por ${esc(o.origen)}` : ''}</span>${botonChatFicha('oportunidad', o.id, o.titulo, `#/oportunidades/${o.id}`)}
-      ${presHub ? `<a class="btn secundario" href="#/presupuestos/nuevo/o/${esc(o.id)}">📄 Crear presupuesto</a>` : ''}</div>
+    <div class="tarjeta-cab"><h2>${ico('objetivo')} ${esc(o.titulo)}</h2><span class="nota">Creada ${esc(hace(o.created_at))}${o.origen ? ` · entró por ${esc(o.origen)}` : ''}</span>${botonChatFicha('oportunidad', o.id, o.titulo, `#/oportunidades/${o.id}`)}
+      ${presHub ? `<a class="btn secundario" href="#/presupuestos/nuevo/o/${esc(o.id)}">${ico('documento')} Crear presupuesto</a>` : ''}</div>
     ${barraEtapas(pipe, o)}
     ${o.estado === 'Perdido' || pipe.etapas.find(e => e.clave === o.estado)?.tipo === 'perdida' ? `<p class="aviso">Perdida${o.motivo_perdida ? `: ${esc(o.motivo_perdida)}` : ''}</p>` : ''}
     <div class="op-ficha">${await formulario(o, false)}
       <div>
         ${proximoPaso(o)}
         <section class="tarjeta"><h3>Apuntar</h3><form data-on-submit="opApuntar" data-prevent="1">
-          <select id="op-act-tipo" aria-label="Tipo">${Object.entries(TIPOS_ACTIVIDAD).map(([k, t]) => `<option value="${k}" ${k === 'llamada' ? 'selected' : ''}>${t.icono} ${esc(t.nombre)}</option>`).join('')}</select>
+          <select id="op-act-tipo" aria-label="Tipo">${Object.entries(TIPOS_ACTIVIDAD).map(([k, t]) => `<option value="${k}" ${k === 'llamada' ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('')}</select>
           <textarea id="op-act-texto" rows="2" required placeholder="Qué pasó…"></textarea>
           <div class="acciones"><button class="btn" type="submit">Apuntar</button></div></form>
           <ul class="di-ultimo">${(acts.data ?? []).map(a => `<li><small class="nota" title="${esc(fechaHora(a.fecha))}">${esc(hace(a.fecha))}</small>
-            <span>${TIPOS_ACTIVIDAD[a.tipo]?.icono ?? ICONO_EVENTO[`actividad_${a.tipo}`] ?? ''} ${esc(a.texto)} <small class="nota">· ${esc(nombreDe(a.usuario_id))}</small></span></li>`).join('') || '<li class="nota">Sin actividad todavía.</li>'}</ul></section>
+            <span>${iconoActividad(a.tipo)} ${esc(a.texto)} <small class="nota">· ${esc(nombreDe(a.usuario_id))}</small></span></li>`).join('') || '<li class="nota">Sin actividad todavía.</li>'}</ul></section>
         <section class="tarjeta"><h3>En la app</h3>${vinc.length ? `<ul>${vinc.map(v => `<li>${v}</li>`).join('')}</ul>` : '<p class="nota">Nada vinculado todavía.</p>'}
-          <p class="nota">Presupuestos y trabajos se crean en la <a href="${esc(enApp())}" target="_blank" rel="noopener">app actual ↗</a> eligiendo esta oportunidad.</p></section>
+          <p class="nota">Presupuestos y trabajos se crean en la <a href="${esc(enApp())}" target="_blank" rel="noopener">app actual ${ico('externo')}</a> eligiendo esta oportunidad.</p></section>
         ${esAdmin() ? '<div class="acciones"><button class="btn peligro" data-action="opBorrar">Borrar oportunidad</button></div>' : ''}
       </div></div>`;
 }
@@ -318,7 +321,7 @@ async function mover(o: Oportunidad, clave: string): Promise<boolean> {
   }
   const r = await API.patch('oportunidades', { id: `eq.${o.id}` }, { estado: clave, ...(e.tipo === 'perdida' ? { motivo_perdida: motivo || null } : {}) });
   if (r.error) { toast(`No se pudo mover: ${r.error.message}`, 'error'); return false; }
-  toast(e.tipo === 'ganada' ? '🎉 Ganada' : `→ ${e.nombre}${e.tipo === 'abierta' && e.seguimiento_dias != null ? ` · próximo paso en ${e.seguimiento_dias} día(s)` : ''}`);
+  toast(e.tipo === 'ganada' ? 'Ganada' : `→ ${e.nombre}${e.tipo === 'abierta' && e.seguimiento_dias != null ? ` · próximo paso en ${e.seguimiento_dias} día(s)` : ''}`);
   return !(await proponer(o, e));
 }
 

@@ -18,9 +18,10 @@ import { botonChatFicha } from '../../ui/chat-ficha';
 import { tomarBorrador } from '../../ui/borrador';
 import {
   type Ticket, type Comentario, type Plantilla,
-  ESTADOS, ABIERTOS, PRIORIDADES, CATEGORIAS, CANALES, TONO_PRIORIDAD, prioridadNorm, sla, limiteSla, esMio, rellenar, enlaceValoracion,
+  ESTADOS, ABIERTOS, PRIORIDADES, CATEGORIAS, CANALES, ICONO_CANAL, TONO_PRIORIDAD, prioridadNorm, sla, limiteSla, esMio, rellenar, enlaceValoracion,
 } from './datos';
 import { enlaceHistorial } from '../../ui/historial';
+import { ico } from '../../shell/linea';
 
 type Vista = 'abiertos' | 'mios' | 'sin_asignar' | 'sla' | 'cerrados';
 const VISTAS: Record<Vista, string> = { abiertos: 'Abiertos', mios: 'Míos', sin_asignar: 'Sin asignar', sla: 'SLA en riesgo', cerrados: 'Cerrados (30 días)' };
@@ -36,9 +37,11 @@ let _plantillas: Plantilla[] = [];
 let _timerCli = 0;
 let _prepararCierre = false; // tras cerrar: rellenar la respuesta con la plantilla de cierre
 
+// Icono del canal por el que entró (con su espacio detrás); sin icono conocido, nada.
+const iconoCanal = (c: string | null | undefined) => { const n = ICONO_CANAL[c ?? '']; return n ? `${ico(n)} ` : ''; };
 const chipPrioridad = (p: string | null) => `<span class="chip ${TONO_PRIORIDAD[prioridadNorm(p)] ?? ''}">${esc(p ?? 'Media')}</span>`;
 const chipSla = (t: Ticket) => { const s = sla(t); return s ? `<span class="chip ${s.tono === 'neutro' ? '' : s.tono}">${esc(s.texto)}</span>` : ''; };
-const estrellas = (n: number | null) => n ? `<span class="tk-estrellas" aria-label="${n} de 5">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span>` : '';
+const estrellas = (n: number | null) => n ? `<span class="tk-estrellas" aria-label="${n} de 5">${ico('estrella').repeat(n)}<span style="opacity:.35">${ico('estrella').repeat(5 - n)}</span></span>` : '';
 
 async function plantillas(): Promise<Plantilla[]> {
   const { data } = await API.get<Plantilla[]>('plantillas_respuesta', { select: '*', activa: 'eq.true', order: 'orden,titulo' });
@@ -74,10 +77,10 @@ async function pintarLista(el: HTMLElement) {
       <div class="segmentado tk-vistas" role="tablist">${(Object.keys(VISTAS) as Vista[]).map(v =>
         `<button role="tab" aria-selected="${v === vista}" class="${v === vista ? 'activo' : ''}" data-action="tkVista" data-p0="${v}">${VISTAS[v]}${vista === 'cerrados' ? '' : cuenta(v)}</button>`).join('')}</div>
       <input id="tk-q" type="search" placeholder="Buscar número, cliente, texto…" value="${esc(_q)}" data-on-input="tkBuscar:$value" aria-label="Buscar tickets">
-      <a class="btn secundario" href="#/tickets/bandeja">✉️ Bandeja${nBandeja ? ` <span class="chip aviso">${nBandeja}</span>` : ''}</a>
+      <a class="btn secundario" href="#/tickets/bandeja">${ico('correo')} Bandeja${nBandeja ? ` <span class="chip aviso">${nBandeja}</span>` : ''}</a>
       <a class="btn secundario" href="#/tickets/ajustes">Plantillas y SLA</a>
       <a class="btn" href="#/tickets/nuevo">+ Nuevo ticket</a>
-      <a class="btn secundario" href="#/tickets/whatsapp" title="Pega o captura un chat de WhatsApp y sale el ticket o el trabajo relleno">💬 Desde WhatsApp</a>
+      <a class="btn secundario" href="#/tickets/whatsapp" title="Pega o captura un chat de WhatsApp y sale el ticket o el trabajo relleno">${ico('mensaje')} Desde WhatsApp</a>
     </div>
     <div id="tk-lista">${tabla(lista)}</div>`;
 }
@@ -88,7 +91,7 @@ function tabla(lista: Ticket[]): string {
   if (!lista.length) return '<p class="vacio">No hay tickets aquí.</p>';
   return `<div class="tarjeta mo-scroll"><table class="tabla tk-tabla"><thead><tr><th>#</th><th>Ticket</th><th>Cliente</th><th>Quién</th><th>Prioridad</th><th>Estado</th><th>SLA</th></tr></thead>
     <tbody>${lista.map(t => `<tr class="fila-clic" data-action="tkAbrir" data-p0="${t.numero}">
-      <td>${t.numero}</td><td><strong>${esc(t.titulo)}</strong><br><small class="nota">${esc(CANALES[t.canal ?? ''] ?? t.canal ?? '')} · ${esc(hace(t.created_at))}</small></td>
+      <td>${t.numero}</td><td><strong>${esc(t.titulo)}</strong><br><small class="nota">${iconoCanal(t.canal)}${esc(CANALES[t.canal ?? ''] ?? t.canal ?? '')} · ${esc(hace(t.created_at))}</small></td>
       <td>${esc(_nombres.get(t.cliente_id ?? '') ?? '')}</td><td>${esc(t.tecnico_id ?? '—')}</td><td>${chipPrioridad(t.prioridad)}</td>
       <td>${esc(t.estado)}</td><td>${t.estado === 'Cerrado' ? estrellas(t.valoracion) : chipSla(t)}</td></tr>`).join('')}</tbody></table></div>`;
 }
@@ -149,7 +152,7 @@ function burbuja(c: Comentario): string {
     : c.envio_error ? `<small class="mal">No se pudo enviar: ${esc(c.envio_error)}</small> <button class="btn secundario" data-action="tkReenviar" data-p0="${esc(c.id)}">Reintentar por correo</button>`
       : '<small class="nota">sin enviar</small>';
   return `<article class="tk-burbuja tk-${c.tipo}"><header><strong>${esc(autor || (c.tipo === 'cliente' ? 'Cliente' : ''))}</strong>
-    <span class="chip">${{ nota: '🔒 Nota interna', respuesta: '↩ Al cliente', cliente: '💬 Cliente' }[c.tipo]}</span>
+    <span class="chip">${{ nota: `${ico('candado')} Nota interna`, respuesta: `${ico('volver')} Al cliente`, cliente: `${ico('mensaje')} Cliente` }[c.tipo]}</span>
     <small class="nota" title="${esc(fechaHora(c.created_at))}">${esc(hace(c.created_at))}</small></header>
     <div class="md">${markdown(c.texto)}</div>${envio}</article>`;
 }
@@ -175,9 +178,9 @@ async function pintarFicha(el: HTMLElement, numero: string) {
   const porDefecto = _ctx.email && (t.canal === 'email' || !wa) ? 'email' : wa ? 'whatsapp' : 'otro';
   const cerrado = t.estado === 'Cerrado';
   el.innerHTML = `<p><a href="#/tickets">← Tickets</a>${t.cliente_id ? ` · <a href="#/clientes/${esc(t.cliente_id)}">Ficha del cliente</a>` : ''}</p>
-    <div class="tarjeta-cab"><h2>🎫 #${t.numero} ${esc(t.titulo)}</h2>
+    <div class="tarjeta-cab"><h2>${ico('etiqueta')} #${t.numero} ${esc(t.titulo)}</h2>
       <div class="acciones">${chipPrioridad(t.prioridad)} <span class="chip">${esc(t.estado)}</span> ${s ? chipSla(t) : ''} ${botonChatFicha('ticket', t.id, `#${t.numero} ${t.titulo}`, `#/tickets/${t.numero}`)} ${enlaceHistorial('tickets', t.id)}</div></div>
-    <p class="nota">Entró ${esc(hace(t.created_at))} por ${esc(CANALES[t.canal ?? ''] ?? t.canal ?? '—')}${t.email_de ? ` · ${esc(t.email_de)}` : ''}</p>
+    <p class="nota">Entró ${esc(hace(t.created_at))} por ${iconoCanal(t.canal)}${esc(CANALES[t.canal ?? ''] ?? t.canal ?? '—')}${t.email_de ? ` · ${esc(t.email_de)}` : ''}</p>
     <div class="op-ficha">
       <div>
         <section class="tk-conversacion">
@@ -192,14 +195,14 @@ async function pintarFicha(el: HTMLElement, numero: string) {
           <div class="in-campos">
             <label>Plantilla <select id="tk-plantilla" data-on-change="tkPlantilla:$value"><option value="">—</option>${pls.map(p => `<option value="${esc(p.id)}">${esc(p.titulo)}</option>`).join('')}</select></label>
             <label id="tk-via-l">Enviar por <select id="tk-via">
-              <option value="email" ${porDefecto === 'email' ? 'selected' : ''} ${_ctx.email ? '' : 'disabled'}>✉️ Correo${_ctx.email ? ` (${esc(_ctx.email)})` : ' (sin correo)'}</option>
-              <option value="whatsapp" ${porDefecto === 'whatsapp' ? 'selected' : ''} ${wa ? '' : 'disabled'}>💬 WhatsApp${wa ? '' : ' (sin teléfono)'}</option>
-              <option value="otro" ${porDefecto === 'otro' ? 'selected' : ''}>📞 Ya se lo he dicho (teléfono, en persona)</option></select></label>
+              <option value="email" ${porDefecto === 'email' ? 'selected' : ''} ${_ctx.email ? '' : 'disabled'}>Correo${_ctx.email ? ` (${esc(_ctx.email)})` : ' (sin correo)'}</option>
+              <option value="whatsapp" ${porDefecto === 'whatsapp' ? 'selected' : ''} ${wa ? '' : 'disabled'}>WhatsApp${wa ? '' : ' (sin teléfono)'}</option>
+              <option value="otro" ${porDefecto === 'otro' ? 'selected' : ''}>Ya se lo he dicho (teléfono, en persona)</option></select></label>
           </div>
           <textarea id="tk-texto" rows="5" required placeholder="Escribe…"></textarea>
           <div id="tk-oki"></div>
           <div class="acciones"><button class="btn" type="submit" id="tk-enviar">Enviar</button>
-            <button type="button" class="btn secundario" data-action="tkOki">✨ Que Oki lo redacte</button></div>
+            <button type="button" class="btn secundario" data-action="tkOki">${ico('chispa')} Que Oki lo redacte</button></div>
         </form>
       </div>
       <div>
@@ -222,10 +225,10 @@ async function pintarFicha(el: HTMLElement, numero: string) {
             ? `<img src="${esc(a.drive_url)}" alt="${esc(a.nombre)}" loading="lazy">` : ''}${esc(a.nombre)}</a>` : esc(a.nombre)}
             <small class="nota">${esc([a.usuario, hace(a.created_at)].filter(Boolean).join(' · '))}</small></li>`).join('')}</ul></section>` : ''}
         <section class="tarjeta"><h3>Trabajo</h3>
-          ${trab.data ? `<p>🛠 Trabajo #${trab.data.numero} ${esc(trab.data.titulo ?? '')} · ${esc(trab.data.estado)} <button class="btn secundario" data-action="tkDesvincular">Quitar</button></p>`
+          ${trab.data ? `<p>${ico('herramienta')} Trabajo #${trab.data.numero} ${esc(trab.data.titulo ?? '')} · ${esc(trab.data.estado)} <button class="btn secundario" data-action="tkDesvincular">Quitar</button></p>`
             : `<form class="acciones" data-on-submit="tkVincular" data-prevent="1"><input id="tk-trabajo" type="number" min="1" placeholder="Nº de trabajo" aria-label="Número de trabajo">
               <button class="btn secundario" type="submit">Vincular</button></form>
-              <p class="nota">¿Hay que ir? Crea el trabajo en la <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">app actual ↗</a> y vincúlalo aquí con su número.</p>`}
+              <p class="nota">¿Hay que ir? Crea el trabajo en la <a href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">app actual ${ico('externo')}</a> y vincúlalo aquí con su número.</p>`}
         </section>
         <section class="tarjeta"><h3>${cerrado ? 'Cerrado' : 'Cerrar'}</h3>
           ${cerrado ? `<p>${esc(t.resolucion ?? '')}${t.resolucion_categoria ? ` <span class="chip">${esc(t.resolucion_categoria)}</span>` : ''}</p>
@@ -277,7 +280,7 @@ async function pintarBandeja(el: HTMLElement) {
           <button class="btn secundario" type="submit">Añadir a un ticket</button></form>
         <button class="btn secundario" data-action="tkDescartar" data-p0="${esc(m.id)}">Descartar</button></div>`
         : m.ticket_id ? `<p><a href="#" data-action="tkAbrirId" data-p0="${esc(m.ticket_id)}">Ver ticket</a></p>` : ''}
-    </article>`).join('') || '<p class="vacio">Nada por revisar. 🎉</p>'}`;
+    </article>`).join('') || `<p class="vacio">Nada por revisar. ${ico('trofeo')}</p>`}`;
 }
 
 // ── Ajustes ────────────────────────────────────────────────────────────────
@@ -340,7 +343,7 @@ async function proponerOki() {
   if (r.data?.propuesta) {
     ta.value = r.data.propuesta;
     ta.focus();
-    caja.innerHTML = '<p class="nota">✨ Lo ha redactado Oki: repásalo antes de enviarlo.</p>';
+    caja.innerHTML = `<p class="nota">${ico('chispa')} Lo ha redactado Oki: repásalo antes de enviarlo.</p>`;
   } else caja.innerHTML = `<p class="nota">${esc(r.error ? `Oki no ha podido redactarla: ${r.error}` : r.data?.motivo ?? 'Oki no ha propuesto nada.')}</p>`;
 }
 

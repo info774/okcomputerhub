@@ -13,6 +13,7 @@ import { esc, hace, fechaHora, toast } from '../../ui/dom';
 import { eur, enApp, telWhatsApp } from '../ventas/datos';
 import { esqueleto } from '../../ui/esqueleto';
 import { enlaceHistorial } from '../../ui/historial';
+import { ico } from '../../shell/linea';
 
 interface Sitio {
   id: string; nombre: string; cliente_id: string | null; direccion: string | null; tipo: string | null; activo: boolean | null;
@@ -106,8 +107,8 @@ async function pintarLista(el: HTMLElement) {
       ${seg('siMant', _mant, [['', 'Todos'], ['con', 'Con mantenimiento'], ['sin', 'Sin mantenimiento']])}
       ${seg('siAviso', _aviso, [['', 'Sin filtro'], ['cobro', 'Cobro torcido'], ['equipos', 'Equipos con aviso']])}
       <button class="chip-boton ${_baja ? 'activo' : ''}" data-action="siBaja" aria-pressed="${_baja}">De baja</button>
-      <button class="btn secundario" data-action="siExcel">⬇ Excel</button>
-      ${escribe ? '<a class="btn" href="#/sitios/nuevo">+ Nuevo sitio</a>' : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener">+ Nuevo sitio en la app ↗</a>`}
+      <button class="btn secundario" data-action="siExcel">${ico('descargar')} Excel</button>
+      ${escribe ? '<a class="btn" href="#/sitios/nuevo">+ Nuevo sitio</a>' : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener">+ Nuevo sitio en la app ${ico('externo')}</a>`}
     </div>
     <p class="nota">${_baja ? `Sitios DE BAJA (no salen en listados ni buscadores; ${escribe ? 'se reactivan desde aquí' : 'se reactivan en la app'}). ` : ''}Mostrando ${Math.min(filtrados.length, 200)} de ${filtrados.length}.</p>
     <div class="tarjeta mo-scroll"><table class="tabla" id="si-tabla"><thead><tr><th>Sitio</th><th>Cliente</th><th>Mantenimiento</th><th>TPV</th><th>Equipos</th>${_baja && escribe ? '<th></th>' : ''}</tr></thead>
@@ -115,7 +116,7 @@ async function pintarLista(el: HTMLElement) {
       const mapa = mapaDe(l);
       return `<tr class="fila-clic" data-action="siAbrir" data-p0="${esc(l.id)}">
         <td><strong>${esc(l.nombre)}</strong>${l.estado && l.estado !== 'activo' ? ` <span class="chip">${esc(l.estado)}</span>` : ''}${l.direccion ? `<br><small class="nota">${esc(l.direccion)}</small>` : ''}
-          ${mapa ? ` <a href="${esc(mapa)}" target="_blank" rel="noopener" data-action="siNada">mapa ↗</a>` : ''}</td>
+          ${mapa ? ` <a href="${esc(mapa)}" target="_blank" rel="noopener" data-action="siNada">mapa ${ico('externo')}</a>` : ''}</td>
         <td>${esc(_clientes.get(l.cliente_id ?? '') ?? '—')}</td>
         <td>${SIN_MANT(l.plan) ? '<span class="nota">Sin mantenimiento</span>' : `${esc(l.plan)}${esAdmin() && l.importe_mantenimiento ? ` · ${eur(l.importe_mantenimiento, 2)}/mes` : ''} ${chipPago(l.estado_pago)}`}</td>
         <td>${esc(l.programa_tpv ?? '—')}</td>
@@ -130,23 +131,23 @@ async function tabResumen(l: Sitio & Record<string, any>): Promise<string> {
   const e = _rmm.get(l.id);
   const alarma = l.alarma_empresa || l.alarma_telefono || l.alarma_contrato || l.alarma_codigo;
   return `<div class="me-grid">
-    <section class="tarjeta"><h3>📍 El sitio</h3><dl class="me-datos">
+    <section class="tarjeta"><h3>${ico('ubicacion')} El sitio</h3><dl class="me-datos">
       ${dato('Tipo', l.tipo)}${dato('Estado', l.estado)}${dato('Dirección', l.direccion)}${dato('Horario', l.horario)}${dato('Programa TPV', l.programa_tpv)}</dl>
       ${l.notas ? `<p class="nota">${esc(l.notas)}</p>` : ''}</section>
-    <section class="tarjeta"><h3>🔁 Mantenimiento</h3>${SIN_MANT(l.plan) ? '<p class="nota">Sin mantenimiento.</p>' : `<dl class="me-datos">
+    <section class="tarjeta"><h3>${ico('repetir')} Mantenimiento</h3>${SIN_MANT(l.plan) ? '<p class="nota">Sin mantenimiento.</p>' : `<dl class="me-datos">
       ${dato('Plan', l.plan)}
       <div class="me-dato"><dt>Estado de pago</dt><dd>${esc(l.estado_pago ?? '—')} ${l.stripe_cobro_en_curso_at ? '<span class="chip aviso">Cobro en curso</span>' : ''}</dd></div>
       ${esAdmin() && l.importe_mantenimiento ? dato('Cuota', `${eur(l.importe_mantenimiento, 2)}${l.importe_incluye_impuesto ? ' (con impuesto)' : ''}`) : ''}
       ${dato('Frecuencia', l.frecuencia_pago)}${dato('Forma de pago', l.forma_pago)}${dato('Próxima cuota', l.proxima_cuota)}${dato('Activo desde', l.fecha_activacion)}
       ${dato('Cobra', l.stripe_subscription_id ? 'Stripe' : l.zoho_subscription_id ? 'Zoho (cartera vieja)' : null)}</dl>
       ${l.notas_mantenimiento ? `<p class="nota">${esc(l.notas_mantenimiento)}</p>` : ''}`}
-      ${esAdmin() ? `<p class="acciones"><a href="#/mantenimientos/cobros/sede/${esc(l.id)}">💳 Cobro de la cuota →</a> <a href="#/mantenimientos/ficha/${esc(l.id)}">Ficha de mantenimiento →</a></p>` : ''}</section>
-    <section class="tarjeta"><h3>🖥 Equipos</h3>${e ? `<p><span class="chip ${TONO_RMM[e.estado]}">${esc(TEXTO_RMM[e.estado])}</span>
+      ${esAdmin() ? `<p class="acciones"><a href="#/mantenimientos/cobros/sede/${esc(l.id)}">${ico('tarjeta')} Cobro de la cuota →</a> <a href="#/mantenimientos/ficha/${esc(l.id)}">Ficha de mantenimiento →</a></p>` : ''}</section>
+    <section class="tarjeta"><h3>${ico('monitor')} Equipos</h3>${e ? `<p><span class="chip ${TONO_RMM[e.estado]}">${esc(TEXTO_RMM[e.estado])}</span>
       ${e.conectados} de ${e.equipos} en línea${e.alertas ? ` · <b>${e.alertas}</b> alerta${e.alertas === 1 ? '' : 's'}` : ''}</p>
       ${e.visto_ultimo ? `<p class="nota">Último contacto ${esc(hace(e.visto_ultimo))}</p>` : ''}
       <a href="#/monitorizacion/sede/${esc(l.id)}">Ver en Monitorización →</a>` : '<p class="nota">Sin agente de Breeze en este sitio.</p>'}</section>
-    ${l.notas_tecnicas ? `<section class="tarjeta"><h3>🛠 Notas técnicas</h3><p class="si-pre">${esc(l.notas_tecnicas)}</p></section>` : ''}
-    ${alarma ? `<section class="tarjeta"><h3>🚨 Alarma</h3><dl class="me-datos">
+    ${l.notas_tecnicas ? `<section class="tarjeta"><h3>${ico('herramienta')} Notas técnicas</h3><p class="si-pre">${esc(l.notas_tecnicas)}</p></section>` : ''}
+    ${alarma ? `<section class="tarjeta"><h3>${ico('alarma')} Alarma</h3><dl class="me-datos">
       ${dato('Empresa', l.alarma_empresa)}${dato('Teléfono', l.alarma_telefono)}${dato('Contrato', l.alarma_contrato)}
       ${l.alarma_codigo ? `<div class="me-dato"><dt>Código</dt><dd><span id="si-codigo">••••</span> <button class="btn secundario" data-action="siCodigo" data-p0="$this">Ver</button></dd></div>` : ''}</dl>
       ${l.alarma_notas ? `<p class="nota">${esc(l.alarma_notas)}</p>` : ''}</section>` : ''}
@@ -164,8 +165,8 @@ async function tabTelefonos(l: Sitio): Promise<string> {
       return `<tr data-tel="${esc(t.id)}"><td>${esc(t.nombre ?? '—')}</td>
         <td><a href="tel:${esc(t.numero)}">${esc(t.numero)}</a>${wa ? ` · <a href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}</td>
         <td>${_escribe ? `<select aria-label="Rol" data-on-change="siTelRol:${esc(t.id)},$value">${opt(t.rol ?? 'otro')}</select>` : esc(rolTexto(t.rol))}</td>
-        ${_escribe ? `<td class="acciones"><button class="btn secundario" data-action="siTelEditar" data-p0="${esc(t.id)}" data-p1="${esc(t.nombre ?? '')}" data-p2="${esc(t.numero)}" data-p3="${esc(t.rol ?? 'otro')}">✎</button>
-          <button class="btn secundario" data-action="siTelBorrar" data-p0="${esc(t.id)}" aria-label="Quitar">🗑</button></td>` : ''}</tr>`;
+        ${_escribe ? `<td class="acciones"><button class="btn secundario" data-action="siTelEditar" data-p0="${esc(t.id)}" data-p1="${esc(t.nombre ?? '')}" data-p2="${esc(t.numero)}" data-p3="${esc(t.rol ?? 'otro')}" aria-label="Editar" title="Editar">${ico('editar')}</button>
+          <button class="btn secundario" data-action="siTelBorrar" data-p0="${esc(t.id)}" aria-label="Quitar">${ico('eliminar')}</button></td>` : ''}</tr>`;
     }).join('')}</tbody></table></div>` : '<p class="vacio">Sin teléfonos apuntados en este sitio.</p>';
   const form = _escribe ? `<form class="tarjeta" id="si-tel-form" data-on-submit="siTelGuardar" data-prevent="1"><h3 id="si-tel-titulo">Añadir teléfono</h3>
     <input type="hidden" id="si-tel-id">
@@ -185,10 +186,10 @@ async function tabContactos(l: Sitio): Promise<string> {
   if (!(data ?? []).length) return `${nuevo}<p class="vacio">Sin contactos de este sitio.</p>`;
   return `${nuevo}<div class="cl-contactos">${(data ?? []).map(p => {
     const wa = telWhatsApp(p.telefono);
-    return `<article class="tarjeta"><h3><a href="#/contactos/${esc(p.id)}">${p.favorito ? '⭐ ' : ''}${esc(p.nombre)}</a></h3>${p.cargo ? `<p class="nota">${esc(p.cargo)}</p>` : ''}
-      <div class="acciones">${p.telefono ? `<a class="btn secundario" href="tel:${esc(p.telefono)}">📞 ${esc(p.telefono)}</a>` : ''}
-        ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
-        ${p.email ? `<a class="btn secundario" href="mailto:${esc(p.email)}">✉️ ${esc(p.email)}</a>` : ''}</div></article>`;
+    return `<article class="tarjeta"><h3><a href="#/contactos/${esc(p.id)}">${p.favorito ? `${ico('estrella')} ` : ''}${esc(p.nombre)}</a></h3>${p.cargo ? `<p class="nota">${esc(p.cargo)}</p>` : ''}
+      <div class="acciones">${p.telefono ? `<a class="btn secundario" href="tel:${esc(p.telefono)}">${ico('telefono')} ${esc(p.telefono)}</a>` : ''}
+        ${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">${ico('mensaje')} WhatsApp</a>` : ''}
+        ${p.email ? `<a class="btn secundario" href="mailto:${esc(p.email)}">${ico('correo')} ${esc(p.email)}</a>` : ''}</div></article>`;
   }).join('')}</div>`;
 }
 
@@ -235,14 +236,14 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
   const mapa = mapaDe(l);
   _escribe = await esDelHub('locales');
   const botones = _escribe
-    ? `<a class="btn secundario" href="#/sitios/${esc(l.id)}/editar">✎ Editar</a>
+    ? `<a class="btn secundario" href="#/sitios/${esc(l.id)}/editar">${ico('editar')} Editar</a>
        ${l.activo === false ? `<button class="btn secundario" data-action="siReactivar" data-p0="${esc(l.id)}">Reactivar</button>` : '<button class="btn secundario" data-action="siDarBaja">Dar de baja</button>'}
        ${esAdmin() ? '<button class="btn peligro" data-action="siEliminar">Eliminar</button>' : ''}`
-    : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los datos del sitio se editan en la app actual">Editar en la app ↗</a>`;
+    : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los datos del sitio se editan en la app actual">Editar en la app ${ico('externo')}</a>`;
   el.innerHTML = `<p><a href="#/sitios">← Sitios</a></p>
     <div class="tarjeta-cab"><h2>${esc(l.nombre)}${l.activo === false ? ' <span class="chip mal">De baja</span>' : ''}</h2>
-      <div class="acciones">${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">🗺 Cómo llegar</a>` : ''}
-        <button class="btn secundario" data-action="siRemoto" data-p0="${esc(l.id)}">🖥 Remoto</button>
+      <div class="acciones">${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">${ico('mapa')} Cómo llegar</a>` : ''}
+        <button class="btn secundario" data-action="siRemoto" data-p0="${esc(l.id)}">${ico('monitor')} Remoto</button>
         ${botones}${enlaceHistorial('locales', l.id)}</div></div>
     <div id="si-rem-lista" class="tarjeta acciones" hidden></div>
     ${l.activo === false ? `<p class="aviso">Este sitio está DE BAJA: no sale en listados ni buscadores. No se ha borrado nada.</p>` : ''}

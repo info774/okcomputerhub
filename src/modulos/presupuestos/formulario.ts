@@ -14,6 +14,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { buscarClientes, eur } from '../ventas/datos';
 import { editorLineas, lineasDe, sumarLineas, aLinea, totalDe, type LineaEd } from './lineas';
 
@@ -69,7 +70,7 @@ export async function pintarFormulario(el: HTMLElement, id?: string, desde?: { c
     ${escribe ? '' : avisoSoloLectura('Los presupuestos')}
     <form class="tarjeta" id="pf-form" data-on-submit="pfGuardar" data-prevent="1">
       ${plantillas.length ? `<fieldset class="pf-plantillas"><legend>Partir de plantillas <span class="nota">(se pueden juntar varias)</span></legend>
-        <div class="acciones">${plantillas.map(t => `<button type="button" class="chip-boton" data-action="pfPlantilla" data-p0="${esc(t.id)}" aria-pressed="false">${esc(t.icono ?? '📄')} ${esc(t.nombre)}</button>`).join('')}</div>
+        <div class="acciones">${plantillas.map(t => `<button type="button" class="chip-boton" data-action="pfPlantilla" data-p0="${esc(t.id)}" aria-pressed="false">${t.icono ? esc(t.icono) : ico('documento')} ${esc(t.nombre)}</button>`).join('')}</div>
         <p class="nota" id="pf-plantillas-resumen" aria-live="polite"></p></fieldset>` : ''}
       <label>Cliente <input id="pf-cliente-q" autocomplete="off" placeholder="Buscar por nombre o NIF…" value="${esc(cli.data?.nombre ?? '')}" data-on-input="pfBuscarCliente:$value"></label>
       <input type="hidden" id="pf-cliente" value="${esc(cli.data?.id ?? '')}"><ul id="pf-cliente-res" class="resultados"></ul>

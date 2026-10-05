@@ -9,6 +9,7 @@ import { usuario } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 
 export type TipoEquipo = 'software' | 'hardware' | 'camaras';
 interface Campo { k: string; t: string; tipo?: 'date' | 'select'; opciones?: string[] }
@@ -81,8 +82,8 @@ export async function tabEquipamiento(tipo: TipoEquipo, localId: string, escribe
   _filas = new Map(filas.map(f => [String(f.id), f]));
   const tabla = filas.length ? `<div class="tarjeta mo-scroll"><table class="tabla" id="si-eq-tabla"><thead><tr>${CABECERA[tipo].map(c => `<th>${c}</th>`).join('')}${escribe ? '<th></th>' : ''}</tr></thead>
     <tbody>${filas.map(f => `<tr data-eq="${esc(f.id)}">${celdas(tipo, f).map(c => `<td>${c}</td>`).join('')}
-      ${escribe ? `<td class="acciones"><button class="btn secundario" data-action="siEqEditar" data-p0="${esc(f.id)}" aria-label="Editar">✎</button>
-        <button class="btn secundario" data-action="siEqBorrar" data-p0="${tipo}" data-p1="${esc(f.id)}" aria-label="Quitar">🗑</button></td>` : ''}</tr>`).join('')}</tbody></table></div>`
+      ${escribe ? `<td class="acciones"><button class="btn secundario" data-action="siEqEditar" data-p0="${esc(f.id)}" aria-label="Editar">${ico('editar')}</button>
+        <button class="btn secundario" data-action="siEqBorrar" data-p0="${tipo}" data-p1="${esc(f.id)}" aria-label="Quitar">${ico('eliminar')}</button></td>` : ''}</tr>`).join('')}</tbody></table></div>`
     : `<p class="vacio">${d.vacio}</p>`;
   if (!escribe) return tabla;
   const campo = (c: Campo) => c.tipo === 'select'

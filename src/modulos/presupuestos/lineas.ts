@@ -7,6 +7,7 @@
 import { API } from '../../core/api';
 import { registrarAcciones } from '../../core/dispatcher';
 import { esc } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { eur } from '../ventas/datos';
 
 export interface LineaEd { nombre: string; cantidad: number; precio: number; descuento: number }
@@ -64,7 +65,7 @@ function cuerpo(pre: string, escribe: boolean): string {
       <td class="num">${num(i, 'precio', l.precio, 'min="0" step="0.01"')}</td>
       <td class="num">${num(i, 'descuento', l.descuento, 'min="0" max="100" step="1"')}</td>
       <td class="num">${eur(subtotal(l), 2)}</td>
-      ${escribe ? `<td><button type="button" class="btn secundario" data-action="lnQuitar" data-p0="${pre}" data-p1="${i}" aria-label="Quitar la línea">🗑</button></td>` : ''}</tr>`).join('')
+      ${escribe ? `<td><button type="button" class="btn secundario" data-action="lnQuitar" data-p0="${pre}" data-p1="${i}" aria-label="Quitar la línea">${ico('eliminar')}</button></td>` : ''}</tr>`).join('')
       || `<tr><td colspan="${escribe ? 6 : 5}" class="vacio">Sin líneas: añade del catálogo o a mano.</td></tr>`}</tbody>
     <tfoot><tr><th colspan="4">Total (sin impuestos)</th><th class="num" id="${pre}-lin-total">${eur(totalDe(ls), 2)}</th>${escribe ? '<th></th>' : ''}</tr></tfoot></table>`;
 }
