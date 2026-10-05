@@ -9,6 +9,7 @@ import { equipo, nombreDe } from '../../core/equipo';
 import { usuario } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { esc, fechaHora, hace, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 
 interface Reloj { id: string; nombre: string | null; usuario_id: string; aprobado_at: string | null; ultimo_uso: string | null; revocado_at: string | null }
 
@@ -44,7 +45,7 @@ async function pintar(el: HTMLElement, params: string[] = []) {
       <h2>Relojes vinculados</h2>
       <table class="tabla"><thead><tr><th>Nombre</th><th>De</th><th>Vinculado</th><th>Último uso</th><th>Estado</th><th></th></tr></thead>
       <tbody>${relojes.map(r => `<tr>
-        <td>⌚ ${esc(r.nombre ?? 'Reloj')}</td><td>${esc(nombreDe(r.usuario_id))}</td>
+        <td>${ico('smartwatch')} ${esc(r.nombre ?? 'Reloj')}</td><td>${esc(nombreDe(r.usuario_id))}</td>
         <td>${esc(r.aprobado_at ? fechaHora(r.aprobado_at) : '—')}</td><td>${esc(r.ultimo_uso ? hace(r.ultimo_uso) : 'nunca')}</td>
         <td>${r.revocado_at ? '<span class="chip mal">Desvinculado</span>' : '<span class="chip bien">Activo</span>'}</td>
         <td>${r.revocado_at ? '' : `<button class="btn peligro" data-action="rlRevocar" data-p0="${esc(r.id)}" data-p1="${esc(r.nombre ?? 'Reloj')}">Desvincular</button>`}</td>

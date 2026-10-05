@@ -10,6 +10,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { navPestanas, olvidarMantenimientos } from './vista';
 import {
   type Contrato, COLS_CONTRATO, renovacionDe, renovacionesProximas, contratosVigentes, sedeYaCobra, sedeEsperandoPago, normalizaFrecuencia,
@@ -44,7 +45,7 @@ export async function pintarDocumentos(el: HTMLElement) {
   const proximas = renovacionesProximas(_contratos, deBaja);
   el.innerHTML = `${escribe ? '' : avisoSoloLectura('Los contratos')}${navPestanas('documentos', proximas.filter(x => !x.r.avisado).length)}
     <div class="acciones mo-barra"><input id="mdo-q" type="search" placeholder="Buscar cliente, plan o sede…" value="${esc(_filtro)}" data-on-input="mdoBuscar:$value" aria-label="Buscar contrato">
-      ${escribe ? '<a class="btn" href="#/mantenimientos/contrato/nuevo">✍ Firmar contrato</a>' : ''}</div>
+      ${escribe ? `<a class="btn" href="#/mantenimientos/contrato/nuevo">${ico('firma')} Firmar contrato</a>` : ''}</div>
     <section class="tarjeta"><h3>Contratos</h3>
       ${lista.length ? `<ul class="mdo-lista" id="mdo-lista">${lista.map(c => filaContrato(c, escribe, admin)).join('')}</ul>`
         : `<p class="vacio">${_contratos.length ? 'Ninguno con esa búsqueda.' : 'Sin contratos todavía. Se genera uno, se firma en el momento o se le manda el enlace al cliente.'}</p>`}</section>
@@ -62,14 +63,14 @@ function filaContrato(c: Contrato, escribe: boolean, admin: boolean): string {
   return `<li data-contrato="${esc(c.id)}"><div class="mdo-cab"><strong>${esc(c.cliente_nombre || '—')}</strong> <span class="chip">${esc(c.plan_nombre)}</span>
       <span class="chip ${tono}">${txt}</span> ${chipCobro}</div>
     <p class="nota">${c.estado === 'firmado' ? `Firmado por ${esc(c.firmante_nombre || '—')} · ${esc(fecha)}` : `Generado el ${esc(fecha)}`}${s ? ` · <a href="#/sitios/${esc(s.id)}">${esc(s.nombre)}</a>` : ''} · ${esc(cuota(c))}</p>
-    ${c.estado === 'firmado' && conCuota && !c.local_id ? '<p class="g-aviso">⚠ Sin sede asignada: la cuota no se puede cobrar. Asígnasela con «Editar».</p>' : ''}
+    ${c.estado === 'firmado' && conCuota && !c.local_id ? `<p class="g-aviso">${ico('atencion')} Sin sede asignada: la cuota no se puede cobrar. Asígnasela con «Editar».</p>` : ''}
     <div class="acciones">
-      ${c.estado === 'pendiente' ? `<a class="btn" href="#/mantenimientos/contrato/${esc(c.id)}/enlace">✍ Firmar</a>` : ''}
-      ${c.estado === 'firmado' ? `<a class="btn secundario" href="#/mantenimientos/contrato/${esc(c.id)}/ver">👁 Ver firmado</a>` : ''}
-      ${c.estado !== 'anulado' ? `<a class="btn secundario" href="#/mantenimientos/contrato/${esc(c.id)}/enlace">🔗 Enlace / enviar</a>` : ''}
-      ${c.estado !== 'anulado' && escribe ? `<a class="btn secundario" href="#/mantenimientos/contrato/${esc(c.id)}">✎ Editar</a>` : ''}
+      ${c.estado === 'pendiente' ? `<a class="btn" href="#/mantenimientos/contrato/${esc(c.id)}/enlace">${ico('firma')} Firmar</a>` : ''}
+      ${c.estado === 'firmado' ? `<a class="btn secundario" href="#/mantenimientos/contrato/${esc(c.id)}/ver">${ico('ver')} Ver firmado</a>` : ''}
+      ${c.estado !== 'anulado' ? `<a class="btn secundario" href="#/mantenimientos/contrato/${esc(c.id)}/enlace">${ico('enlace')} Enlace / enviar</a>` : ''}
+      ${c.estado !== 'anulado' && escribe ? `<a class="btn secundario" href="#/mantenimientos/contrato/${esc(c.id)}">${ico('editar')} Editar</a>` : ''}
       ${c.estado === 'pendiente' && escribe && admin ? `<button class="btn secundario" data-action="mdoAnular" data-p0="${esc(c.id)}">✕ Anular</button>` : ''}
-      ${escribe && admin ? `<button class="btn peligro" data-action="mdoEliminar" data-p0="${esc(c.id)}">🗑 Eliminar</button>` : ''}</div></li>`;
+      ${escribe && admin ? `<button class="btn peligro" data-action="mdoEliminar" data-p0="${esc(c.id)}">${ico('eliminar')} Eliminar</button>` : ''}</div></li>`;
 }
 
 function pintarRenovaciones(escribe: boolean): string {
@@ -88,14 +89,14 @@ function pintarRenovaciones(escribe: boolean): string {
       const cuando = r.dias === 0 ? 'hoy' : r.dias === 1 ? 'mañana' : `en ${r.dias} días`;
       const s = _sedes.get(c.local_id ?? '');
       const preaviso = r.auto && r.dias <= RENOV_AVISO_DIAS
-        ? (diasEntre(hoy, r.preaviso) >= 0 ? `<p class="${urgente ? 'g-aviso' : 'nota'}">⏰ Para no renovarlo hay que comunicarlo antes del ${esc(fechaCorta(r.preaviso))}.</p>`
-          : `<p class="g-aviso">⚠ Pasado el plazo de preaviso (${esc(fechaCorta(r.preaviso))}): se renueva otro periodo.</p>`) : '';
+        ? (diasEntre(hoy, r.preaviso) >= 0 ? `<p class="${urgente ? 'g-aviso' : 'nota'}">${ico('reloj')} Para no renovarlo hay que comunicarlo antes del ${esc(fechaCorta(r.preaviso))}.</p>`
+          : `<p class="g-aviso">${ico('atencion')} Pasado el plazo de preaviso (${esc(fechaCorta(r.preaviso))}): se renueva otro periodo.</p>`) : '';
       return `<li data-renov="${esc(c.id)}" class="${tono ? `mdo-${tono}` : ''}"><div class="mdo-cab"><strong>${esc(c.cliente_nombre || s?.nombre || '—')}</strong> <span class="chip">${esc(c.plan_nombre)}</span>
           ${r.auto ? '<span class="chip bien">Renovación automática</span>' : '<span class="chip mal">No renueva: vence</span>'}${r.avisado ? ' <span class="chip">Cliente avisado</span>' : ''}${s?.activo === false ? ' <span class="chip">Sede de baja</span>' : ''}</div>
         <p class="nota">${r.auto ? 'Renueva' : 'Vence'} el <strong>${esc(fechaCorta(r.fecha))}</strong> (${cuando}) · Año ${r.periodo} desde la firma del ${esc(fechaCorta(r.inicio))}${s ? ` · ${esc(s.nombre)}` : ''} · ${esc(cuota(c))}</p>
         ${preaviso}
-        <div class="acciones"><a class="btn secundario" href="#/mantenimientos/contrato/${esc(c.id)}/ver">👁 Ver contrato</a>
-          ${escribe ? `<button class="btn secundario" data-action="mdoAvisado" data-p0="${esc(c.id)}">${r.avisado ? '↩ Quitar el aviso' : '✓ Marcar avisado'}</button>
+        <div class="acciones"><a class="btn secundario" href="#/mantenimientos/contrato/${esc(c.id)}/ver">${ico('ver')} Ver contrato</a>
+          ${escribe ? `<button class="btn secundario" data-action="mdoAvisado" data-p0="${esc(c.id)}">${r.avisado ? `${ico('volver')} Quitar el aviso` : '✓ Marcar avisado'}</button>
           <button class="btn ${r.auto ? 'peligro' : 'secundario'}" data-action="mdoAuto" data-p0="${esc(c.id)}">${r.auto ? 'No renovar' : 'Volver a renovar'}</button>` : ''}</div></li>`;
     }).join('')}</ul>`
       : `<p class="vacio">${_renov === 'proximas' ? `Ninguna renovación a la vista: aquí salen los firmados que cumplen año en los próximos ${RENOV_AVISO_DIAS} días.` : 'Nada que enseñar aquí.'}</p>`}</section>`;

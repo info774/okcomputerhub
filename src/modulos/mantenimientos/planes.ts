@@ -14,6 +14,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { eur } from '../ventas/datos';
 import { navPestanas } from './vista';
 import { FRECUENCIAS } from './datos';
@@ -54,13 +55,13 @@ export async function pintarPlanes(el: HTMLElement, id?: string, sub?: string) {
       <p>${[p.revisiones_anuales ? `${p.revisiones_anuales} rev./año` : '', p.descuento_mano_obra ? `−${p.descuento_mano_obra} % mano de obra` : '',
         p.descuento_material ? `−${p.descuento_material} % material` : '', p.coste_presencial_estandar != null ? `visita ${eur(p.coste_presencial_estandar)}` : '',
         p.coste_presencial_urgente != null ? `urgente ${eur(p.coste_presencial_urgente)}` : '', p.activo ? '' : 'Inactivo'].filter(Boolean).map(t => `<span class="chip">${esc(t)}</span>`).join(' ')}</p>
-      ${puede ? `<a class="btn secundario" href="#/mantenimientos/plantillas/${esc(p.id)}">✎ Editar</a>` : `<a class="btn secundario" href="#/mantenimientos/plantillas/${esc(p.id)}">Ver</a>`}</article>`).join('')
+      ${puede ? `<a class="btn secundario" href="#/mantenimientos/plantillas/${esc(p.id)}">${ico('editar')} Editar</a>` : `<a class="btn secundario" href="#/mantenimientos/plantillas/${esc(p.id)}">Ver</a>`}</article>`).join('')
       || '<p class="vacio">Sin planes (llegan de la app con la copia de cada noche).</p>'}</div>
     <div class="tarjeta-cab"><h2>Checklists de visita</h2>${puede ? '<div class="acciones"><a class="btn secundario" href="#/mantenimientos/plantillas/checklist/nuevo">+ Nuevo checklist</a></div>' : ''}</div>
     <p class="nota">Se rellenan en la ficha del trabajo de mantenimiento: el del plan de la sede o, si no hay, el genérico.</p>
     <div class="tarjeta mo-scroll"><table class="tabla" id="mcl-tabla"><thead><tr><th>Checklist</th><th>Plan</th><th class="num">Puntos</th><th></th></tr></thead>
       <tbody>${(cks.data ?? []).map(c => `<tr><td><strong>${esc(c.nombre)}</strong>${c.activa ? '' : ' <span class="chip">Inactivo</span>'}</td><td>${esc(c.plan ?? 'Genérico')}</td>
-        <td class="num">${(c.items ?? []).length}</td><td><a class="btn secundario" href="#/mantenimientos/plantillas/checklist/${esc(c.id)}">${puede ? '✎ Editar' : 'Ver'}</a></td></tr>`).join('')
+        <td class="num">${(c.items ?? []).length}</td><td><a class="btn secundario" href="#/mantenimientos/plantillas/checklist/${esc(c.id)}">${puede ? `${ico('editar')} Editar` : 'Ver'}</a></td></tr>`).join('')
         || '<tr><td colspan="4" class="vacio">Sin checklists.</td></tr>'}</tbody></table></div>`;
 }
 
@@ -102,7 +103,7 @@ function filasTareas(puede: boolean): string {
     ? `<tr data-tarea="${esc(t.id)}"><td><input value="${esc(t.nombre)}" aria-label="Tarea" data-on-change="mplTarea:${t.id},nombre,$value"></td>
       <td><select aria-label="Periodicidad" data-on-change="mplTarea:${t.id},periodicidad,$value">${PERIODICIDADES.map(x => `<option ${x === t.periodicidad ? 'selected' : ''}>${x}</option>`).join('')}</select></td>
       <td><input type="checkbox" aria-label="Es copia de seguridad" ${t.es_backup ? 'checked' : ''} data-on-change="mplTarea:${t.id},es_backup,$checked"></td>
-      <td><button type="button" class="btn secundario" data-action="mplTareaQuitar" data-p0="${esc(t.id)}" aria-label="Quitar">🗑</button></td></tr>`
+      <td><button type="button" class="btn secundario" data-action="mplTareaQuitar" data-p0="${esc(t.id)}" aria-label="Quitar">${ico('eliminar')}</button></td></tr>`
     : `<tr><td>${esc(t.nombre)}</td><td>${esc(t.periodicidad)}</td><td>${t.es_backup ? 'Sí' : ''}</td></tr>`).join('')
     || `<tr><td colspan="${puede ? 4 : 3}" class="vacio">Sin tareas.</td></tr>`}</tbody></table>`;
 }
@@ -131,7 +132,7 @@ function filasItems(): string {
     <label>Punto <input value="${esc(it.texto)}" data-on-change="mclCampo:${i},texto,$value"></label>
     <label>Tipo <select data-on-change="mclCampo:${i},tipo,$value">${[['check', 'Casilla'], ['text', 'Texto'], ['number', 'Número']].map(([k, n]) => `<option value="${k}" ${k === it.tipo ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <label class="check"><input type="checkbox" ${it.obligatorio ? 'checked' : ''} data-on-change="mclCampo:${i},obligatorio,$checked"> Obligatorio</label>
-    <button type="button" class="btn secundario" data-action="mclQuitar" data-p0="${i}" aria-label="Quitar">🗑</button></div>`).join('') || '<p class="nota">Sin puntos todavía.</p>';
+    <button type="button" class="btn secundario" data-action="mclQuitar" data-p0="${i}" aria-label="Quitar">${ico('eliminar')}</button></div>`).join('') || '<p class="nota">Sin puntos todavía.</p>';
 }
 
 const val = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value.trim() ?? '';

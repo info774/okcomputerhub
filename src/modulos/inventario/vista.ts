@@ -11,6 +11,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, hace, fechaHora } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { barras } from '../../ui/barras';
 import { eur, enApp } from '../ventas/datos';
 
@@ -219,21 +220,21 @@ async function pintarFicha(el: HTMLElement, id: string) {
   el.innerHTML = `<p><a href="#/inventario">← Inventario</a></p>
     ${delHub ? '' : avisoSoloLectura('El inventario')}
     <div class="tarjeta-cab"><h2>${esc(p.nombre)}</h2>
-      <div class="acciones"><a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Las entradas, salidas y trasvases se apuntan en la app">Mover en la app ↗</a></div></div>
+      <div class="acciones"><a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Las entradas, salidas y trasvases se apuntan en la app">Mover en la app ${ico('externo')}</a></div></div>
     <p><span class="chip">${esc(nombreUbic(p.furgoneta_id))}</span> ${p.categoria ? `<span class="chip">${esc(p.categoria)}</span>` : ''}
       ${bajoMinimo(p) ? `<span class="chip ${n(p.cantidad) <= 0 ? 'mal' : 'aviso'}">${n(p.cantidad) <= 0 ? 'Agotado' : 'Bajo mínimo'}</span>` : ''}</p>
     <div class="me-grid">
-      <section class="tarjeta pp-total"><h3>📦 Aquí hay</h3><p class="di-valor">${num(n(p.cantidad))}</p>
+      <section class="tarjeta pp-total"><h3>${ico('caja')} Aquí hay</h3><p class="di-valor">${num(n(p.cantidad))}</p>
         <p>${medidor(n(p.cantidad), n(p.stock_minimo))} <small class="nota">mínimo ${num(n(p.stock_minimo))}</small></p>
         <dl class="me-datos">${dato('Código', esc(p.codigo_principal ?? ''))}${dato('Código de barras', esc(p.codigo_barra ?? ''))}
           ${admin ? dato('Precio', p.precio ? eur(p.precio, 2) : '') : ''}${dato('Notas', esc(p.notas ?? ''))}</dl></section>
-      <section class="tarjeta"><h3>📍 En otras ubicaciones</h3>
+      <section class="tarjeta"><h3>${ico('ubicacion')} En otras ubicaciones</h3>
         ${otros.length ? `<ul class="in-otros">${otros.map(o => `<li><a href="#/inventario/${esc(o.id)}">${esc(nombreUbic(o.furgoneta_id))}</a> <strong>${num(n(o.cantidad))}</strong>
           ${bajoMinimo(o) ? `<span class="chip ${n(o.cantidad) <= 0 ? 'mal' : 'aviso'}">${n(o.cantidad) <= 0 ? 'Agotado' : 'Bajo mínimo'}</span>` : ''}</li>`).join('')}</ul>
           <p class="nota">En total: <strong>${num(n(p.cantidad) + otros.reduce((t, o) => t + n(o.cantidad), 0))}</strong></p>` : '<p class="nota">Solo está aquí.</p>'}
         ${p.catalogo_id ? '<p><a href="#/almacen">Ver en Almacén (consumo y qué pedir) →</a></p>' : ''}</section>
     </div>
-    <section class="tarjeta mo-scroll"><h3>🧾 Movimientos</h3>
+    <section class="tarjeta mo-scroll"><h3>${ico('recibo')} Movimientos</h3>
       ${movs.error ? `<p class="aviso mal">No se pudieron leer los movimientos: ${esc(movs.error.message)}</p>` : ''}
       <table class="tabla" id="in-ficha-movs"><thead><tr><th>Cuándo</th><th>Tipo</th><th class="num">Cant.</th><th>Dónde</th><th>Quién</th><th>Trabajo / motivo</th></tr></thead>
       <tbody>${ms.map(m => filaMov(m, new Map(), trabajos, false)).join('') || '<tr><td colspan="6" class="vacio">Sin movimientos apuntados.</td></tr>'}</tbody></table>

@@ -10,6 +10,7 @@ import { usuario } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { eur, telWhatsApp, enApp } from '../ventas/datos';
 
 interface Rec { id: string; invoice_id: string; numero: string; cliente_zoho_id: string | null; cliente_nombre: string | null; saldo: number;
@@ -49,9 +50,9 @@ async function pintar(el: HTMLElement) {
       <p class="nota">Venció el ${esc(r.vence)} (${dias(r.vence)} días)${c ? ` · <a href="#/clientes/${esc(c.id)}">ficha del cliente</a>` : ' · <span class="aviso">no se encuentra el cliente en la app</span>'}</p>
       <textarea id="co-texto-${esc(r.id)}" rows="4" data-on-change="coTexto:${esc(r.id)},$value" aria-label="Texto del recordatorio">${esc(r.texto)}</textarea>
       <div class="acciones">
-        ${wa ? `<a class="btn" href="https://wa.me/${wa}?text=${encodeURIComponent(r.texto)}" target="_blank" rel="noopener" data-action="coAbierto" data-p0="${esc(r.id)}" data-p1="whatsapp">💬 WhatsApp</a>` : ''}
-        ${c?.email ? `<a class="btn secundario" href="mailto:${esc(c.email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(r.texto)}" data-action="coAbierto" data-p0="${esc(r.id)}" data-p1="email">✉️ Email</a>` : ''}
-        ${c?.telefono ? `<a class="btn secundario" href="tel:${esc(c.telefono)}">📞 ${esc(c.telefono)}</a>` : ''}
+        ${wa ? `<a class="btn" href="https://wa.me/${wa}?text=${encodeURIComponent(r.texto)}" target="_blank" rel="noopener" data-action="coAbierto" data-p0="${esc(r.id)}" data-p1="whatsapp">${ico('mensaje')} WhatsApp</a>` : ''}
+        ${c?.email ? `<a class="btn secundario" href="mailto:${esc(c.email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(r.texto)}" data-action="coAbierto" data-p0="${esc(r.id)}" data-p1="email">${ico('correo')} Email</a>` : ''}
+        ${c?.telefono ? `<a class="btn secundario" href="tel:${esc(c.telefono)}">${ico('telefono')} ${esc(c.telefono)}</a>` : ''}
         <button class="btn secundario" data-action="coCopiar" data-p0="${esc(r.id)}">Copiar texto</button>
         <button class="btn secundario" data-action="coEnviado" data-p0="${esc(r.id)}" data-p1="otro">Marcar enviado</button>
         <button class="btn peligro" data-action="coDescartar" data-p0="${esc(r.id)}">Descartar</button>
@@ -66,11 +67,11 @@ async function pintar(el: HTMLElement) {
     </div>
     <h2>Recordatorios listos para mandar</h2>
     <p class="nota">Se preparan solos cada mañana a los 7, 21 y 45 días del vencimiento. Revisa el texto, mándalo con tu WhatsApp o tu correo y márcalo como enviado.</p>
-    ${pendientes.length ? pendientes.map(tarjetaRec).join('') : '<p class="vacio">✅ Nada que reclamar ahora mismo.</p>'}
+    ${pendientes.length ? pendientes.map(tarjetaRec).join('') : `<p class="vacio">${ico('hecho')} Nada que reclamar ahora mismo.</p>`}
     ${sinRec.length ? `<h2>Vencidas que aún no llegan al primer aviso</h2><div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Factura</th><th>Cliente</th><th>Pendiente</th><th>Venció</th></tr></thead>
       <tbody>${sinRec.map(f => `<tr><td><a href="${ZOHO}${esc(f.invoice_id)}" target="_blank" rel="noopener">${esc(f.numero)}</a></td><td>${esc(f.cliente_nombre ?? '')}</td>
         <td>${eur(f.saldo, 2)}</td><td>${esc(f.vence)} (${dias(f.vence)} d)</td></tr>`).join('')}</tbody></table></div>` : ''}
-    ${(mant.data ?? []).length ? `<h2>Mantenimiento con el cobro torcido</h2><p class="nota">Stripe y Zoho Billing los gestiona la <a href="${esc(enApp())}" target="_blank" rel="noopener">app actual ↗</a> (Mantenimientos → Cobros).</p>
+    ${(mant.data ?? []).length ? `<h2>Mantenimiento con el cobro torcido</h2><p class="nota">Stripe y Zoho Billing los gestiona la <a href="${esc(enApp())}" target="_blank" rel="noopener">app actual ${ico('externo')}</a> (Mantenimientos → Cobros).</p>
       <div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Sede</th><th>Estado</th><th>Cuota</th></tr></thead>
       <tbody>${(mant.data ?? []).map(l => `<tr><td>${l.cliente_id ? `<a href="#/clientes/${esc(l.cliente_id)}/sedes">${esc(l.nombre)}</a>` : esc(l.nombre)}</td>
         <td>${esc(l.estado_pago ?? '')}${l.stripe_ultimo_error ? `<br><small class="mal">${esc(l.stripe_ultimo_error)}</small>` : ''}</td><td>${l.importe_mantenimiento ? eur(l.importe_mantenimiento, 2) : ''}</td></tr>`).join('')}</tbody></table></div>` : ''}

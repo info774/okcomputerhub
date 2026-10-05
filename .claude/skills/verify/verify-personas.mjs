@@ -57,7 +57,7 @@ try {
   await page.waitForSelector('.pe-jornada');
   await page.selectOption('#pe-persona', UT);
   await page.waitForFunction(() => document.querySelector('.pe-jornada')?.textContent.includes('5:00'));
-  ok((await page.textContent('.pe-jornada')).includes('🏖 Vacaciones') && await page.locator('.pe-ausencia').count() === 1, 'jornada: horas del día y las ausencias');
+  ok((await page.textContent('.pe-jornada')).includes('Vacaciones') && await page.locator('.pe-jornada .pe-ausencia svg.ico').count() === 1 && await page.locator('.pe-ausencia').count() === 1, 'jornada: horas del día y las ausencias');
   const csv = page.waitForEvent('download');
   await page.click('[data-action="peCsv"]');
   ok((await csv).suggestedFilename().startsWith(`jornada-${mes}`), 'jornada: se descarga en CSV');

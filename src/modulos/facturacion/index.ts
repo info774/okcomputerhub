@@ -9,6 +9,7 @@ import { API } from '../../core/api';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { buscarClientes, nombresClientes, eur } from '../ventas/datos';
 
 interface Factura { id: string; created_at: string; serie: string; codigo: string | null; estado: string; tipo: string; rectifica_id: string | null; motivo_rectificacion: string | null;
@@ -28,7 +29,7 @@ async function estadoActivacion(): Promise<boolean> {
   const { data } = await API.single<{ valor: unknown }>('config', { select: 'valor', clave: 'eq.facturacion_activa' });
   return data?.valor === true || data?.valor === 'true';
 }
-const banner = (activa: boolean) => activa ? '' : `<p class="aviso fa-banner">⚠️ <strong>Sin activar.</strong> Las facturas de verdad las sigue haciendo Zoho Books.
+const banner = (activa: boolean) => activa ? '' : `<p class="aviso fa-banner">${ico('atencion')} <strong>Sin activar.</strong> Las facturas de verdad las sigue haciendo Zoho Books.
   Aquí solo se emite la serie de <strong>PRUEBA</strong> (sin valor fiscal) para que la gestoría lo revise. Se activa cuando ella lo valide y Fran dé el OK (ver docs/FASE11.md).</p>`;
 
 async function series(): Promise<Serie[]> {

@@ -18,6 +18,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { buscarClientes, eur } from '../ventas/datos';
 import { type Contrato, COLS_CONTRATO, FRECUENCIAS, normalizaFrecuencia, netoMensual, fechaCorta, cuotaPeriodo, IGIC } from './datos';
 import { renderContratoDoc, numEs, type PlantillaContrato } from './contrato-doc';
@@ -103,7 +104,7 @@ async function pintarFormulario(el: HTMLElement, sedeId: string | null) {
           <button type="button" class="btn secundario" data-action="mcoRestaurar">Restaurar las del plan</button></details>
       </div>
       <div class="acciones"><button class="btn" type="submit" ${escribe ? '' : 'disabled'}>${nuevo ? 'Generar y firmar' : 'Guardar'}</button>
-        ${firmado ? '' : '<button type="button" class="btn secundario" data-action="mcoBorrador">👁 Ver borrador</button>'}
+        ${firmado ? '' : `<button type="button" class="btn secundario" data-action="mcoBorrador">${ico('ver')} Ver borrador</button>`}
         <a class="btn secundario" href="#/mantenimientos/documentos">Cancelar</a></div></form>
     <section class="tarjeta" id="mco-borrador" hidden><h3>Borrador</h3><div class="mco-doc"></div></section>`;
   refrescaCuota();
@@ -160,10 +161,10 @@ function pintarEnlace(el: HTMLElement, c: Contrato) {
         : c.estado === 'anulado' ? '<p class="aviso mal">Anulado: el enlace ya no deja firmar.</p>'
         : '<p>Se firma aquí mismo (el cliente delante, en la tablet o el móvil) o se le manda el enlace. El enlace no caduca.</p>'}
       <label>Enlace de firma <input id="mco-url" readonly value="${esc(_enlace)}"></label>
-      <div class="acciones"><button class="btn secundario" data-action="mcoCopiar">📋 Copiar</button>
-        ${c.estado === 'pendiente' ? '<button class="btn" data-action="mcoFirmarAqui">✍ Firmar ahora (aquí)</button>' : ''}
-        <a class="btn secundario" id="mco-wa" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">💬 WhatsApp</a>
-        <a class="btn secundario" id="mco-email" href="mailto:?subject=${encodeURIComponent(`Contrato de mantenimiento ${c.plan_nombre} · OK Computer Tenerife`)}&body=${encodeURIComponent(msg)}">✉️ Correo</a></div>
+      <div class="acciones"><button class="btn secundario" data-action="mcoCopiar">${ico('lista')} Copiar</button>
+        ${c.estado === 'pendiente' ? `<button class="btn" data-action="mcoFirmarAqui">${ico('firma')} Firmar ahora (aquí)</button>` : ''}
+        <a class="btn secundario" id="mco-wa" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${ico('mensaje')} WhatsApp</a>
+        <a class="btn secundario" id="mco-email" href="mailto:?subject=${encodeURIComponent(`Contrato de mantenimiento ${c.plan_nombre} · OK Computer Tenerife`)}&body=${encodeURIComponent(msg)}">${ico('correo')} Correo</a></div>
     </section>`;
 }
 
@@ -172,7 +173,7 @@ async function pintarFirmado(el: HTMLElement, id: string) {
   const { data: c } = await API.single<any>('contratos', { select: 'plan_nombre,cliente_nombre,cuerpo_html,firmante_nombre,firmado_at,firma_img,firmante_ip,estado', id: `eq.${id}` });
   if (!c) { el.innerHTML = '<p class="aviso mal">No existe ese contrato.</p>'; return; }
   el.innerHTML = `<p><a href="#/mantenimientos/documentos">← Documentos</a></p><h2>Contrato ${esc(c.plan_nombre)} · ${esc(c.cliente_nombre ?? '')}</h2>
-    <p class="acciones"><button class="btn secundario" data-action="mcoImprimir">🖨 Imprimir o guardar en PDF</button></p>
+    <p class="acciones"><button class="btn secundario" data-action="mcoImprimir">${ico('imprimir')} Imprimir o guardar en PDF</button></p>
     <div class="mco-imprimible"><article class="tarjeta mco-doc" id="mco-firmado"></article>
     <section class="tarjeta"><h3>Firma del cliente</h3>
       ${c.firma_img && /^data:image\/(png|jpeg);base64,/.test(c.firma_img) ? `<img class="tr-firma" src="${esc(c.firma_img)}" alt="Firma del cliente">` : '<p class="nota">Sin imagen de firma.</p>'}

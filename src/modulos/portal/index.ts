@@ -8,14 +8,17 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { ico, type IconoLinea } from '../../shell/linea';
 import { buscarClientes, nombresClientes, eur } from '../ventas/datos';
 
 const URL_PORTAL = `${location.origin}/portal.html`;
-const ACCION: Record<string, string> = { entrada: '🔓 Entró', salir: 'Salió', enlace_enviado: '✉️ Enlace enviado', enlace_error: '⚠️ No se pudo enviar el enlace',
-  enlace_generado: '🔗 Enlace generado por el equipo', enlace_desconocido: '❔ Pidió enlace un correo sin acceso', enlace_limite: '⛔ Demasiados enlaces pedidos',
-  ver_ticket: 'Vio un ticket', g_jornada: '📒 Gestoría: vio la jornada', g_ausencias: '📒 Gestoría: vio las ausencias', g_gastos: '📒 Gestoría: vio los gastos',
-  g_gasto_url: '📒 Gestoría: abrió un ticket de gasto', g_facturas: '📒 Gestoría: vio las facturas', g_cierre: '📒 Gestoría: cierre del mes', g_personas: '📒 Gestoría: entró', abrir_ticket: '🎫 Abrió un ticket', mensaje_ticket: '💬 Escribió en un ticket', aceptar_presupuesto: '✅ Aceptó un presupuesto',
-  descargar_factura: '⬇️ Descargó una factura', descargar_presupuesto: '⬇️ Descargó un presupuesto', revocado: '🚫 Acceso revocado' };
+// Qué hizo cada acceso: icono (opcional) y texto.
+const ACCION: Record<string, [IconoLinea | null, string]> = { entrada: ['abierto', 'Entró'], salir: [null, 'Salió'], enlace_enviado: ['correo', 'Enlace enviado'], enlace_error: ['atencion', 'No se pudo enviar el enlace'],
+  enlace_generado: ['enlace', 'Enlace generado por el equipo'], enlace_desconocido: ['ayuda', 'Pidió enlace un correo sin acceso'], enlace_limite: ['prohibido', 'Demasiados enlaces pedidos'],
+  ver_ticket: [null, 'Vio un ticket'], g_jornada: ['libreta', 'Gestoría: vio la jornada'], g_ausencias: ['libreta', 'Gestoría: vio las ausencias'], g_gastos: ['libreta', 'Gestoría: vio los gastos'],
+  g_gasto_url: ['libreta', 'Gestoría: abrió un ticket de gasto'], g_facturas: ['libreta', 'Gestoría: vio las facturas'], g_cierre: ['libreta', 'Gestoría: cierre del mes'], g_personas: ['libreta', 'Gestoría: entró'], abrir_ticket: ['etiqueta', 'Abrió un ticket'], mensaje_ticket: ['mensaje', 'Escribió en un ticket'], aceptar_presupuesto: ['hecho', 'Aceptó un presupuesto'],
+  descargar_factura: ['descargar', 'Descargó una factura'], descargar_presupuesto: ['descargar', 'Descargó un presupuesto'], revocado: ['prohibido', 'Acceso revocado'] };
+const accionHtml = (k: string) => { const a = ACCION[k]; return a ? `${a[0] ? `${ico(a[0])} ` : ''}${esc(a[1])}` : esc(k); };
 let _timer = 0;
 
 async function pintar(el: HTMLElement) {
@@ -49,14 +52,14 @@ async function pintar(el: HTMLElement) {
         <div class="acciones"><button class="btn" type="submit">Dar acceso</button></div></form></section>
     <section class="tarjeta mo-scroll"><h3>Accesos</h3>${accesos.length ? `<table class="tabla"><thead><tr><th>Correo</th><th>Cliente</th><th>Última entrada</th><th></th></tr></thead><tbody>
       ${accesos.map(a => `<tr class="${a.activo ? '' : 'in-pausado'}"><td>${esc(a.email)}${a.nombre ? `<br><small class="nota">${esc(a.nombre)}</small>` : ''}</td>
-        <td>${a.tipo === 'gestoria' ? '<span class="chip">📒 Gestoría</span>' : a.cliente_id ? `<a href="#/clientes/${esc(a.cliente_id)}">${esc(nombres.get(a.cliente_id) ?? '')}</a>` : ''}</td>
+        <td>${a.tipo === 'gestoria' ? `<span class="chip">${ico('libreta')} Gestoría</span>` : a.cliente_id ? `<a href="#/clientes/${esc(a.cliente_id)}">${esc(nombres.get(a.cliente_id) ?? '')}</a>` : ''}</td>
         <td>${a.activo ? esc(a.ultima_entrada_at ? hace(a.ultima_entrada_at) : 'nunca') : `<span class="chip">revocado ${esc(hace(a.revocado_at))}</span>`}</td>
         <td><div class="acciones">${a.activo ? `<button class="btn secundario" data-action="ptEnlace" data-p0="${esc(a.id)}">Generar enlace</button>
           <button class="btn peligro" data-action="ptActivo" data-p0="${esc(a.id)}" data-p1="0">Revocar</button>`
           : `<button class="btn secundario" data-action="ptActivo" data-p0="${esc(a.id)}" data-p1="1">Reactivar</button>`}</div></td></tr>`).join('')}</tbody></table>` : '<p class="vacio">Nadie tiene acceso todavía.</p>'}
       <div id="pt-enlace"></div></section>
     <section class="tarjeta"><h3>Qué han hecho (lo último)</h3><ul class="di-ultimo">${(tr.data ?? []).map(t => `<li><small class="nota" title="${esc(fechaHora(t.created_at))}">${esc(hace(t.created_at))}</small>
-      <span>${esc(ACCION[t.accion] ?? t.accion)} · ${esc(t.email ?? emailDe.get(t.acceso_id) ?? '')}${t.detalle?.numero ? ` · #${esc(t.detalle.numero)}` : ''}${t.detalle?.mes ? ` · ${esc(t.detalle.mes)}` : ''}${t.detalle?.error ? ` · <small class="mal">${esc(t.detalle.error)}</small>` : ''}</span></li>`).join('') || '<li class="nota">Nada todavía.</li>'}</ul></section>`;
+      <span>${accionHtml(t.accion)} · ${esc(t.email ?? emailDe.get(t.acceso_id) ?? '')}${t.detalle?.numero ? ` · #${esc(t.detalle.numero)}` : ''}${t.detalle?.mes ? ` · ${esc(t.detalle.mes)}` : ''}${t.detalle?.error ? ` · <small class="mal">${esc(t.detalle.error)}</small>` : ''}</span></li>`).join('') || '<li class="nota">Nada todavía.</li>'}</ul></section>`;
 }
 
 registrarAcciones({

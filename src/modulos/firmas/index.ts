@@ -11,6 +11,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { markdown } from '../../ui/markdown';
 import { buscarClientes, nombresClientes } from '../ventas/datos';
 
@@ -54,7 +55,7 @@ async function vistaFicha(id: string): Promise<string> {
   const puede = esAdmin() || f.creado_por === usuario()?.id;
   if (f.estado === 'pendiente' && puede && location.hash.endsWith('/editar')) return `<p><a href="#/firmas/${f.id}">← Volver</a></p><h2>Editar</h2>${formulario(f, cliente)}`;
   return `<p><a href="#/firmas">← Firmas</a></p>
-    <div class="tarjeta-cab"><h2>✍️ ${esc(f.titulo)}</h2><span class="chip ${TONO[f.estado] ?? ''}">${esc(f.estado)}</span></div>
+    <div class="tarjeta-cab"><h2>${ico('firma')} ${esc(f.titulo)}</h2><span class="chip ${TONO[f.estado] ?? ''}">${esc(f.estado)}</span></div>
     <p class="nota">Creado ${esc(hace(f.created_at))} por ${esc(nombreDe(f.creado_por))}${cliente ? ` · ${esc(cliente)}` : ''} · huella <code>${esc(f.contenido_hash.slice(0, 16))}…</code></p>
     ${f.estado === 'pendiente' ? `<section class="tarjeta"><h3>Enlace para ${esc(f.firmante_nombre ?? 'el firmante')}</h3>
       <p><input readonly id="fi-enlace" value="${esc(enlace(f))}" aria-label="Enlace para firmar"></p>

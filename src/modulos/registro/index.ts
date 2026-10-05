@@ -1,7 +1,7 @@
 // Registro de cambios (paridad bloque 6, modules/auditoria.js de la app): quién
 // cambió qué y cuándo. #/registro = todo, con filtros por tabla, persona,
 // texto y fecha; #/registro/<tabla>/<id> = el historial de UNA ficha (el
-// enlace «🕘 Historial» de cliente, sitio, trabajo, ticket y presupuesto). Lo
+// enlace «Historial» de cliente, sitio, trabajo, ticket y presupuesto). Lo
 // sirve la función `historial`, que junta la auditoría del hub y la de la app
 // (marcadas «hub» / «app»). Solo admin. Prefijo de ids: rg-.
 import type { Modulo } from '../../core/modulo';
@@ -113,6 +113,6 @@ export const moduloRegistro: Modulo = {
   grupo: 'Sistema',
   icono: '🕘',
   soloAdmin: true,
-  explicacion: 'Quién cambió qué y cuándo, en el hub y en la app (cada cambio dice dónde se hizo). Cada ficha de cliente, sitio, trabajo, ticket y presupuesto tiene su «🕘 Historial».',
+  explicacion: 'Quién cambió qué y cuándo, en el hub y en la app (cada cambio dice dónde se hizo). Cada ficha de cliente, sitio, trabajo, ticket y presupuesto tiene su «Historial».',
   pintar,
 };

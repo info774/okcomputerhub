@@ -11,6 +11,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, toast, hace } from '../../ui/dom';
+import { ico, type IconoLinea } from '../../shell/linea';
 import { eur } from '../ventas/datos';
 
 interface Dia { usuario_id: string; nombre: string; fecha: string; entrada: string | null; salida: string | null; trabajado_min: number | null;
@@ -21,7 +22,10 @@ interface Gasto { id: string; created_at: string; subido_por: string | null; arc
   estado: string; error: string | null; notas: string | null; leido_por_claude: boolean }
 
 const PESTANAS: [string, string, boolean][] = [['', 'Jornada', false], ['ausencias', 'Ausencias', false], ['gastos', 'Gastos', false], ['cierre', 'Cierre del mes', true]];
-const TIPOS_AUS: Record<string, string> = { vacaciones: '🏖 Vacaciones', asuntos_propios: '📌 Asuntos propios', baja: '🩺 Baja', permiso: '📄 Permiso', otro: 'Otro' };
+const TIPOS_AUS: Record<string, string> = { vacaciones: 'Vacaciones', asuntos_propios: 'Asuntos propios', baja: 'Baja', permiso: 'Permiso', otro: 'Otro' };
+const ICONO_AUS: Record<string, IconoLinea> = { vacaciones: 'vacaciones', asuntos_propios: 'chincheta', baja: 'salud', permiso: 'documento' };
+/** Tipo de ausencia para HTML: icono (si lo tiene) y texto escapado. */
+const ausHtml = (k: string) => `${ICONO_AUS[k] ? `${ico(ICONO_AUS[k])} ` : ''}${esc(TIPOS_AUS[k] ?? k)}`;
 const ESTADO_AUS: Record<string, string> = { solicitada: 'aviso', aprobada: 'bien', rechazada: 'mal', anulada: '' };
 const CATEGORIAS = ['Material', 'Combustible', 'Dietas', 'Aparcamiento y peajes', 'Transporte', 'Software y suscripciones', 'Teléfono e internet', 'Oficina', 'Herramientas', 'Otros'];
 const leer = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
@@ -76,7 +80,7 @@ async function vistaJornada(): Promise<string> {
       <table class="tabla pe-jornada"><thead><tr><th>Día</th><th>Entrada</th><th>Salida</th><th>Trabajado</th><th>Pausas</th><th>Observaciones</th>${esAdmin() ? '<th class="no-imprimir"></th>' : ''}</tr></thead><tbody>
       ${_dias.map(d => `<tr class="${d.ausencia ? 'pe-ausencia' : ''}"><td>${esc(diaSemana(d.fecha))}</td><td>${hora(d.entrada)}</td><td>${hora(d.salida)}</td>
         <td>${hm(d.trabajado_min)}</td><td>${hm(d.pausas_min)}</td>
-        <td>${(d.trabajado_min ?? 0) > 720 && !d.ajustado ? '<span class="chip mal">más de 12 h: ¿se quedó un fichaje abierto?</span> ' : ''}${d.ausencia ? esc(TIPOS_AUS[d.ausencia] ?? d.ausencia) : ''}${d.ajustado ? ` <span class="chip aviso" title="${esc(d.motivo_ajuste ?? '')}">corregido: ${esc(d.motivo_ajuste ?? '')}</span>` : ''}${d.sesiones ? ` <small class="nota">${d.sesiones} fichaje(s)</small>` : ''}</td>
+        <td>${(d.trabajado_min ?? 0) > 720 && !d.ajustado ? '<span class="chip mal">más de 12 h: ¿se quedó un fichaje abierto?</span> ' : ''}${d.ausencia ? ausHtml(d.ausencia) : ''}${d.ajustado ? ` <span class="chip aviso" title="${esc(d.motivo_ajuste ?? '')}">corregido: ${esc(d.motivo_ajuste ?? '')}</span>` : ''}${d.sesiones ? ` <small class="nota">${d.sesiones} fichaje(s)</small>` : ''}</td>
         ${esAdmin() ? `<td class="no-imprimir"><button class="btn secundario" data-action="peCorregir" data-p0="${esc(d.fecha)}">Corregir</button></td>` : ''}</tr>`).join('')
         || `<tr><td colspan="7" class="vacio">Sin fichajes este mes.</td></tr>`}
       </tbody><tfoot><tr><th colspan="3">Total</th><th>${hm(total)}</th><th colspan="3"></th></tr></tfoot></table></div>
@@ -106,7 +110,7 @@ async function vistaAusencias(): Promise<string> {
       <label>Desde <input type="date" id="pe-aus-desde" required></label><label>Hasta <input type="date" id="pe-aus-hasta" required></label></div>
       <label>Nota <input id="pe-aus-nota" placeholder="Opcional"></label><div class="acciones"><button class="btn" type="submit">${esAdmin() ? 'Apuntar' : 'Pedir'}</button></div></form>
     <div class="tarjeta mo-scroll"><h3>Este año</h3>${todas.length ? `<table class="tabla"><thead><tr><th>Quién</th><th>Qué</th><th>Fechas</th><th>Días</th><th>Estado</th><th></th></tr></thead><tbody>
-      ${todas.map(a => `<tr><td>${esc(nombreDe(a.usuario_id))}</td><td>${esc(TIPOS_AUS[a.tipo] ?? a.tipo)}${a.nota ? `<br><small class="nota">${esc(a.nota)}</small>` : ''}</td>
+      ${todas.map(a => `<tr><td>${esc(nombreDe(a.usuario_id))}</td><td>${ausHtml(a.tipo)}${a.nota ? `<br><small class="nota">${esc(a.nota)}</small>` : ''}</td>
         <td>${esc(a.desde)} → ${esc(a.hasta)}</td><td>${a.dias ?? ''}</td><td><span class="chip ${ESTADO_AUS[a.estado] ?? ''}">${esc(a.estado)}</span>${a.respuesta ? `<br><small class="nota">${esc(a.respuesta)}</small>` : ''}</td>
         <td><div class="acciones">${esAdmin() && a.estado === 'solicitada' ? `<button class="btn" data-action="peDecidir" data-p0="${a.id}" data-p1="aprobada">Aprobar</button><button class="btn secundario" data-action="peDecidir" data-p0="${a.id}" data-p1="rechazada">Rechazar</button>` : ''}
           ${a.usuario_id === yo && a.estado === 'solicitada' ? `<button class="btn secundario" data-action="peAnular" data-p0="${a.id}">Anular</button>` : ''}</div></td></tr>`).join('')}

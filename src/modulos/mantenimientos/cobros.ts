@@ -20,6 +20,7 @@ import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
 import { esc, toast } from '../../ui/dom';
+import { ico } from '../../shell/linea';
 import { navPestanas, olvidarMantenimientos } from './vista';
 import { sedeEnZoho, sinAcentos, FRECUENCIAS, normalizaFrecuencia, mesesDe, fechaCorta, IGIC, urlZohoBilling } from './datos';
 import { planesActivos } from './planes';
@@ -139,9 +140,9 @@ export async function pintarCobros(el: HTMLElement, sub?: string, id?: string) {
       ${enCurso.length ? kpi(String(enCurso.length), 'Cobros en curso (SEPA, ~6 días)', lentos.length ? 'atento' : '', lentos.length ? `${lentos.length} sin liquidar hace más de ${DIAS_SEPA} días` : '') : ''}
       ${kpi(String(impagados.length), 'Recibos devueltos', impagados.length ? 'mal' : 'bien')}
       ${kpi(String(sinFacturar.length), 'Cobros sin factura en Zoho', sinFacturar.length ? 'mal' : 'bien')}</div>
-    <div class="acciones mo-barra"><button class="btn secundario" data-action="mcbSync"${dis()}>⬇ Traer estado de Stripe</button>
-      <a class="btn secundario" href="#/mantenimientos/cobros/ajustes">⚙ Ajustes de facturación</a>
-      <a class="btn secundario" href="https://dashboard.stripe.com/subscriptions" target="_blank" rel="noopener">↗ Panel de Stripe</a></div>
+    <div class="acciones mo-barra"><button class="btn secundario" data-action="mcbSync"${dis()}>${ico('descargar')} Traer estado de Stripe</button>
+      <a class="btn secundario" href="#/mantenimientos/cobros/ajustes">${ico('ajustes')} Ajustes de facturación</a>
+      <a class="btn secundario" href="https://dashboard.stripe.com/subscriptions" target="_blank" rel="noopener">${ico('externo')} Panel de Stripe</a></div>
     <div class="acciones mo-barra"><input id="mcb-q" type="search" placeholder="Buscar cliente, sede, plan o número de factura…" value="${esc(_q)}" data-on-input="mcbBuscar:$value" aria-label="Buscar">
       ${FILTROS.map(([k, n]) => `<button class="chip-boton ${_filtro === k ? 'activo' : ''}" data-action="mcbFiltro" data-p0="${k}" aria-pressed="${_filtro === k}">${n}</button>`).join('')}</div>
     <section class="tarjeta"><h3>Sedes</h3>${vistos.length ? `<ul class="mdo-lista" id="mcb-sedes">${vistos.map(filaSede).join('')}</ul>`
@@ -156,11 +157,11 @@ function chipsSede(c: Cobro): string {
   const plan = chip(esc(c.plan ?? ''));
   if (esStripe(c)) {
     const [t, tono] = ESTADO_STRIPE[c.stripe_estado ?? ''] ?? ['', ''];
-    return [plan, t ? chip(t, tono) : '', c.stripe_mandato_estado !== 'activo' ? chip('⚠ Falta el medio de pago', 'aviso') : chip('Tarjeta o SEPA'), chipEnCurso(c)].join(' ');
+    return [plan, t ? chip(t, tono) : '', c.stripe_mandato_estado !== 'activo' ? chip(`${ico('atencion')} Falta el medio de pago`, 'aviso') : chip('Tarjeta o SEPA'), chipEnCurso(c)].join(' ');
   }
   if (c.zoho_subscription_id) {
     return [plan, chip('Zoho Billing'), zohoDeBaja(c) ? chip('Baja en Zoho · ya no cobra') : c.zoho_estado ? chip(esc(c.zoho_estado)) : '',
-      Number(c.zoho_deuda) > 0 ? chip(`⚠ Debe ${euros(c.zoho_deuda)}${c.zoho_facturas_impagadas ? ` (${c.zoho_facturas_impagadas})` : ''}`, 'mal')
+      Number(c.zoho_deuda) > 0 ? chip(`${ico('atencion')} Debe ${euros(c.zoho_deuda)}${c.zoho_facturas_impagadas ? ` (${c.zoho_facturas_impagadas})` : ''}`, 'mal')
         : c.zoho_sync_error ? `<span class="chip aviso" title="${esc(c.zoho_sync_error)}">Sin comprobar en Zoho</span>` : ''].join(' ');
   }
   return `${plan} ${chip('Sin domiciliar', 'aviso')}`;
@@ -169,7 +170,7 @@ function chipsSede(c: Cobro): string {
 function chipEnCurso(c: Cobro): string {
   if (!c.stripe_cobro_en_curso_at) return '';
   const dias = Math.floor((Date.now() - Date.parse(c.stripe_cobro_en_curso_at)) / 86_400_000);
-  return `<span class="chip ${dias > DIAS_SEPA ? 'aviso' : ''}" title="Con SEPA el adeudo tarda unos 6 días hábiles; hasta entonces no hay factura de Zoho.">⏳ ${dias > DIAS_SEPA ? `Cobro sin liquidar (${dias} días)` : 'Cobro en curso'}</span>`;
+  return `<span class="chip ${dias > DIAS_SEPA ? 'aviso' : ''}" title="Con SEPA el adeudo tarda unos 6 días hábiles; hasta entonces no hay factura de Zoho.">${ico('espera')} ${dias > DIAS_SEPA ? `Cobro sin liquidar (${dias} días)` : 'Cobro en curso'}</span>`;
 }
 
 // Los botones de una sede según quién la cobra (los MISMOS en el cuadro y en su página).
@@ -177,19 +178,19 @@ function botonesSede(c: Cobro): string {
   const id = esc(c.local_id), d = dis();
   if (esStripe(c)) {
     const ok = c.stripe_mandato_estado === 'activo';
-    return `${ok ? '' : `<button class="btn" data-action="mcbMandato" data-p0="${id}"${d}>🔗 Enlace de pago</button>`}
-      <a class="btn secundario" href="#/mantenimientos/cobros/sede/${id}">🧾 Cuotas</a>
-      <a class="btn secundario" href="#/mantenimientos/cobros/cambiar/${id}">✎ Cambiar plan</a>
-      ${ok ? `<button class="btn secundario" data-action="mcbMandato" data-p0="${id}"${d}>🏦 Cambiar medio de pago</button>` : ''}
-      <button class="btn secundario" data-action="mcbPortal" data-p0="${id}"${d}>👤 Portal cliente</button>
-      ${c.stripe_estado === 'paused' ? `<button class="btn secundario" data-action="mcbReanudar" data-p0="${id}"${d}>▶ Reanudar</button>`
-        : `<button class="btn secundario" data-action="mcbPausar" data-p0="${id}"${d}>⏸ Pausar</button>`}
+    return `${ok ? '' : `<button class="btn" data-action="mcbMandato" data-p0="${id}"${d}>${ico('enlace')} Enlace de pago</button>`}
+      <a class="btn secundario" href="#/mantenimientos/cobros/sede/${id}">${ico('recibo')} Cuotas</a>
+      <a class="btn secundario" href="#/mantenimientos/cobros/cambiar/${id}">${ico('editar')} Cambiar plan</a>
+      ${ok ? `<button class="btn secundario" data-action="mcbMandato" data-p0="${id}"${d}>${ico('banco')} Cambiar medio de pago</button>` : ''}
+      <button class="btn secundario" data-action="mcbPortal" data-p0="${id}"${d}>${ico('persona')} Portal cliente</button>
+      ${c.stripe_estado === 'paused' ? `<button class="btn secundario" data-action="mcbReanudar" data-p0="${id}"${d}>${ico('play')} Reanudar</button>`
+        : `<button class="btn secundario" data-action="mcbPausar" data-p0="${id}"${d}>${ico('pausa')} Pausar</button>`}
       <button class="btn peligro" data-action="mcbCancelar" data-p0="${id}"${d}>✕ Dar de baja</button>`;
   }
   // Cartera vieja de Zoho Billing: la cobra Zoho; aquí solo se mira y se desvincula (tanda 4: comprobar).
   // «Comprobar en Zoho» vale ya (solo lee; con el corte, además guarda en la sede).
-  const comprobar = c.zoho_subscription_id ? `<button class="btn secundario" data-action="mcbComprobarZoho" data-p0="${id}">⬇ Comprobar en Zoho</button>` : '';
-  if (sedeEnZoho(c)) return `<a class="btn secundario" href="${esc(urlZohoBilling(c.zoho_subscription_id))}" target="_blank" rel="noopener">↗ Ver en Zoho</a> ${comprobar}
+  const comprobar = c.zoho_subscription_id ? `<button class="btn secundario" data-action="mcbComprobarZoho" data-p0="${id}">${ico('descargar')} Comprobar en Zoho</button>` : '';
+  if (sedeEnZoho(c)) return `<a class="btn secundario" href="${esc(urlZohoBilling(c.zoho_subscription_id))}" target="_blank" rel="noopener">${ico('externo')} Ver en Zoho</a> ${comprobar}
       <button class="btn secundario" data-action="mcbDesvincular" data-p0="${id}"${d}>Desvincular de Zoho</button>`;
   return `<button class="btn" data-action="mcbCrear" data-p0="${id}"${d}>＋ Domiciliar</button>${zohoDeBaja(c) ? ` ${comprobar} <button class="btn secundario" data-action="mcbDesvincular" data-p0="${id}"${d}>Desvincular de Zoho</button>` : ''}`;
 }
@@ -198,8 +199,8 @@ function filaSede(c: Cobro): string {
   const neto = netoSede(c), bruto = conImpuesto(neto * mesesDe(c.frecuencia_pago));
   return `<li data-sede="${esc(c.local_id)}"><div class="mdo-cab"><a href="#/mantenimientos/cobros/sede/${esc(c.local_id)}"><strong>${esc(c.cliente_nombre || '—')}</strong> · ${esc(c.local_nombre || '—')}</a></div>
     <p class="mdo-cab">${chipsSede(c)} ${neto ? `<span>${euros(neto)}/mes${c.frecuencia_pago ? ` · ${esc(normalizaFrecuencia(c.frecuencia_pago) ?? c.frecuencia_pago)}` : ''}</span> <small class="nota">se cargan ${euros(bruto)} ${cada(c.frecuencia_pago)}</small>` : ''}</p>
-    <p class="nota">${c.proxima_cuota && esStripe(c) ? `📅 Próx. cuota ${esc(fechaCorta(c.proxima_cuota))}` : ''}${c.ultima_factura_numero ? ` · Últ. factura ${esc(c.ultima_factura_numero)}${c.ultima_factura_zoho_estado === 'error' ? ' ⚠' : ''}` : ''}</p>
-    ${c.stripe_ultimo_error ? `<p class="g-mal">⚠ ${esc(c.stripe_ultimo_error)}</p>` : ''}
+    <p class="nota">${c.proxima_cuota && esStripe(c) ? `${ico('calendario')} Próx. cuota ${esc(fechaCorta(c.proxima_cuota))}` : ''}${c.ultima_factura_numero ? ` · Últ. factura ${esc(c.ultima_factura_numero)}${c.ultima_factura_zoho_estado === 'error' ? ` ${ico('atencion')}` : ''}` : ''}</p>
+    ${c.stripe_ultimo_error ? `<p class="g-mal">${ico('atencion')} ${esc(c.stripe_ultimo_error)}</p>` : ''}
     <div class="acciones">${botonesSede(c)}</div></li>`;
 }
 
@@ -209,18 +210,18 @@ function filaFactura(f: Factura): string {
   const abonos = _abonos.filter(a => a.factura_id === f.id);
   const abonado = abonos.reduce((s, a) => s + Number(a.importe || 0), 0);
   const abonable = Math.round((Number(f.importe || 0) - abonado) * 100) / 100;
-  const zoho = f.zoho_invoice_id ? chip(`Zoho ${esc(f.zoho_invoice_number ?? '✓')}`, 'bien') : f.zoho_estado === 'error' ? chip('⚠ Sin facturar', 'mal') : f.estado === 'pagada' ? chip('Pendiente de emitir', 'aviso') : '';
-  const correo = !f.zoho_invoice_id ? '' : f.email_enviado_at ? `<span class="chip bien" title="${esc((f.email_destinatarios ?? []).join(', '))}">✉ Enviada al cliente</span>` : chip('Sin enviar', 'aviso');
+  const zoho = f.zoho_invoice_id ? chip(`Zoho ${esc(f.zoho_invoice_number ?? '✓')}`, 'bien') : f.zoho_estado === 'error' ? chip(`${ico('atencion')} Sin facturar`, 'mal') : f.estado === 'pagada' ? chip('Pendiente de emitir', 'aviso') : '';
+  const correo = !f.zoho_invoice_id ? '' : f.email_enviado_at ? `<span class="chip bien" title="${esc((f.email_destinatarios ?? []).join(', '))}">${ico('correo')} Enviada al cliente</span>` : chip('Sin enviar', 'aviso');
   // Stripe COBRA, no factura: su PDF es un apunte interno, no la factura del cliente.
   const interno = f.stripe_invoice_id ? `<small class="nota">Stripe${f.tipo === 'alta' ? ' · 1ª cuota' : ''}${f.stripe_pdf_url && /^https:\/\//.test(f.stripe_pdf_url) ? ` · <a href="${esc(f.stripe_pdf_url)}" target="_blank" rel="noopener" title="Apunte interno del cobro en Stripe. La factura del cliente es la de Zoho (serie MANT-).">cobro interno</a>` : ''}</small>` : '';
   return `<p class="mdo-cab"><strong>${euros(f.importe)}</strong> ${chip(esc(t), tono)} ${zoho} ${correo} ${interno}
       <small class="nota">${esc(fechaCorta(f.fecha_emision || f.created_at))}${f.periodo_inicio && f.periodo_fin ? ` · ${esc(fechaCorta(f.periodo_inicio))} – ${esc(fechaCorta(f.periodo_fin))}` : ''}</small>
       ${Number(f.saldo_aplicado) > 0.005 ? `<small class="nota">${euros(Number(f.importe) - Number(f.saldo_aplicado))} en efectivo · ${euros(f.saldo_aplicado)} de saldo</small>` : ''}</p>
     ${f.error_pago ? `<p class="g-mal">${esc(f.error_pago)}</p>` : ''}${f.zoho_error ? `<p class="g-aviso">${esc(f.zoho_error)}</p>` : ''}
-    ${abonos.map(a => `<p class="nota mcb-abono">↩ <strong>${esc(a.numero_serie ?? 'Abono')}</strong> −${euros(a.importe)} · ${esc(a.motivo)}${a.zoho_creditnote_number ? ` · Zoho ${esc(a.zoho_creditnote_number)}` : ''}${a.stripe_balance_txn_id ? ' · saldo aplicado' : ''}${a.zoho_error || a.stripe_error ? ` <span class="g-mal">${esc(a.zoho_error || a.stripe_error || '')}</span>` : ''}</p>`).join('')}
+    ${abonos.map(a => `<p class="nota mcb-abono">${ico('volver')} <strong>${esc(a.numero_serie ?? 'Abono')}</strong> −${euros(a.importe)} · ${esc(a.motivo)}${a.zoho_creditnote_number ? ` · Zoho ${esc(a.zoho_creditnote_number)}` : ''}${a.stripe_balance_txn_id ? ' · saldo aplicado' : ''}${a.zoho_error || a.stripe_error ? ` <span class="g-mal">${esc(a.zoho_error || a.stripe_error || '')}</span>` : ''}</p>`).join('')}
     ${(f.estado === 'pagada' && !f.zoho_invoice_id) || (f.zoho_invoice_id && abonable > 0.005) ? `<div class="acciones">
       ${f.estado === 'pagada' && !f.zoho_invoice_id ? `<button class="btn secundario" data-action="mcbEmitir" data-p0="${esc(f.id)}"${dis()}>↻ Emitir en Zoho</button>` : ''}
-      ${f.zoho_invoice_id && abonable > 0.005 && _escribe ? `<a class="btn secundario" href="#/mantenimientos/cobros/abonar/${esc(f.id)}">↩ Abonar</a>` : ''}</div>` : ''}`;
+      ${f.zoho_invoice_id && abonable > 0.005 && _escribe ? `<a class="btn secundario" href="#/mantenimientos/cobros/abonar/${esc(f.id)}">${ico('volver')} Abonar</a>` : ''}</div>` : ''}`;
 }
 
 // El enlace de pago no se copia solo: se enseña con WhatsApp y correo, que es como se le manda.
@@ -230,9 +231,9 @@ function panelEnlace(): string {
   const msg = `Hola${sede?.cliente_nombre ? ` ${sede.cliente_nombre}` : ''}, para pagar la cuota de mantenimiento de OK Computer Tenerife (con tarjeta o domiciliándola por SEPA) solo tienes que entrar en este enlace seguro: ${url}`;
   return `<section class="tarjeta" id="mcb-enlace"><h3>Enlace de pago</h3>
     <label>Enlace <input id="mcb-url" readonly value="${esc(url)}"></label>
-    <div class="acciones"><button class="btn secundario" data-action="mcbCopiar">📋 Copiar</button>
-      <a class="btn secundario" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">💬 WhatsApp</a>
-      <a class="btn secundario" href="mailto:${encodeURIComponent(sede?.cliente_email ?? '')}?subject=${encodeURIComponent('Pago de la cuota de mantenimiento · OK Computer Tenerife')}&body=${encodeURIComponent(msg)}">✉️ Correo</a>
+    <div class="acciones"><button class="btn secundario" data-action="mcbCopiar">${ico('lista')} Copiar</button>
+      <a class="btn secundario" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${ico('mensaje')} WhatsApp</a>
+      <a class="btn secundario" href="mailto:${encodeURIComponent(sede?.cliente_email ?? '')}?subject=${encodeURIComponent('Pago de la cuota de mantenimiento · OK Computer Tenerife')}&body=${encodeURIComponent(msg)}">${ico('correo')} Correo</a>
       <button class="btn secundario" data-action="mcbCerrarEnlace">Cerrar</button></div>
     <p class="nota">${caduca ? `El enlace caduca el ${esc(fechaCorta(caduca))}.` : 'Es de un solo uso y dura 24 horas.'} Si caduca, genera otro desde aquí.</p></section>`;
 }
@@ -245,7 +246,7 @@ function panelZoho(): string {
       <div><dt>Estado en Zoho</dt><dd>${esc(z.status || '—')}</dd></div><div><dt>Estado de pago</dt><dd>${esc(z.estado_pago || '—')}</dd></div>
       <div><dt>Debe</dt><dd>${z.deuda != null ? `${euros(z.deuda)}${z.facturas_impagadas ? ` (${z.facturas_impagadas} facturas)` : ''}` : `<span class="nota">sin consultar${z.deuda_error ? `: ${esc(z.deuda_error)}` : ''}</span>`}</dd></div>
       <div><dt>Cuota (con impuesto)</dt><dd>${euros(z.importe)}</dd></div><div><dt>Próxima cuota</dt><dd>${esc(fechaCorta(z.proxima_cuota)) || '—'}</dd></div></dl>
-      ${z.url ? `<p><a href="${esc(z.url)}" target="_blank" rel="noopener">↗ Abrir en Zoho Billing</a></p>` : ''}`}
+      ${z.url ? `<p><a href="${esc(z.url)}" target="_blank" rel="noopener">${ico('externo')} Abrir en Zoho Billing</a></p>` : ''}`}
     <p class="nota">${z.guardado ? 'Guardado en la sede.' : 'Solo consultado: hasta el cambio, la sede la actualiza la app cada noche.'}</p>
     <button class="btn secundario" data-action="mcbCerrarZoho">Cerrar</button></section>`;
 }
@@ -271,7 +272,7 @@ function pintarSede(el: HTMLElement, id: string) {
       <dl class="me-datos mcb-datos">${dato('Cuota', neto ? `${euros(neto)}/mes <small class="nota">${_cfg?.precio_incluye_impuesto ? 'con impuestos' : 'sin impuestos'}</small><br><small class="nota">Se le cargan ${euros(conImpuesto(neto * meses))} ${cada(c.frecuencia_pago)}</small>${c.importe_incluye_impuesto ? `<br><small class="g-aviso">Heredado de Zoho (${euros(c.importe_mantenimiento)} con impuesto)</small>` : ''}` : '—')}
         ${dato('Frecuencia', esc(normalizaFrecuencia(c.frecuencia_pago) ?? c.frecuencia_pago ?? '—'))}${dato('Forma de pago', esc(c.forma_pago || '—'))}${dato('Estado de pago', esc(c.estado_pago || '—'))}
         ${dato('Próxima cuota', c.proxima_cuota && esStripe(c) ? esc(fechaCorta(c.proxima_cuota)) : '—')}</dl>
-      ${c.stripe_ultimo_error ? `<p class="g-mal">⚠ ${esc(c.stripe_ultimo_error)}</p>` : ''}
+      ${c.stripe_ultimo_error ? `<p class="g-mal">${ico('atencion')} ${esc(c.stripe_ultimo_error)}</p>` : ''}
       ${c.stripe_sync_at ? `<p class="nota">Estado traído de Stripe el ${esc(fechaCorta(c.stripe_sync_at))}.</p>` : ''}
       <div class="acciones">${deudaPlan(c) || !sinCobro(c) ? botonesSede(c) : ''}${esStripe(c) ? `<button class="btn secundario" data-action="mcbSync" data-p0="${esc(c.local_id)}"${dis()}>↻ Traer estado de Stripe</button>` : ''}</div></section>
     <section class="tarjeta"><h3>Cuotas</h3>${_facturas.length ? `<ul class="mdo-lista" id="mcb-libro">${_facturas.map(f => `<li data-factura="${esc(f.id)}">${f.numero_serie ? `<strong>${esc(f.numero_serie)}</strong>` : ''}${filaFactura(f)}</li>`).join('')}</ul>`
