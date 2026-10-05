@@ -341,6 +341,16 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `hub.jornada_ajustes` (motivo + autor). Gestoría = acceso del portal de
   `tipo = 'gestoria'`: todo lo que ve pasa por las acciones `g_*` de la función
   `portal` y queda en `portal_traza`.
+- Gastos y cobros de la app (paridad bloque 7, tanda 2, PREPARADO para el corte
+  del área `gastos`): UNIFICADOS en Personas → Gastos (`personas/movimientos.ts`,
+  `pm-`; `#/personas/gastos/gasto|cobro[/t/<trabajo>]` y `/mov/<id>`), debajo de
+  los tickets de Claude. La foto va al cubo privado por `gastos-ocr` (`foto`) y
+  `foto_url` = `hub:gastos/<ruta>` (se abre con `foto_url`, enlace de minutos);
+  las viejas de la app (Drive o data URL) se abren tal cual. Borrar, solo admin.
+- Facturas de compra (bloque 7, tanda 2): DEL HUB desde ya (`hub.facturas_compra`;
+  en la app la tabla nunca llegó a producción). Almacén → «Facturas de compra»
+  (`almacen/facturas.ts`, `afc-`); el adjunto lo sube y lo lee `gastos-ocr`
+  (`compra`, `compra_url`). Arnés de las dos: `verify-compras-gastos.mjs`.
 - Firmas: lo firmado es inmutable (trigger `hub.firma_antes`); solo
   `hub.firma_firmar` (service_role, con la huella) lo pasa a firmado.
 - Ficheros privados (Storage, cubo `gastos`): los sube y firma URLs
@@ -571,6 +581,18 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   libro de movimientos (`#/inventario/movimientos`; llegan cada noche) y la
   ficha del producto. Espejo en SOLO LECTURA (área `inventario`); lo agregado
   por material y «qué pedir» siguen en `#/almacen`. Arnés `verify-inventario.mjs`.
+  Desde el 2026-10-05 (paridad bloque 7, tanda 1) con escritura PREPARADA para
+  el corte (`inventario/escritura.ts`, `inw-`): `#/inventario/nuevo[/<ubic>]`,
+  `/<id>/editar`, `/<id>/mover`, `/vehiculo`, `/albaran` e `/importar`. El
+  stock NUNCA se toca a secas: todo va por `hub.inventario_guardar`,
+  `_mover` y `_entradas` (`20261031_inventario.sql`, exigen el área), que
+  apuntan el movimiento a nombre de quien lo hace y enlazan (o crean) la ficha
+  del catálogo (`hub.inventario_catalogo`, la regla de
+  `syncInventarioACatalogo`). Albarán = Claude lee en `gastos-ocr`
+  (`accion: 'albaran'`, no guarda nada) y lo que ya está por nombre SUMA;
+  Excel = CSV (`leerCsv` de `ui/csv.ts`), cada fila un alta, como la app. Tras
+  escribir se dispara `hub:inventario` para que la vista relea. Arnés
+  `verify-inventario-escritura.mjs`.
 - **Sistema común de pantallas** (2026-10-04): el bloque «Sistema común» al
   final de `src/estilo.css` da a TODAS las pantallas el acabado del modo
   escritorio (cabecera de cristal, botones, tablas con cabecera en versalitas y

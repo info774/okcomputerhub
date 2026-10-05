@@ -629,6 +629,7 @@ try {
   const noCortado = psql(como('authenticated', 'tito@ok.test', `select hub.fichar('inicio', 'trabajo', '${tr}');`), { esperaError: true });
   ok(!noCortado.ok && /app/.test(noCortado.err), 'final: sin el corte, fichar desde el hub avisa de que se hace en la app');
   ok(!psql(como('authenticated', 'tito@ok.test', `select hub.trabajo_guardar_lineas('${tr}', '[]');`), { esperaError: true }).ok, 'final: sin el corte, el material tampoco');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.inventario_entradas(gen_random_uuid(), '[{"nombre":"x","cantidad":1}]');`), { esperaError: true }).ok, 'inventario: sin el corte, el albarán no entra');
   psql(`insert into hub.trabajos (id, numero, titulo, estado, fecha_programada) values ('00000000-0000-0000-0000-0000000000e2', 699, 'Copia de la app', 'Pendiente', current_date)`);
   ok(psql(`select count(*) from hub.agenda where trabajo_id = '00000000-0000-0000-0000-0000000000e2'`) === '0', 'paridad: sin el corte, una fecha en el trabajo no crea bloque (la agenda la trae el espejo)');
   // Chat
@@ -852,6 +853,45 @@ commit;`);
     'whatsapp: los códigos de las sedes y los mensajes, solo las funciones');
   ok(psql(`select array_to_string(tablas, ',') from hub.areas where area = 'whatsapp'`) === 'wa_conversaciones,wa_mensajes'
     && psql(`select 'ticket_adjuntos' = any (tablas) from hub.areas where area = 'tickets'`) === 't', 'whatsapp: área propia y los adjuntos con los tickets');
+
+  // Inventario completo (paridad bloque 7, tanda 1): tras el corte, todo movimiento deja su apunte.
+  psql(`insert into hub.furgonetas (id, nombre) values ('00000000-0000-0000-0000-0000000000a1', 'Furgo 1'), ('00000000-0000-0000-0000-0000000000a2', 'Tienda')`);
+  const invNuevo = una('tito@ok.test', `select hub.inventario_guardar(null, '00000000-0000-0000-0000-0000000000a1', '{"nombre":"Cable HDMI","cantidad":5,"precio":4,"codigo_principal":"HDMI-2"}');`);
+  ok(psql(`select count(*) from hub.catalogo where nombre = 'Cable HDMI' and referencia = 'HDMI-2'`) === '1'
+    && psql(`select (catalogo_id is not null)::text from hub.furgoneta_inventario where id = '${invNuevo}'`) === 'true'
+    && psql(`select tipo || cantidad || tecnico_id from hub.furgoneta_movimientos where producto_id = '${invNuevo}'`) === 'entrada5Tito',
+    'inventario: el alta crea su ficha del catálogo, la enlaza y apunta la entrada a nombre de quien la da');
+  una('tito@ok.test', `select hub.inventario_guardar('${invNuevo}', null, '{"nombre":"Cable HDMI","cantidad":3,"precio":4}');`);
+  ok(psql(`select string_agg(tipo || cantidad, ',' order by created_at, tipo) from hub.furgoneta_movimientos where producto_id = '${invNuevo}'`) === 'entrada5,salida2',
+    'inventario: corregir la cantidad en la ficha deja la diferencia como movimiento');
+  ok(una('tito@ok.test', `select hub.inventario_mover('${invNuevo}', 'salida', 10);`) === '0', 'inventario: una salida nunca deja el stock por debajo de 0');
+  una('tito@ok.test', `select hub.inventario_mover('${invNuevo}', 'entrada', 4);`);
+  una('tito@ok.test', `select hub.inventario_mover('${invNuevo}', 'trasvase', 3, '00000000-0000-0000-0000-0000000000a2', 'Para la tienda');`);
+  ok(psql(`select cantidad || '|' || (catalogo_id is not null)::text from hub.furgoneta_inventario where furgoneta_id = '00000000-0000-0000-0000-0000000000a2' and nombre = 'Cable HDMI'`) === '3|true'
+    && psql(`select cantidad from hub.furgoneta_inventario where id = '${invNuevo}'`) === '1'
+    && psql(`select count(*) from hub.furgoneta_movimientos where notas = 'Trasvase recibido (Para la tienda)'`) === '1',
+    'inventario: el trasvase sale del origen, da de alta en el destino (con su ficha) y apunta los dos lados');
+  const alb = una('tito@ok.test', `select hub.inventario_entradas('00000000-0000-0000-0000-0000000000a2', '[{"nombre":"cable hdmi","cantidad":2},{"nombre":"Switch 8p","cantidad":1,"precio":25,"referencia":"SW8"}]');`);
+  ok(alb.includes('"altas": 1') && alb.includes('"sumadas": 1') && psql(`select cantidad from hub.furgoneta_inventario where furgoneta_id = '00000000-0000-0000-0000-0000000000a2' and nombre = 'Cable HDMI'`) === '5',
+    'inventario: el albarán suma a lo que ya hay (por nombre) y da de alta lo nuevo');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.inventario_mover('${invNuevo}', 'trasvase', 1, '00000000-0000-0000-0000-0000000000a1');`), { esperaError: true }).ok,
+    'inventario: un trasvase a la misma ubicación no vale');
+
+  // Facturas de compra (del hub) y gastos de la app (paridad bloque 7, tanda 2).
+  psql(`insert into hub.proveedores (id, nombre) values ('00000000-0000-0000-0000-0000000000d1', 'Diverso Canarias')`);
+  const fc = una('tito@ok.test', `insert into hub.facturas_compra (proveedor_id, numero, importe, vence) values ('00000000-0000-0000-0000-0000000000d1', 'F-77', 120.5, current_date - 1) returning id;`);
+  ok(psql(`select (creado_por = (select id from hub.usuarios where email = 'tito@ok.test'))::text || '|' || estado from hub.facturas_compra where id = '${fc}'`) === 'true|Pendiente',
+    'compras: cualquiera del equipo registra la factura del proveedor, a su nombre');
+  una('tito@ok.test', `update hub.facturas_compra set estado = 'Pagada' where id = '${fc}';`);
+  ok(psql(`select (pagada_at = current_date)::text from hub.facturas_compra where id = '${fc}'`) === 'true', 'compras: marcarla pagada apunta el día');
+  una('tito@ok.test', `delete from hub.facturas_compra where id = '${fc}';`);
+  ok(psql(`select count(*) from hub.facturas_compra where id = '${fc}'`) === '1' && psql(`select count(*) from hub.auditoria where tabla = 'facturas_compra'`) !== '0',
+    'compras: un técnico no la elimina (solo admin) y queda auditada');
+  const gm = una('tito@ok.test', `insert into hub.gastos (tipo, importe, fecha, descripcion, tecnico_id) values ('cobro', 40, current_date, 'Cobro en mano', 'Tito') returning id;`);
+  una('tito@ok.test', `delete from hub.gastos where id = '${gm}';`);
+  ok(gm.length === 36 && psql(`select count(*) from hub.gastos where id = '${gm}'`) === '1', 'gastos: tras el corte se apuntan en el hub, y borrar es de un admin');
+  una('ana@ok.test', `delete from hub.gastos where id = '${gm}';`);
+  ok(psql(`select count(*) from hub.gastos where id = '${gm}'`) === '0', 'gastos: el admin sí lo borra');
 
   // Feedback y avisos push (paridad bloque 6, tanda 4).
   psql(como('authenticated', 'tito@ok.test', `insert into hub.feedback (tipo, descripcion, estado, autor_nombre, resultado) values ('bug', 'No guarda la sede', 'hecha', 'Otro', 'trampa');`));

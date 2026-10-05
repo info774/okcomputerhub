@@ -102,6 +102,11 @@ Fran, 2026-10-03).
 7. **Resto**: inventario completo (albaranes, historial, Excel), VeriFactu,
    facturas de compra, gastos y cobros de la app, control de equipos, Google
    (Calendar, Contactos, Drive).
+   Decisiones de Fran (2026-10-05): gastos y cobros de la app, UNIFICADOS en
+   Personas → Gastos (con el OCR); VeriFactu, listo para el cambio (se edita
+   en la app hasta su OK); control de equipos, se VE ya lo que comprueba la app
+   y la pasada propia queda preparada sin encender; Google Calendar (capa de
+   solo lectura) funcionando ya, Contactos y Drive listos para el cambio.
 
 ## El mapa
 
@@ -213,21 +218,21 @@ Fran, 2026-10-03).
 | Asignar cliente a sede suelta al facturar | Preparado | La pantalla de facturar pide el cliente y se lo deja a las sedes sueltas y sus trabajos | Corte. |
 | Factura o presupuesto en PDF por WhatsApp | Hecho | Chat de WhatsApp → «📎 Factura / presupuesto» (función `whatsapp`, `enviar_documento`; solo documentos de ese cliente) | Desde la lista de facturas a un teléfono suelto (el hub aún no tiene el listado de facturas). Fuera de 24 h, `WHATSAPP_PLANTILLA_DOCUMENTO` (PENDIENTE_FRAN §1 quater). |
 | Tablero VeriFactu (`modules/verifactu.js`) | Falta | — | Tabla y pantalla. |
-| Facturas de compra (`facturas_compra.js`) | Falta | — | — |
+| Facturas de compra (`facturas_compra.js`) | Hecho | Almacén → «Facturas de compra» (`#/almacen/facturas`, `almacen/facturas.ts`, `afc-`): alta con el adjunto leído por Claude (`gastos-ocr`, acción `compra`; elige el proveedor por NIF), desde un pedido, vencidas, pagada; eliminar solo admin; `hub.facturas_compra` (`20261101_compras_gastos.sql`) | Es del hub desde ya: en la app su tabla nunca llegó a producción. El adjunto va al almacén privado, no a Drive. |
 
 ### 7. Inventario y almacén
 
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
-| Inventario por ubicación, movimientos, trasvases (`furgonetas.js`) | Solo lectura | `#/almacen` (+ Enlace «Inventario») | Corte del área `inventario`. |
-| Historial de una furgoneta | Falta | — | Lista de movimientos. |
-| Albaranes, importar/exportar Excel | Falta | — | — |
+| Inventario por ubicación, movimientos, trasvases (`furgonetas.js`) | Preparado | `#/inventario` (stock por ubicación y total, libro de movimientos, ficha); alta y edición con el buscador del catálogo, «Mover» (entrada, salida, trasvase) y ubicación nueva (`inventario/escritura.ts`, `inw-`) sobre `hub.inventario_guardar` / `_mover` (`20261031_inventario.sql`: cada cambio deja su apunte) | Corte del área `inventario`. |
+| Historial de una furgoneta | Hecho | `#/inventario/movimientos` filtrado por la ubicación (y los de cada producto en su ficha) | — |
+| Albaranes, importar/exportar Excel | Preparado | «Excel» de la lista (vale ya, CSV como el resto del hub); «Escanear albarán» (Claude lee en `gastos-ocr`, acción `albaran`; lo ya existente suma) e «Importar» (CSV de Excel) por `hub.inventario_entradas` | Corte; el albarán necesita la clave de Claude (en la app llamaba a Anthropic sin clave). Excel nativo (.xlsx): se guarda como CSV. |
 | Pedidos internos de reposición | Hecho | `#/almacen` (MRP, qué pedir) | — |
 | Catálogo (editar, categorías, sync de Zoho) | Solo lectura | espejo `hub.catalogo` | — |
-| Inventario → catálogo | Falta | — | — |
+| Inventario → catálogo | Preparado | `hub.inventario_catalogo` (busca por nombre o referencia; si no está, crea la ficha como Hardware y la enlaza), en todo alta, trasvase o entrada | Corte. |
 | Proveedores | Hecho | `#/almacen` | — |
 | Pedidos de compra | Hecho | `#/almacen` | La entrada se da en la app. |
-| Alta de vehículos | Falta | — | — |
+| Alta de vehículos | Preparado | `#/inventario/vehiculo` (nombre y a cargo de quién) | Corte. |
 
 ### 8. Personas, fichaje y gastos
 
@@ -235,7 +240,7 @@ Fran, 2026-10-03).
 |---|---|---|---|
 | Mis horas | Hecho | `#/personas` (Jornada) | — |
 | Informe de horas del mes | Hecho | `#/personas` | — |
-| Gastos y cobros en efectivo con foto (`gastos.js`) | Falta | `#/personas` (Gastos por OCR, flujo propio) | Gasto y cobro de la app. |
+| Gastos y cobros en efectivo con foto (`gastos.js`) | Preparado | Personas → Gastos (decisión de Fran: unificados con los tickets de Claude): lista del mes con trabajo, contacto y sede; «+ Gasto» (categoría, foto al almacén privado) y «+ Cobro» (descripción obligatoria), editar, eliminar solo admin; «Gasto» y «Cobro» en la ficha del trabajo (`personas/movimientos.ts`, `pm-`) | Corte del área `gastos`. |
 | Usuarios: alta y activar (`configuracion.js`) | Preparado | `#/usuarios` (admin): alta, rol, teléfono del WhatsApp del equipo y activar/desactivar (nunca a uno mismo) | Corte del área `usuarios` (hasta entonces, solo lectura: se dan de alta en la app). |
 | Modo empleado (menú reducido) | Hecho | `core/empleado.ts`: quien no es admin ve el menú del técnico (el de la app + comandas, tablero, wiki, buscador, reloj y monitorización); en el móvil entra a `#/hoy` | — |
 

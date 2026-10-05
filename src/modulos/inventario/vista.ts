@@ -1,4 +1,5 @@
-// Vista de Inventario (ver index.ts). Solo lectura mientras el área sea de la app.
+// Vista de Inventario (ver index.ts). Solo lectura mientras el área sea de la app;
+// lo que escribe (alta, mover, albarán, importar, ubicación) está en escritura.ts.
 //
 // Reglas que vienen de la app (`public/js/modules/furgonetas.js`):
 //   · El «Total» junta un mismo producto de todas las ubicaciones por su ficha
@@ -14,6 +15,8 @@ import { esc, hace, fechaHora } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { barras } from '../../ui/barras';
 import { eur, enApp } from '../ventas/datos';
+import { descargarCsv } from '../../ui/csv';
+import { pintarProducto, pintarMover, pintarVehiculo, pintarAlbaran } from './escritura';
 
 interface Ubicacion { id: string; nombre: string; tecnico_responsable: string | null }
 interface Producto {
@@ -39,6 +42,8 @@ let _cat = '';
 let _bajo = false;
 let _tipoMov = '';
 let _actual: string | null = null;
+let _fs: Fila[] = [];
+document.addEventListener('hub:inventario', () => { _at = 0; });
 
 const n = (v: number | null | undefined) => Number(v ?? 0);
 const num = (v: number) => v.toLocaleString('es-ES', { maximumFractionDigits: 2 });
@@ -112,7 +117,9 @@ async function pintarStock(el: HTMLElement) {
     : { clave: u.id, etiqueta: u.nombre, valor: ps.length, texto: String(ps.length), detalle: `${u.nombre}: ${ps.length} productos` }), 'inUbicBarra', _ubicSel);
   const cats = [...new Set(_prods.map(p => p.categoria).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b));
   const fs = filas();
+  _fs = fs;
   const sel = _ubic.find(u => u.id === _ubicSel);
+  const dis = delHub ? '' : 'disabled title="Hasta el cambio, en la app"';
   el.innerHTML = `${delHub ? '' : avisoSoloLectura('El inventario')}${pestanas('')}
     <div class="pp-cabeza">
       <div class="di-cifras pp-cifras">
@@ -131,6 +138,13 @@ async function pintarStock(el: HTMLElement) {
         ${cats.map(c => `<option ${c === _cat ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
       <label class="check"><input id="in-bajo" type="checkbox" ${_bajo ? 'checked' : ''} data-on-change="inBajo:$checked"> Solo bajo mínimo</label>
       <a class="btn secundario" href="#/almacen/compras">Qué pedir →</a>
+      <button class="btn secundario" data-action="inExcel">${ico('descargar')} Excel</button>
+    </div>
+    <div class="acciones mo-barra in-escribir">
+      <button class="btn" data-action="inNuevo" ${dis}>${ico('mas')} Producto</button>
+      <button class="btn secundario" data-action="inIr" data-p0="albaran" ${dis}>${ico('camara')} Escanear albarán</button>
+      <button class="btn secundario" data-action="inIr" data-p0="importar" ${dis}>${ico('subir')} Importar</button>
+      <button class="btn secundario" data-action="inIr" data-p0="vehiculo" ${dis}>${ico('furgoneta')} Nueva ubicación</button>
     </div>
     <p class="nota">Mostrando ${Math.min(fs.length, 300)} de ${fs.length}.</p>
     <div class="tarjeta mo-scroll"><table class="tabla" id="in-tabla"><thead><tr><th>Producto</th><th>${_ubicSel ? 'Categoría' : 'Dónde'}</th><th class="num">Cantidad</th><th>Frente al mínimo</th>${admin ? '<th class="num">Precio</th><th class="num">Valor</th>' : ''}</tr></thead>
@@ -220,7 +234,8 @@ async function pintarFicha(el: HTMLElement, id: string) {
   el.innerHTML = `<p><a href="#/inventario">← Inventario</a></p>
     ${delHub ? '' : avisoSoloLectura('El inventario')}
     <div class="tarjeta-cab"><h2>${esc(p.nombre)}</h2>
-      <div class="acciones"><a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Las entradas, salidas y trasvases se apuntan en la app">Mover en la app ${ico('externo')}</a></div></div>
+      <div class="acciones">${delHub ? `<a class="btn" href="#/inventario/${esc(p.id)}/mover">${ico('flecha')} Mover</a><a class="btn secundario" href="#/inventario/${esc(p.id)}/editar">${ico('editar')} Editar</a>`
+        : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Las entradas, salidas y trasvases se apuntan en la app">Mover en la app ${ico('externo')}</a>`}</div></div>
     <p><span class="chip">${esc(nombreUbic(p.furgoneta_id))}</span> ${p.categoria ? `<span class="chip">${esc(p.categoria)}</span>` : ''}
       ${bajoMinimo(p) ? `<span class="chip ${n(p.cantidad) <= 0 ? 'mal' : 'aviso'}">${n(p.cantidad) <= 0 ? 'Agotado' : 'Bajo mínimo'}</span>` : ''}</p>
     <div class="me-grid">
@@ -242,7 +257,13 @@ async function pintarFicha(el: HTMLElement, id: string) {
 }
 
 export async function pintarInventario(el: HTMLElement, params: string[]) {
-  if (params[0] === 'movimientos') await pintarMovimientos(el);
+  const [a, b] = params;
+  if (a === 'movimientos') await pintarMovimientos(el);
+  else if (a === 'nuevo') await pintarProducto(el, null, b ?? _ubicSel);
+  else if (a === 'vehiculo') await pintarVehiculo(el);
+  else if (a === 'albaran' || a === 'importar') await pintarAlbaran(el, a === 'albaran' ? 'albaran' : 'excel');
+  else if (a && b === 'editar') await pintarProducto(el, a);
+  else if (a && b === 'mover') await pintarMover(el, a);
   else if (params[0]) await pintarFicha(el, params[0]);
   else await pintarStock(el);
 }
@@ -250,6 +271,16 @@ export async function pintarInventario(el: HTMLElement, params: string[]) {
 let _timer: number | undefined;
 registrarAcciones({
   inAbrir(id: string) { if (id) ir('inventario', id); },
+  inNuevo() { ir('inventario', 'nuevo', ...(_ubicSel ? [_ubicSel] : [])); },
+  inIr(que: string) { ir('inventario', que); },
+  // «Excel» de la app: lo que hay en pantalla (en «Todas», con el desglose por ubicación).
+  inExcel() {
+    const sel = _ubic.find(u => u.id === _ubicSel);
+    if (sel) descargarCsv(`Inventario_${sel.nombre.replace(/\W+/g, '_')}`, ['Nombre', 'Categoría', 'Cantidad', 'Stock mínimo', 'Notas'],
+      _fs.map(f => [f.nombre, f.categoria ?? '', f.cantidad, f.minimo, f.ubicaciones[0]?.notas ?? '']));
+    else descargarCsv('Inventario_Total', ['Nombre', 'Categoría', 'Cantidad total', 'Stock mínimo', 'Ubicaciones'],
+      _fs.map(f => [f.nombre, f.categoria ?? '', f.cantidad, f.minimo, f.ubicaciones.map(u => `${nombreUbic(u.furgoneta_id)} ${num(n(u.cantidad))}`).join(' · ')]));
+  },
   inUbic(id: string) { _ubicSel = id; resolver(); },
   // La barra de una ubicación la elige; pulsarla otra vez vuelve al total.
   inUbicBarra(id: string) { _ubicSel = _ubicSel === id ? TODAS : id; resolver(); },
