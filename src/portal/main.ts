@@ -3,7 +3,7 @@
 // cliente (x-portal-token). Entrada: ?c=<código> del enlace mágico.
 import './portal.css';
 import { FUNCIONES_URL, SUPABASE_ANON_KEY } from '../core/config';
-import { esc, fechaHora } from '../ui/dom';
+import { esc, fechaHora, pl } from '../ui/dom';
 import { markdown } from '../ui/markdown';
 
 const CLAVE = 'okc_portal_token';
@@ -62,8 +62,8 @@ async function inicio(): Promise<string> {
   const c = (href: string, n: unknown, txt: string, tono = '') => `<a class="po-tarjeta po-cifra" href="#/${href}"><strong class="${tono}">${esc(n)}</strong>${esc(txt)}</a>`;
   return `<h1>Hola${_yo?.nombre ? ', ' + esc(_yo.nombre.split(' ')[0]) : ''}</h1><p class="po-nota">${esc(_yo?.cliente ?? '')}</p>
     <div class="po-cifras">${c('tickets', r.tickets_abiertos, 'tickets abiertos')}${c('presupuestos', r.presupuestos_pendientes, 'presupuestos por aceptar')}
-      ${c('facturas', eur(r.saldo_pendiente), `pendiente en ${r.facturas_pendientes} factura(s)`, r.saldo_pendiente > 0 ? 'po-mal' : '')}
-      ${c('equipos', `${r.equipos_conectados}/${r.equipos}`, `equipos conectados${r.alertas ? ` · ${r.alertas} alerta(s)` : ''}`)}</div>
+      ${c('facturas', eur(r.saldo_pendiente), `pendiente en ${pl(r.facturas_pendientes, 'factura', 'facturas')}`, r.saldo_pendiente > 0 ? 'po-mal' : '')}
+      ${c('equipos', `${r.equipos_conectados}/${r.equipos}`, `equipos conectados${r.alertas ? ` · ${pl(r.alertas, 'alerta', 'alertas')}` : ''}`)}</div>
     <div class="po-acciones"><a class="po-btn" href="#/nuevo" style="display:inline-flex;align-items:center;text-decoration:none">Abrir un aviso</a></div>`;
 }
 
@@ -107,7 +107,7 @@ async function presupuestos(): Promise<string> {
 async function facturas(): Promise<string> {
   const fs = await llamar<any[]>('facturas');
   const pend = fs.filter(f => Number(f.saldo) > 0);
-  return `<h1>Facturas</h1>${pend.length ? `<p class="po-tarjeta">Pendiente de pago: <strong class="po-mal">${eur(pend.reduce((a, f) => a + Number(f.saldo), 0))}</strong> en ${pend.length} factura(s).</p>` : ''}
+  return `<h1>Facturas</h1>${pend.length ? `<p class="po-tarjeta">Pendiente de pago: <strong class="po-mal">${eur(pend.reduce((a, f) => a + Number(f.saldo), 0))}</strong> en ${pl(pend.length, 'factura', 'facturas')}.</p>` : ''}
     <div class="po-tarjeta po-scroll">${fs.length ? `<table class="po-tabla"><thead><tr><th>Nº</th><th>Fecha</th><th>Total</th><th>Pendiente</th><th></th></tr></thead><tbody>
     ${fs.map(f => `<tr><td>${esc(f.numero)}</td><td>${fecha(f.fecha)}${Number(f.saldo) > 0 && f.vence ? `<br><small class="${new Date(f.vence) < new Date() ? 'po-mal' : 'po-nota'}">vence ${fecha(f.vence)}</small>` : ''}</td>
       <td>${eur(f.total)}</td><td>${Number(f.saldo) > 0 ? `<span class="po-mal">${eur(f.saldo)}</span>` : chip('Pagada', 'bien')}</td>
@@ -128,7 +128,7 @@ async function equipos(): Promise<string> {
   return `<h1>Estado de tus equipos</h1><p class="po-nota">Los equipos con nuestro agente de monitorización. Se actualiza cada pocos minutos.</p>
     <div class="po-tarjeta po-scroll">${es.length ? `<table class="po-tabla"><thead><tr><th>Equipo</th><th>Estado</th><th class="po-ocultable">Sede</th><th class="po-ocultable">Visto</th></tr></thead><tbody>
     ${es.map(e => `<tr><td>${esc(e.nombre || e.hostname)}<br><small class="po-nota">${esc(e.so ?? '')}</small></td>
-      <td>${e.conectado ? chip('Conectado', 'bien') : chip('Sin conexión', 'mal')}${e.alertas_abiertas ? ` ${chip(`${e.alertas_abiertas} alerta(s)`, 'aviso')}` : ''}${e.reinicio_pendiente ? ` ${chip('Reinicio pendiente', 'aviso')}` : ''}</td>
+      <td>${e.conectado ? chip('Conectado', 'bien') : chip('Sin conexión', 'mal')}${e.alertas_abiertas ? ` ${chip(`${pl(e.alertas_abiertas, 'alerta', 'alertas')}`, 'aviso')}` : ''}${e.reinicio_pendiente ? ` ${chip('Reinicio pendiente', 'aviso')}` : ''}</td>
       <td class="po-ocultable">${esc(e.sede)}</td><td class="po-ocultable">${fechaHora(e.visto_ultimo)}</td></tr>`).join('')}
   </tbody></table>` : '<p class="po-nota">Todavía no hay equipos monitorizados.</p>'}</div>`;
 }

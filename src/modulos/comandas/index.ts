@@ -10,7 +10,7 @@ import { equipo, nombreDe } from '../../core/equipo';
 import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
-import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { esc, toast, hace, fechaHora, fecha, pl } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 
 interface Tarea { id: string; comanda_id: string | null; created_at: string; texto: string; persona_id: string | null; estado: 'pendiente' | 'en_curso' | 'hecha';
@@ -33,13 +33,13 @@ function tarjeta(t: Tarea): string {
     : t.estado === 'en_curso' ? `<button class="btn secundario" data-action="coMover" data-p0="${t.id}" data-p1="pendiente">Volver</button><button class="btn" data-action="coMover" data-p0="${t.id}" data-p1="hecha">Hecha</button>`
       : `<button class="btn secundario" data-action="coMover" data-p0="${t.id}" data-p1="pendiente">Reabrir</button>`;
   return `<article class="pr-tarjeta co-tarjeta ${t.prioridad ? 'co-prioridad' : ''}" draggable="true" data-id="${t.id}" data-on-dragstart="coArrastrar:$this">
-    <div class="pr-tarjeta-cab">${t.prioridad ? '<span class="chip mal">PRIORIDAD</span>' : ''}<span class="chip">${esc(ORIGEN[t.origen] ?? t.origen)}</span>
+    <div class="pr-tarjeta-cab">${t.prioridad ? '<span class="chip mal">PRIORIDAD</span>' : ''}${t.origen ? `<span class="chip">${esc(ORIGEN[t.origen] ?? t.origen)}</span>` : ''}
       <small class="nota" title="${esc(fechaHora(t.created_at))}">${esc(hace(t.created_at))}</small></div>
     <p class="co-texto">${esc(t.texto)}</p>
     <div class="pr-tarjeta-pie"><select aria-label="Persona" data-on-change="coPersona:${t.id},$value"><option value="">Sin repartir</option>
       ${_personas.map(p => `<option value="${p.id}" ${p.id === t.persona_id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>
-      ${t.fecha_limite ? `<span class="${vencida ? 'mal' : ''}">${ico('calendario')} ${esc(t.fecha_limite)}</span>` : ''}</div>
-    <div class="acciones">${botones}${esAdmin() || t.creada_por === usuario()?.id ? `<button class="btn secundario" data-action="coBorrar" data-p0="${t.id}" aria-label="Borrar">✕</button>` : ''}</div>
+      ${t.fecha_limite ? `<span class="${vencida ? 'mal' : ''}">${ico('calendario')} ${esc(fecha(t.fecha_limite))}</span>` : ''}</div>
+    <div class="acciones">${botones}${esAdmin() || t.creada_por === usuario()?.id ? `<button class="btn secundario" data-action="coBorrar" data-p0="${t.id}" aria-label="Borrar">${ico('cerrar')}</button>` : ''}</div>
   </article>`;
 }
 let _personas: { id: string; nombre: string }[] = [];
@@ -84,7 +84,7 @@ async function pintar(el: HTMLElement) {
         <div class="pr-col-cuerpo">${col.map(tarjeta).join('') || '<p class="vacio col-vacia">—</p>'}</div></section>`;
     }).join('')}</div>
     ${(cs.data ?? []).length ? `<details class="tarjeta"><summary>Últimas comandas</summary><ul class="di-ultimo">${(cs.data ?? []).map(c => `<li><small class="nota">${esc(hace(c.created_at))}</small>
-      <span><strong>${esc(nombreDe(c.creada_por))}</strong> · ${esc(ORIGEN[c.origen === 'app' ? 'voz' : c.origen] ?? c.origen)} · ${c.n_tareas} tarea(s)${c.con_claude ? '' : ' (por líneas)'}<br><em>«${esc(c.transcripcion)}»</em></span></li>`).join('')}</ul></details>` : ''}`;
+      <span><strong>${esc(nombreDe(c.creada_por))}</strong> · ${esc(ORIGEN[c.origen === 'app' ? 'voz' : c.origen] ?? c.origen)} · ${pl(c.n_tareas, 'tarea', 'tareas')}${c.con_claude ? '' : ' (por líneas)'}<br><em>«${esc(c.transcripcion)}»</em></span></li>`).join('')}</ul></details>` : ''}`;
 }
 
 async function enviar(cuerpo: Record<string, unknown>) {
@@ -94,7 +94,7 @@ async function enviar(cuerpo: Record<string, unknown>) {
   const r = await llamarFuncion<{ tareas: unknown[]; con_claude: boolean }>('comandas', { accion: 'crear', ...cuerpo }, 120000);
   if (btn) btn.disabled = false;
   if (r.error || !r.data) { toast(`No se pudo: ${r.error}`, 'error'); if (est) est.textContent = r.error ?? ''; return; }
-  toast(`Comanda repartida en ${r.data.tareas.length} tarea(s)`);
+  toast(`Comanda repartida en ${pl(r.data.tareas.length, 'tarea', 'tareas')}`);
   resolver();
 }
 

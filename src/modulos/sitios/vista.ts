@@ -9,7 +9,7 @@ import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { descargarCsv } from '../../ui/csv';
 import { tabEquipamiento, tabSeguimiento } from './equipamiento';
-import { esc, hace, fechaHora, toast } from '../../ui/dom';
+import { esc, hace, fechaHora, toast, fecha } from '../../ui/dom';
 import { eur, enApp, telWhatsApp } from '../ventas/datos';
 import { esqueleto } from '../../ui/esqueleto';
 import { enlaceHistorial } from '../../ui/historial';
@@ -109,7 +109,7 @@ async function pintarLista(el: HTMLElement) {
       ${seg('siAviso', _aviso, [['', 'Sin filtro'], ['cobro', 'Cobro torcido'], ['equipos', 'Equipos con aviso']])}
       <button class="chip-boton ${_baja ? 'activo' : ''}" data-action="siBaja" aria-pressed="${_baja}">De baja</button>
       <button class="btn secundario" data-action="siExcel">${ico('descargar')} Excel</button>
-      ${escribe ? '<a class="btn" href="#/sitios/nuevo">+ Nuevo sitio</a>' : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener">+ Nuevo sitio en la app ${ico('externo')}</a>`}
+      ${escribe ? `<a class="btn" href="#/sitios/nuevo">${ico('mas')} Nuevo sitio</a>` : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener">${ico('mas')} Nuevo sitio en la app ${ico('externo')}</a>`}
     </div>
     <p class="nota">${_baja ? `Sitios DE BAJA (no salen en listados ni buscadores; ${escribe ? 'se reactivan desde aquí' : 'se reactivan en la app'}). ` : ''}Mostrando ${Math.min(filtrados.length, 200)} de ${filtrados.length}.</p>
     <div class="tarjeta mo-scroll"><table class="tabla" id="si-tabla"><thead><tr><th>Sitio</th><th>Cliente</th><th>Mantenimiento</th><th>TPV</th><th>Equipos</th>${_baja && escribe ? '<th></th>' : ''}</tr></thead>
@@ -183,7 +183,7 @@ async function tabTelefonos(l: Sitio): Promise<string> {
 async function tabContactos(l: Sitio): Promise<string> {
   const { data, error } = await API.get<any[]>('contactos', { select: 'id,nombre,cargo,telefono,email,favorito', local_id: `eq.${l.id}`, activo: 'neq.false', order: 'favorito.desc.nullslast,nombre' });
   if (error) return `<p class="aviso mal">${esc(error.message)}</p>`;
-  const nuevo = _escribe ? `<p class="acciones"><a class="btn" href="#/contactos/nuevo/l/${esc(l.id)}">+ Nuevo contacto</a></p>` : '';
+  const nuevo = _escribe ? `<p class="acciones"><a class="btn" href="#/contactos/nuevo/l/${esc(l.id)}">${ico('mas')} Nuevo contacto</a></p>` : '';
   if (!(data ?? []).length) return `${nuevo}<p class="vacio">Sin contactos de este sitio.</p>`;
   return `${nuevo}<div class="cl-contactos">${(data ?? []).map(p => {
     const wa = telWhatsApp(p.telefono);
@@ -200,7 +200,7 @@ async function tabTrabajos(l: Sitio): Promise<string> {
   if (!(data ?? []).length) return '<p class="vacio">Ningún trabajo en este sitio.</p>';
   return `<div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Nº</th><th>Trabajo</th><th>Estado</th><th>Fecha</th><th>Técnicos</th></tr></thead>
     <tbody>${(data ?? []).map(t => `<tr class="fila-clic" data-action="siTrabajo" data-p0="${esc(t.id)}"><td>#${esc(t.numero ?? '?')}</td>
-      <td>${esc(t.titulo || (t.descripcion ?? '').slice(0, 80))}</td><td>${esc(t.estado ?? '')}</td><td>${esc(t.fecha_programada ?? '')}</td>
+      <td>${esc(t.titulo || (t.descripcion ?? '').slice(0, 80))}</td><td>${esc(t.estado ?? '')}</td><td>${esc(fecha(t.fecha_programada))}</td>
       <td>${esc((t.tecnicos ?? []).join(', '))}</td></tr>`).join('')}</tbody></table></div>`;
 }
 

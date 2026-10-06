@@ -46,7 +46,7 @@ export async function pintarPlanes(el: HTMLElement, id?: string, sub?: string) {
   ]);
   const puede = escribe && esAdmin();
   el.innerHTML = `${escribe ? '' : avisoSoloLectura('Los planes de mantenimiento')}${navPestanas('plantillas')}
-    <div class="tarjeta-cab"><h2>Planes</h2>${puede ? '<div class="acciones"><a class="btn" href="#/mantenimientos/plantillas/nuevo">+ Nuevo plan</a></div>' : ''}</div>
+    <div class="tarjeta-cab"><h2>Planes</h2>${puede ? `<div class="acciones"><a class="btn" href="#/mantenimientos/plantillas/nuevo">${ico('mas')} Nuevo plan</a></div>` : ''}</div>
     <div class="mpl-planes">${planes.map(p => `<article class="tarjeta mpl-plan ${p.activo ? '' : 'mpl-inactivo'}" data-plan="${esc(p.id)}">
       <h3><span class="hex-punto" aria-hidden="true"></span> ${esc(p.nombre)}</h3>
       <p class="di-valor">${p.precio_mensual != null ? `${eur(p.precio_mensual, 2)}<small class="nota">/mes sin impuestos</small>` : '<small class="nota">Sin cuota</small>'}</p>
@@ -57,7 +57,7 @@ export async function pintarPlanes(el: HTMLElement, id?: string, sub?: string) {
         p.coste_presencial_urgente != null ? `urgente ${eur(p.coste_presencial_urgente)}` : '', p.activo ? '' : 'Inactivo'].filter(Boolean).map(t => `<span class="chip">${esc(t)}</span>`).join(' ')}</p>
       ${puede ? `<a class="btn secundario" href="#/mantenimientos/plantillas/${esc(p.id)}">${ico('editar')} Editar</a>` : `<a class="btn secundario" href="#/mantenimientos/plantillas/${esc(p.id)}">Ver</a>`}</article>`).join('')
       || '<p class="vacio">Sin planes (llegan de la app con la copia de cada noche).</p>'}</div>
-    <div class="tarjeta-cab"><h2>Checklists de visita</h2>${puede ? '<div class="acciones"><a class="btn secundario" href="#/mantenimientos/plantillas/checklist/nuevo">+ Nuevo checklist</a></div>' : ''}</div>
+    <div class="tarjeta-cab"><h2>Checklists de visita</h2>${puede ? `<div class="acciones"><a class="btn secundario" href="#/mantenimientos/plantillas/checklist/nuevo">${ico('mas')} Nuevo checklist</a></div>` : ''}</div>
     <p class="nota">Se rellenan en la ficha del trabajo de mantenimiento: el del plan de la sede o, si no hay, el genérico.</p>
     <div class="tarjeta mo-scroll"><table class="tabla" id="mcl-tabla"><thead><tr><th>Checklist</th><th>Plan</th><th class="num">Puntos</th><th></th></tr></thead>
       <tbody>${(cks.data ?? []).map(c => `<tr><td><strong>${esc(c.nombre)}</strong>${c.activa ? '' : ' <span class="chip">Inactivo</span>'}</td><td>${esc(c.plan ?? 'Genérico')}</td>
@@ -95,7 +95,7 @@ async function pintarPlan(el: HTMLElement, id: string | null) {
     ${p ? `<section class="tarjeta"><h3>Tareas de seguimiento del plan</h3>
       <p class="nota">Las que se marcan por periodo en la ficha de cada sede y en Checklist. Las de copia de seguridad salen aparte en la tabla maestra.</p>
       <div id="mpl-tareas">${filasTareas(tareasHub && esAdmin())}</div>
-      ${tareasHub && esAdmin() ? '<button type="button" class="btn secundario" data-action="mplTareaNueva">+ Tarea</button>' : ''}</section>` : ''}`;
+      ${tareasHub && esAdmin() ? `<button type="button" class="btn secundario" data-action="mplTareaNueva">${ico('mas')} Tarea</button>` : ''}</section>` : ''}`;
 }
 
 function filasTareas(puede: boolean): string {
@@ -122,7 +122,7 @@ async function pintarChecklistVisita(el: HTMLElement, id: string) {
       <div class="in-campos"><label>Nombre <input id="mcl-nombre" required value="${esc(c?.nombre ?? '')}"></label>
         <label>Plan <select id="mcl-plan"><option value="">Genérico (cualquier plan)</option>${planes.map(p => `<option ${p.nombre === c?.plan ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></label></div>
       <div id="mcl-items">${filasItems()}</div>
-      <button type="button" class="btn secundario" data-action="mclItem">+ Punto</button>
+      <button type="button" class="btn secundario" data-action="mclItem">${ico('mas')} Punto</button>
       <label class="check"><input type="checkbox" id="mcl-activa" ${c?.activa === false ? '' : 'checked'}> Activo</label>
       <div class="acciones"><button class="btn" type="submit" ${puede ? '' : 'disabled'}>Guardar</button><a class="btn secundario" href="#/mantenimientos/plantillas">Cancelar</a></div></form>`;
 }

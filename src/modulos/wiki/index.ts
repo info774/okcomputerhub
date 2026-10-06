@@ -47,7 +47,7 @@ function marco(cuerpo: string): string {
   return `<div class="wk-marco">
     <aside class="wk-lateral tarjeta">
       <form data-on-submit="wkBuscar" data-prevent="1"><input id="wk-q" type="search" placeholder="Buscar en la wiki…" value="${esc(_busqueda)}" aria-label="Buscar en la wiki"></form>
-      <div class="acciones"><button class="btn" data-action="wkNueva">+ Página</button>
+      <div class="acciones"><button class="btn" data-action="wkNueva">${ico('mas')} Página</button>
         <label class="check"><input type="checkbox" ${_verArchivadas ? 'checked' : ''} data-on-change="wkArchivadas:$checked"> Archivadas</label></div>
       ${arbol() || '<p class="vacio">Todavía no hay páginas.</p>'}
       <p class="wk-conocimiento"><a href="#/wiki/conocimiento">${ico('libro')} Base de conocimiento (de la app)</a></p>
@@ -78,7 +78,7 @@ async function vistaPagina(id: string): Promise<string> {
   return `${migas(p)}
     <div class="tarjeta-cab"><h2>${p.icono != null ? esc(p.icono) : ico('documento')} ${esc(p.titulo)}</h2>
       <div class="acciones"><a class="btn" href="#/wiki/${esc(p.id)}/editar">Editar</a>
-        <button class="btn secundario" data-action="wkNueva" data-p0="${esc(p.id)}">+ Subpágina</button>
+        <button class="btn secundario" data-action="wkNueva" data-p0="${esc(p.id)}">${ico('mas')} Subpágina</button>
         <a class="btn secundario" href="#/wiki/${esc(p.id)}/historial">Historial (${p.version - 1})</a></div></div>
     <p class="nota">Versión ${p.version} · cambiada ${esc(hace(p.updated_at))}${p.actualizado_por ? ` por ${esc(nombreDe(p.actualizado_por))}` : ''}
       ${proyecto ? ` · proyecto <a href="#/proyectos/${proyecto.numero}">#${proyecto.numero} ${esc(proyecto.titulo)}</a>` : ''}${p.archivada ? ' · <span class="chip">Archivada</span>' : ''}</p>

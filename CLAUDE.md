@@ -648,6 +648,22 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   usan `AVISO_PANTALLA` (en `direccion/`, compartido con el centro de avisos).
   Para repasar el aspecto de todo: `verify-galeria.mjs` (captura de cada
   pantalla del menú; `GALERIA_NOCHE=1`, `GALERIA_MOVIL=1`, `GALERIA=a,b`).
+- **Repaso de pantallas** (2026-10-05, bloque «Repaso de pantallas» al final del
+  sistema común de `src/estilo.css` y al final de `src/escritorio.css`): fechas
+  para enseñar con `fecha(v)` de `ui/dom.ts` («5 oct», con año si no es este;
+  `fecha(v, true)` siempre con año, p. ej. en facturas) y NUNCA en el `value` de
+  un `<input type="date">`, que quiere ISO; plurales con `pl(n, 'alerta',
+  'alertas')`, nada de «(s)»; botones con `ico('mas' | 'cerrar' | 'hecho' |
+  'repetir' | 'izquierda' | 'derecha')`, no con «+», «✕», «✓», «⧉» ni «‹ ›»
+  escritos. `[hidden]` gana siempre (`!important`). `.pr-barra` va junta a la
+  izquierda. Radios dentro de `.segmentado` se pintan como sus botones. En el
+  modo escritorio el cuerpo de cada ventana es el contenedor `ventana`: un corte
+  `@media` de una pantalla que deba valer también dentro de una ventana se
+  repite como `@container ventana (…)` en `escritorio.css`; el ancho con el
+  que abre cada pantalla ancha está en `ANCHO` (`shell/escritorio.ts`).
+  `verify-galeria.mjs` recorre además las subpantallas (`GALERIA_FICHAS=1`) y el
+  modo escritorio (`GALERIA_ESCRITORIO=1`), en español, y falla si en pantalla
+  sale `${`, «undefined», «NaN», «Invalid Date» o «[object Object]».
 - **Barras de una serie**: `src/ui/barras.ts` (tabla de verdad, `--serie-1`,
   etiqueta directa, la fila filtra con su `data-action` y la `activa` lleva el
   hexágono). `.chip.aviso` es una

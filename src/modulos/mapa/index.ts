@@ -10,7 +10,7 @@ import type * as Leaflet from 'leaflet';
 import { API } from '../../core/api';
 import { esAdmin } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
-import { esc } from '../../ui/dom';
+import { esc, pl } from '../../ui/dom';
 import { clases, eur } from '../ventas/datos';
 
 type Capa = 'rmm' | 'cobro' | 'clase' | 'oportunidades';
@@ -68,7 +68,7 @@ function punto(s: Sede, capa: Capa): Punto {
     const e = d.rmm.get(s.id);
     if (!e) return { color: '--texto-suave', radio: 4, texto: 'Sin agente de Breeze', valor: 0 };
     return { color: e.estado === 'ok' ? '--bien' : e.estado === 'parcial' ? '--aviso' : '--mal', radio: 7,
-      texto: `${e.conectados}/${e.equipos} equipos conectados${e.alertas ? ` · ${e.alertas} alerta(s)` : ''}`, valor: 2 };
+      texto: `${e.conectados}/${e.equipos} equipos conectados${e.alertas ? ` · ${pl(e.alertas, 'alerta', 'alertas')}` : ''}`, valor: 2 };
   }
   if (capa === 'cobro') {
     const v = d.vencido.get(cli) ?? 0;
@@ -153,7 +153,7 @@ export const moduloMapa: Modulo = {
   titulo: 'Mapa',
   grupo: 'Clientes',
   icono: '🗺',
-  explicacion: 'Las sedes de los clientes en el mapa. Cambia de capa para ver dónde hay equipos con problemas, dónde se debe dinero, dónde están los clientes grandes o dónde hay ventas en marcha. A la derecha, el día (técnicos fichados, trabajos y tickets), la semana para planificar arrastrando y la ruta del día con los kilómetros.',
+  explicacion: 'Las sedes de los clientes en el mapa. Cambia de capa para ver dónde hay equipos con problemas, dónde se debe dinero, dónde están los clientes grandes o dónde hay ventas en marcha. Al lado (debajo en el móvil), el día (técnicos fichados, trabajos y tickets), la semana para planificar arrastrando y la ruta del día con los kilómetros.',
   pintar,
   async contador(): Promise<Contador | null> {
     const n = await API.contar('locales', { activo: 'neq.false', lat: 'not.is.null' });

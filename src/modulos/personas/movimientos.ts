@@ -15,7 +15,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
-import { esc, toast } from '../../ui/dom';
+import { esc, toast, fecha } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { eur } from '../ventas/datos';
 
@@ -66,7 +66,7 @@ export async function seccionMovimientos(desde: string, hasta: string): Promise<
     <div class="mo-scroll">${movs.length ? `<table class="tabla" id="pm-lista"><thead><tr><th>Fecha</th><th>Qué</th><th>Quién</th><th>De</th><th class="num">Importe</th><th></th></tr></thead><tbody>
       ${movs.map(m => { const cobro = m.tipo === 'cobro';
         const de = [m.trabajo_id && n.t.get(m.trabajo_id), m.contacto_id && n.c.get(m.contacto_id), m.local_id && n.l.get(m.local_id)].filter(Boolean).join(' · ');
-        return `<tr class="fila-clic" data-action="pmAbrir" data-p0="${esc(m.id)}"><td>${esc(m.fecha ?? '—')}</td>
+        return `<tr class="fila-clic" data-action="pmAbrir" data-p0="${esc(m.id)}"><td>${esc(fecha(m.fecha) || '—')}</td>
           <td><span class="chip ${cobro ? 'bien' : 'aviso'}">${cobro ? 'Cobro' : 'Gasto'}</span> ${esc(m.descripcion || m.notas || m.categoria || '')}</td>
           <td>${esc(m.tecnico_id ?? '')}</td><td>${esc(de)}</td>
           <td class="num"><strong>${cobro ? '+' : '−'}${eur(m.importe, 2)}</strong></td>

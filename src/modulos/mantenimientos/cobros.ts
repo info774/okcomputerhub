@@ -19,7 +19,7 @@ import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
-import { esc, toast } from '../../ui/dom';
+import { esc, toast, pl } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { navPestanas, olvidarMantenimientos } from './vista';
 import { sedeEnZoho, sinAcentos, FRECUENCIAS, normalizaFrecuencia, mesesDe, fechaCorta, IGIC, urlZohoBilling } from './datos';
@@ -143,7 +143,7 @@ export async function pintarCobros(el: HTMLElement, sub?: string, id?: string) {
     <div class="acciones mo-barra"><button class="btn secundario" data-action="mcbSync"${dis()}>${ico('descargar')} Traer estado de Stripe</button>
       <a class="btn secundario" href="#/mantenimientos/cobros/ajustes">${ico('ajustes')} Ajustes de facturación</a>
       <a class="btn secundario" href="https://dashboard.stripe.com/subscriptions" target="_blank" rel="noopener">${ico('externo')} Panel de Stripe</a></div>
-    <div class="acciones mo-barra"><input id="mcb-q" type="search" placeholder="Buscar cliente, sede, plan o número de factura…" value="${esc(_q)}" data-on-input="mcbBuscar:$value" aria-label="Buscar">
+    <div class="acciones mo-barra"><input id="mcb-q" type="search" placeholder="Buscar cliente, sede o factura…" value="${esc(_q)}" data-on-input="mcbBuscar:$value" aria-label="Buscar">
       ${FILTROS.map(([k, n]) => `<button class="chip-boton ${_filtro === k ? 'activo' : ''}" data-action="mcbFiltro" data-p0="${k}" aria-pressed="${_filtro === k}">${n}</button>`).join('')}</div>
     <section class="tarjeta"><h3>Sedes</h3>${vistos.length ? `<ul class="mdo-lista" id="mcb-sedes">${vistos.map(filaSede).join('')}</ul>`
       : `<p class="vacio">${q ? `Ninguna sede coincide con «${esc(_q)}».` : _filtro ? 'Ninguna sede cumple este filtro.' : 'Ninguna sede con plan de mantenimiento todavía.'}</p>`}</section>
@@ -185,7 +185,7 @@ function botonesSede(c: Cobro): string {
       <button class="btn secundario" data-action="mcbPortal" data-p0="${id}"${d}>${ico('persona')} Portal cliente</button>
       ${c.stripe_estado === 'paused' ? `<button class="btn secundario" data-action="mcbReanudar" data-p0="${id}"${d}>${ico('play')} Reanudar</button>`
         : `<button class="btn secundario" data-action="mcbPausar" data-p0="${id}"${d}>${ico('pausa')} Pausar</button>`}
-      <button class="btn peligro" data-action="mcbCancelar" data-p0="${id}"${d}>✕ Dar de baja</button>`;
+      <button class="btn peligro" data-action="mcbCancelar" data-p0="${id}"${d}>${ico('cerrar')} Dar de baja</button>`;
   }
   // Cartera vieja de Zoho Billing: la cobra Zoho; aquí solo se mira y se desvincula (tanda 4: comprobar).
   // «Comprobar en Zoho» vale ya (solo lee; con el corte, además guarda en la sede).
@@ -253,7 +253,7 @@ function panelZoho(): string {
 
 function panelDivergentes(): string {
   if (!_divergentes.length) return '';
-  return `<section class="aviso" id="mcb-divergentes"><strong>${_divergentes.length} sede(s) tenían en la app una cuota distinta de la que cobra Stripe.</strong> Se ha guardado la de Stripe, que es la que se cobra; si la buena es la otra, cámbiala con «Cambiar plan».
+  return `<section class="aviso" id="mcb-divergentes"><strong>${pl(_divergentes.length, 'sede', 'sedes')} tenían en la app una cuota distinta de la que cobra Stripe.</strong> Se ha guardado la de Stripe, que es la que se cobra; si la buena es la otra, cámbiala con «Cambiar plan».
     <ul>${_divergentes.map(d => `<li><strong>${esc(d.sede)}</strong>: decía ${euros(d.app)}/mes y Stripe cobra ${euros(d.stripe)}/mes</li>`).join('')}</ul>
     <button class="btn secundario" data-action="mcbCerrarDivergentes">Entendido</button></section>`;
 }

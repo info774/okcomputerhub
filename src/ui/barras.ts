@@ -12,10 +12,11 @@ export function barras(id: string, titulo: string, filas: Barra[], accion?: stri
   const max = Math.max(1, ...filas.map(f => f.valor));
   return `<section class="tarjeta barras-tarjeta" aria-label="${esc(titulo)}">
     <h3>${esc(titulo)}</h3>
-    <table class="barras" id="${esc(id)}"><caption class="sr">${esc(titulo)}</caption>
+    ${filas.length ? '' : '<p class="vacio">Sin datos.</p>'}
+    <table class="barras" id="${esc(id)}"${filas.length ? '' : ' hidden'}><caption class="sr">${esc(titulo)}</caption>
       <tbody>${filas.map(f => `<tr${accion ? ` class="fila-clic${f.clave === activa ? ' activa' : ''}" data-action="${esc(accion)}" data-p0="${esc(f.clave)}"${f.clave === activa ? ' aria-current="true"' : ''}` : ''} title="${esc(f.detalle ?? `${f.etiqueta}: ${f.texto}`)}">
         <th scope="row">${esc(f.etiqueta)}</th>
         <td><span class="barras-pista"><span class="barras-barra" style="width:${Math.max(f.valor ? 1.5 : 0, 100 * f.valor / max).toFixed(1)}%"></span></span></td>
-        <td class="num">${f.texto}</td></tr>`).join('') || '<tr><td class="vacio">Sin datos.</td></tr>'}</tbody></table>
+        <td class="num">${f.texto}</td></tr>`).join('')}</tbody></table>
   </section>`;
 }

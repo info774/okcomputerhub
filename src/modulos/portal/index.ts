@@ -7,7 +7,7 @@ import { API } from '../../core/api';
 import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
-import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { esc, toast, hace, fechaHora, pl } from '../../ui/dom';
 import { ico, type IconoLinea } from '../../shell/linea';
 import { buscarClientes, nombresClientes, eur } from '../ventas/datos';
 
@@ -59,7 +59,7 @@ async function pintar(el: HTMLElement) {
           : `<button class="btn secundario" data-action="ptActivo" data-p0="${esc(a.id)}" data-p1="1">Reactivar</button>`}</div></td></tr>`).join('')}</tbody></table>` : '<p class="vacio">Nadie tiene acceso todavía.</p>'}
       <div id="pt-enlace"></div></section>
     <section class="tarjeta"><h3>Qué han hecho (lo último)</h3><ul class="di-ultimo">${(tr.data ?? []).map(t => `<li><small class="nota" title="${esc(fechaHora(t.created_at))}">${esc(hace(t.created_at))}</small>
-      <span>${accionHtml(t.accion)} · ${esc(t.email ?? emailDe.get(t.acceso_id) ?? '')}${t.detalle?.numero ? ` · #${esc(t.detalle.numero)}` : ''}${t.detalle?.mes ? ` · ${esc(t.detalle.mes)}` : ''}${t.detalle?.error ? ` · <small class="mal">${esc(t.detalle.error)}</small>` : ''}</span></li>`).join('') || '<li class="nota">Nada todavía.</li>'}</ul></section>`;
+      <span>${accionHtml(t.accion)} · ${esc(t.email ?? emailDe.get(t.acceso_id) ?? '')}${t.detalle?.numero ? ` · #${esc(t.detalle.numero)}` : ''}${t.detalle?.mes ? ` · ${esc(t.detalle.mes)}` : ''}${t.detalle?.error ? ` · <small class="mal">${esc(t.detalle.error)}</small>` : ''}</span></li>`).join('')}</ul>${(tr.data ?? []).length ? '' : '<p class="vacio">Nada todavía.</p>'}</section>`;
 }
 
 registrarAcciones({
@@ -113,7 +113,7 @@ registrarAcciones({
 async function contador(): Promise<Contador | null> {
   const [n, pend] = await Promise.all([API.contar('portal_accesos', { activo: 'eq.true' }), API.contar('portal_aceptaciones', { revisada_at: 'is.null' })]);
   if (n == null) return null;
-  return { valor: n, subtitulo: pend ? `accesos · ${pend} presupuesto(s) aceptado(s) por pasar` : 'clientes con acceso', tono: pend ? 'mal' : 'neutro' };
+  return { valor: n, subtitulo: pend ? `accesos · ${pl(pend, 'presupuesto aceptado', 'presupuestos aceptados')} por pasar` : 'clientes con acceso', tono: pend ? 'mal' : 'neutro' };
 }
 
 export const moduloPortal: Modulo = {

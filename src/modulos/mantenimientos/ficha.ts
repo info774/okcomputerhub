@@ -54,7 +54,7 @@ export async function pintarFicha(el: HTMLElement, id: string) {
       <fieldset class="fm-tels"><legend>Teléfonos y su rol</legend>
         <p class="nota">Solo a <strong>Dueño</strong> y <strong>Administración</strong> les manda el WhatsApp documentos, y antes les pide el código.</p>
         <div id="fm-tels">${filasTels()}</div>
-        <button type="button" class="btn secundario" data-action="fmTelAnadir">+ Teléfono</button></fieldset>
+        <button type="button" class="btn secundario" data-action="fmTelAnadir">${ico('mas')} Teléfono</button></fieldset>
       <section class="fm-codigo"><h3>Código de verificación</h3>
         <p><code id="fm-codigo">${esc(s.codigo_verificacion ?? '—')}</code>
         ${txt && wa ? `<a class="btn secundario" href="https://wa.me/${wa}?text=${txt}" target="_blank" rel="noopener">${ico('mensaje')} Mandarlo por WhatsApp</a>` : ''}

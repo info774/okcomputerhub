@@ -21,7 +21,7 @@ export async function pintarPlantillas(el: HTMLElement, id?: string) {
   const ps = await plantillasActivas();
   el.innerHTML = `<p><a href="#/presupuestos">← Presupuestos</a></p>
     <div class="tarjeta-cab"><h2>Plantillas de presupuesto</h2>
-      ${escribe ? '<div class="acciones"><a class="btn" href="#/presupuestos/plantillas/nueva">+ Nueva plantilla</a></div>' : ''}</div>
+      ${escribe ? `<div class="acciones"><a class="btn" href="#/presupuestos/plantillas/nueva">${ico('mas')} Nueva plantilla</a></div>` : ''}</div>
     ${escribe ? '' : avisoSoloLectura('Las plantillas de presupuesto')}
     <p class="nota">Al crear un presupuesto se eligen una o varias y sus líneas se juntan.</p>
     <div class="tarjeta mo-scroll"><table class="tabla" id="ppl-tabla"><thead><tr><th>Plantilla</th><th class="num">Líneas</th><th class="num">Total</th>${escribe ? '<th></th>' : ''}</tr></thead>

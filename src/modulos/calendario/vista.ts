@@ -182,7 +182,7 @@ function vistaSemana(evs: Ev[], desde: Date, solapa: Set<string>, tras: Map<stri
     return `<section class="tarjeta ca-dia ${ds === hoy ? 'ca-hoy' : ''}" data-dia="${ds}" ${_escribe ? `data-on-dragover="caSobre:$this" data-prevent="1" data-on-dragleave="caFuera:$this" data-on-drop="caSoltarDia:${ds}"` : ''}>
       <h3><button class="ca-ir-dia" data-action="caIrDia" data-p0="${ds}">${esc(d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }))}</button></h3>
       ${cargaHtml(evs, ds, equipo)}
-      ${evs.filter(e => dia(e.inicio) === ds).map(e => tarjeta(e, solapa, tras)).join('') || (gDia(ds).length ? '' : '<p class="vacio col-vacia">—</p>')}
+      ${evs.filter(e => dia(e.inicio) === ds).sort((a, b) => a.inicio.getTime() - b.inicio.getTime()).map(e => tarjeta(e, solapa, tras)).join('') || (gDia(ds).length ? '' : '<p class="vacio col-vacia">—</p>')}
       ${gDia(ds).map(gTarjeta).join('')}
       ${_ses.filter(s => dia(new Date(s.inicio)) === ds && (filtro === 'todo' || (filtro === 'mios' ? mismaPersona(s.tecnico_nombre ?? '', usuario()?.nombre ?? '') : mismaPersona(s.tecnico_nombre ?? '', filtro)))).map(real).join('')}</section>`;
   }).join('')}</div>`;
@@ -328,11 +328,11 @@ export async function pintar(el: HTMLElement, params: string[] = []) {
           : vistaSemana(visibles, desde, sol.claves, tras, equipoVista, filtro);
   el.innerHTML = `${_escribe ? '' : avisoSoloLectura('La agenda')}
     <div class="acciones pr-barra ca-barra">
-      <button class="btn secundario" data-action="caMover" data-p0="-1" aria-label="Anterior">‹</button>
+      <button class="btn secundario" data-action="caMover" data-p0="-1" aria-label="Anterior">${ico('izquierda')}</button>
       <strong class="ca-titulo">${esc(titulo)}</strong>
-      <button class="btn secundario" data-action="caMover" data-p0="1" aria-label="Siguiente">›</button>
+      <button class="btn secundario" data-action="caMover" data-p0="1" aria-label="Siguiente">${ico('derecha')}</button>
       <button class="btn secundario" data-action="caMover" data-p0="0">Hoy</button>
-      ${_escribe ? '<a class="btn secundario" href="#/calendario/cita">+ Cita</a>' : ''}
+      ${_escribe ? `<a class="btn secundario" href="#/calendario/cita">${ico('mas')} Cita</a>` : ''}
       <input type="date" id="ca-ir" value="${dia(f)}" data-on-change="caIrDia:$value" aria-label="Ir a la fecha">
       ${sol.lista.length ? `<button class="chip mal" data-action="caVerSolape" data-p0="${sol.lista[0].a.id}">${ico('atencion')} ${sol.lista.length} solape${sol.lista.length === 1 ? '' : 's'}</button>` : ''}
     </div>
@@ -344,9 +344,9 @@ export async function pintar(el: HTMLElement, params: string[] = []) {
         <optgroup label="Técnico">${_equipo.map(n => `<option ${filtro === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}</optgroup></select>
       <select id="ca-guardados" data-on-change="caAplicarGuardado:$value" aria-label="Filtros guardados"><option value="">Filtros guardados…</option>${guardados.map((g, i) => `<option value="${i}">${esc(g.nombre)}</option>`).join('')}</select>
       <button class="btn secundario" data-action="caGuardarFiltro">Guardar filtro</button>
-      <label class="check"><input type="checkbox" ${conTraslados ? 'checked' : ''} data-on-change="caTraslados:$checked"> Traslados</label>
+      <span class="acciones ca-capas"><label class="check"><input type="checkbox" ${conTraslados ? 'checked' : ''} data-on-change="caTraslados:$checked"> Traslados</label>
       <label class="check"><input type="checkbox" ${conPend ? 'checked' : ''} data-on-change="caPendPanel:$checked"> Pendientes</label>
-      <label class="check" title="Los eventos de Google Calendar, solo para ver"><input type="checkbox" id="ca-google" ${conGoogle ? 'checked' : ''} data-on-change="caGoogle:$checked"> Google</label>
+      <label class="check" title="Los eventos de Google Calendar, solo para ver"><input type="checkbox" id="ca-google" ${conGoogle ? 'checked' : ''} data-on-change="caGoogle:$checked"> Google</label></span>
     </div>
     ${conGoogle && _googleMsg ? `<p class="nota ca-google-nota">${ico('info')} ${esc(_googleMsg)}</p>` : ''}
     ${bannerHueco()}

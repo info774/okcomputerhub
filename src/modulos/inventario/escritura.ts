@@ -38,8 +38,11 @@ let _lineas: Linea[] = [];
 let _modoLineas: 'albaran' | 'excel' = 'albaran';
 
 const ubicaciones = async () => (await API.get<Ubicacion[]>('furgonetas', { select: 'id,nombre', order: 'nombre' })).data ?? [];
-const selUbic = (id: string, us: Ubicacion[], actual = '', dis = '') => `<select id="${id}" ${dis} aria-label="Ubicación">${us.map(u =>
-  `<option value="${esc(u.id)}" ${u.id === actual ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}</select>`;
+// Sin ubicaciones no hay dónde dar de alta: el desplegable lo dice y lleva a crear una.
+const selUbic = (id: string, us: Ubicacion[], actual = '', dis = '') => us.length
+  ? `<select id="${id}" ${dis} aria-label="Ubicación">${us.map(u =>
+    `<option value="${esc(u.id)}" ${u.id === actual ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}</select>`
+  : `<select id="${id}" disabled aria-label="Ubicación"><option value="">Primero crea una ubicación</option></select> <a href="#/inventario/vehiculo">Crear ubicación</a>`;
 const volver = (ruta = '#/inventario', txt = 'Inventario') => `<p><a href="${ruta}">← ${txt}</a></p>`;
 
 async function cabecera(que: string): Promise<{ dis: string; aviso: string }> {
@@ -147,7 +150,7 @@ function pintarPaso2(dis: string) {
     <p class="nota">${_modoLineas === 'albaran' ? 'Lo que ya esté en esa ubicación con el mismo nombre SUMA; lo nuevo se da de alta. Corrige lo que haga falta y quita lo que no entre.' : 'Cada fila se da de alta como producto nuevo en esa ubicación, como «Importar» de la app.'}</p>
     <div class="mo-scroll">${tablaLineas(dis)}</div>
     <div class="acciones"><button class="btn" data-action="inwConfirmar" ${dis || (n ? '' : 'disabled')}>Dar entrada a ${n}</button>
-      ${_modoLineas === 'albaran' ? `<button class="btn secundario" data-action="inwLineaMas" ${dis}>+ Línea a mano</button>` : ''}</div>`;
+      ${_modoLineas === 'albaran' ? `<button class="btn secundario" data-action="inwLineaMas" ${dis}>${ico('mas')} Línea a mano</button>` : ''}</div>`;
 }
 
 export async function pintarAlbaran(el: HTMLElement, modo: 'albaran' | 'excel') {

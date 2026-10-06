@@ -73,13 +73,13 @@ async function vistaLista(): Promise<string> {
       <span class="ld-txt"><strong>${href ? `<a href="${href}">${esc(tituloDe(it))}</a>` : esc(tituloDe(it))}</strong>
         <small class="nota">${esc([ETIQ[it.tipo], it._cliente, estado, _persona === TODOS ? it.usuario : null].filter(Boolean).join(' · '))}</small></span>
       ${escribe ? `<select class="ld-mover" data-on-change="ldMover:${it.id},$value" aria-label="Pasar a otra persona"><option value="">Pasar a…</option>${personas.filter(p => p.nombre !== it.usuario).map(p => `<option>${esc(p.nombre)}</option>`).join('')}</select>
-        <button class="btn secundario" data-action="ldQuitar" data-p0="${it.id}" aria-label="Quitar de la lista">✕</button>` : ''}</li>`;
+        <button class="btn secundario" data-action="ldQuitar" data-p0="${it.id}" aria-label="Quitar de la lista">${ico('cerrar')}</button>` : ''}</li>`;
   };
   return `${escribe ? '' : avisoSoloLectura('La lista del día')}
     <div class="acciones pr-barra"><div class="segmentado" role="tablist"><button role="tab" aria-selected="true" class="activo">Lista</button><button role="tab" aria-selected="false" data-action="ldIrPlanificar">Planificar</button></div>
-      <button class="btn secundario" data-action="ldDia" data-p0="-1" aria-label="Día anterior">‹</button>
+      <button class="btn secundario" data-action="ldDia" data-p0="-1" aria-label="Día anterior">${ico('izquierda')}</button>
       <input type="date" id="ld-fecha" value="${_fecha}" data-on-change="ldFecha:$value" aria-label="Día">
-      <button class="btn secundario" data-action="ldDia" data-p0="1" aria-label="Día siguiente">›</button>
+      <button class="btn secundario" data-action="ldDia" data-p0="1" aria-label="Día siguiente">${ico('derecha')}</button>
       ${_fecha !== hoyStr() ? '<button class="btn secundario" data-action="ldFecha" data-p0="">Hoy</button>' : ''}</div>
     ${esAdmin() ? `<div class="acciones ld-personas">${personas.map(p => `<button class="chip-boton${_persona === p.nombre ? ' activo' : ''}" data-action="ldPersona" data-p0="${esc(p.nombre)}">${esc(p.nombre)}</button>`).join('')}
       <button class="chip-boton${_persona === TODOS ? ' activo' : ''}" data-action="ldPersona" data-p0="${TODOS}">${ico('personas')} Todo el equipo</button></div>` : ''}
@@ -87,7 +87,7 @@ async function vistaLista(): Promise<string> {
       <span class="chip ${_items.length && hechos === _items.length ? 'bien' : ''}">${hechos}/${_items.length} hechos</span></div>
       ${_items.length ? `<ul class="ld-lista">${_items.map(fila).join('')}</ul>` : '<p class="vacio">La lista está vacía.</p>'}
       ${escribe && _persona !== TODOS ? `<form class="acciones" data-on-submit="ldNota" data-prevent="1"><input id="ld-nota" placeholder="Apuntar un recado suelto…" aria-label="Recado"><button class="btn secundario" type="submit">Apuntar</button></form>
-        <div class="acciones"><button class="btn" data-action="ldAbrirAnadir">+ Añadir de lo pendiente</button><button class="btn secundario" data-action="ldTraer">Traer lo que ya tiene asignado ese día</button></div>
+        <div class="acciones"><button class="btn" data-action="ldAbrirAnadir">${ico('mas')} Añadir de lo pendiente</button><button class="btn secundario" data-action="ldTraer">Traer lo que ya tiene asignado ese día</button></div>
         <div id="ld-anadir"></div>` : ''}</section>`;
 }
 

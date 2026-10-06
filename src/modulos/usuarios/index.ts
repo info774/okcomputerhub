@@ -41,10 +41,10 @@ async function pintar(el: HTMLElement) {
           ${u.id === yo ? '' : `<button class="btn secundario" data-action="usActivo" data-p0="${esc(u.id)}" data-p1="${u.activo ? '0' : '1'}">${u.activo ? 'Desactivar' : 'Activar'}</button>`}` : ''}</td>
       </tr>`).join('') || '<tr><td colspan="5" class="vacio">Sin usuarios.</td></tr>'}</tbody></table>
     </section>
-    <form class="tarjeta" id="us-alta" data-on-submit="usCrear" data-prevent="1"><h3>Nuevo usuario</h3>
+    <form class="tarjeta" id="us-alta" data-on-submit="usCrear" data-prevent="1"><h2>Nuevo usuario</h2>
       <div class="in-campos">
         <label>Nombre <input id="us-nombre" required maxlength="80" placeholder="Francesco, Cristian…" ${dis}></label>
-        <label>Correo (el de Google con el que entra) <input id="us-email" type="email" required ${dis}></label>
+        <label>Correo de Google <input id="us-email" type="email" required ${dis}></label>
         <label>Rol <select id="us-rol" ${dis}><option value="tecnico">Técnico</option><option value="admin">Administrador</option></select></label>
         <label>Teléfono <input id="us-telefono" type="tel" placeholder="Opcional: su WhatsApp" ${dis}></label>
       </div>

@@ -6,7 +6,7 @@ import { usuario, esAdmin } from '../../core/estado';
 import { equipo, nombreDe } from '../../core/equipo';
 import { ir } from '../../core/router';
 import { registrarAcciones } from '../../core/dispatcher';
-import { esc, toast, fechaHora } from '../../ui/dom';
+import { esc, toast, fechaHora, fecha, pl } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { markdown } from '../../ui/markdown';
 import {
@@ -99,7 +99,7 @@ function tabObjetivos(): string {
       <label class="check"><input type="checkbox" ${o.hecho ? 'checked' : ''} data-on-change="pfObjetivoHecho:${o.id},$checked">
         <span class="${o.hecho ? 'tachado' : ''}">${esc(o.texto)}</span></label>
       ${o.metrica ? `<small>${ico('regla')} ${esc(o.metrica)}</small>` : ''}
-      <button class="icono-btn pequeno" aria-label="Quitar objetivo" data-action="pfBorrar" data-p0="proyecto_objetivos" data-p1="${o.id}">✕</button>
+      <button class="icono-btn pequeno" aria-label="Quitar objetivo" data-action="pfBorrar" data-p0="proyecto_objetivos" data-p1="${o.id}">${ico('cerrar')}</button>
     </li>`).join('') || '<li class="vacio">Sin objetivos todavía.</li>'}</ul>
     <form class="acciones" data-on-submit="pfNuevoObjetivo" data-prevent="1">
       <input id="pfo-texto" placeholder="Objetivo (p. ej. 20 clientes con copia en la nube)" maxlength="300">
@@ -133,7 +133,7 @@ function tabInvestigacion(): string {
   const pags = _pz!.paginas;
   if (_paginaAbierta) return editorPagina(_paginaAbierta === 'nueva' ? null : pags.find(p => p.id === _paginaAbierta) ?? null);
   return `<div class="acciones pr-barra">
-      <button class="btn" data-action="pfAbrirPagina" data-p0="nueva">+ Página</button>
+      <button class="btn" data-action="pfAbrirPagina" data-p0="nueva">${ico('mas')} Página</button>
       <button class="btn secundario" data-action="pfPedirClaude" data-p0="investigar">${ico('buscar')} Investigar con Claude</button>
     </div>
     ${pags.map(pg => `<article class="tarjeta pr-pagina">
@@ -163,7 +163,7 @@ function gantt(hitos: Hito[]): string {
       const tarde = h.estado !== 'hecho' && h.fecha_objetivo && h.fecha_objetivo < hoy();
       return `<div class="gantt-fila"><span class="gantt-nombre">${esc(h.nombre)}</span>
         <div class="gantt-pista"><div class="gantt-barra ${h.estado} ${tarde ? 'tarde' : ''}"
-          style="left:${pct(a)}%;width:${Math.max(pct(b) - pct(a), 1.5)}%" title="${esc(h.fecha_inicio ?? '')} → ${esc(h.fecha_objetivo ?? '')}"></div></div></div>`;
+          style="left:${pct(a)}%;width:${Math.max(pct(b) - pct(a), 1.5)}%" title="${esc(fecha(h.fecha_inicio))} → ${esc(fecha(h.fecha_objetivo))}"></div></div></div>`;
     }).join('')}
     <div class="gantt-eje"><span>${new Date(ini).toLocaleDateString('es-ES')}</span><span>${new Date(fin).toLocaleDateString('es-ES')}</span></div>
   </div>`;
@@ -185,7 +185,7 @@ function tabRoadmap(): string {
           <td><select data-on-change="pfHitoCampo:${h.id},estado,$value">${[['pendiente', 'Pendiente'], ['en_curso', 'En curso'], ['hecho', 'Hecho']].map(([v, n]) =>
             `<option value="${v}" ${h.estado === v ? 'selected' : ''}>${n}</option>`).join('')}</select></td>
           <td>${ts.filter(t => t.estado === 'hecho').length}/${ts.length}</td>
-          <td><button class="icono-btn pequeno" aria-label="Quitar hito" data-action="pfBorrar" data-p0="proyecto_hitos" data-p1="${h.id}">✕</button></td>
+          <td><button class="icono-btn pequeno" aria-label="Quitar hito" data-action="pfBorrar" data-p0="proyecto_hitos" data-p1="${h.id}">${ico('cerrar')}</button></td>
         </tr>`;
       }).join('') || '<tr><td colspan="6" class="vacio">Sin hitos todavía.</td></tr>'}</tbody></table>
       <form class="acciones" data-on-submit="pfNuevoHito" data-prevent="1">
@@ -226,11 +226,11 @@ function tarjetaTarea(t: TareaP): string {
     <h4>${esc(t.titulo)}</h4>
     <div class="pr-tarjeta-pie">
       <span>${ico('persona')} ${esc(nombreDe(t.responsable_id) || 'Sin asignar')}</span>
-      ${t.fecha_limite ? `<span class="${tarde ? 'mal' : ''}">${ico('calendario')} ${esc(t.fecha_limite)}</span>` : ''}
+      ${t.fecha_limite ? `<span class="${tarde ? 'mal' : ''}">${ico('calendario')} ${esc(fecha(t.fecha_limite))}</span>` : ''}
       ${hito ? `<span>${ico('bandera')} ${esc(hito.nombre)}</span>` : ''}
     </div>
     <div class="acciones">${i > 0 ? mover(orden[i - 1], 'Atrás') : ''}${i < 2 ? mover(orden[i + 1], 'Adelante') : ''}
-      <button class="icono-btn pequeno" aria-label="Quitar tarea" data-action="pfBorrar" data-p0="proyecto_tareas" data-p1="${t.id}">✕</button></div>
+      <button class="icono-btn pequeno" aria-label="Quitar tarea" data-action="pfBorrar" data-p0="proyecto_tareas" data-p1="${t.id}">${ico('cerrar')}</button></div>
   </article>`;
 }
 
@@ -256,7 +256,7 @@ async function tabVinculado(): Promise<string> {
         const f = filas.get(`${v.tabla}:${v.registro_id}`);
         const def = ENLAZABLES[v.tabla];
         return `<li><span class="chip">${esc(def?.nombre ?? v.tabla)}</span> ${f ? esc(def.rotulo(f)) : '<span class="nota">(ya no está en la copia)</span>'}
-          <button class="icono-btn pequeno" aria-label="Quitar vínculo" data-action="pfBorrar" data-p0="proyecto_vinculos" data-p1="${v.id}">✕</button></li>`;
+          <button class="icono-btn pequeno" aria-label="Quitar vínculo" data-action="pfBorrar" data-p0="proyecto_vinculos" data-p1="${v.id}">${ico('cerrar')}</button></li>`;
       }).join('') || '<li class="vacio">Nada enlazado todavía.</li>'}</ul>
     </section>
     <section class="tarjeta">
@@ -302,7 +302,7 @@ async function tabCoste(p: Proyecto): Promise<string> {
         <span class="baldosa-valor">${previsto ? eur(previsto) : '—'}</span>
         <span class="baldosa-sub">${pctUso == null ? 'pon el presupuesto en Idea' : `usado ${pctUso}%`}</span></div>
       ${presus.length ? `<div class="baldosa"><span class="baldosa-titulo">Presupuestado al cliente</span><span class="baldosa-valor">${eur(presupuestado)}</span>
-        <span class="baldosa-sub">${presus.length} presupuesto(s) enlazado(s)</span></div>` : ''}
+        <span class="baldosa-sub">${pl(presus.length, 'presupuesto enlazado', 'presupuestos enlazados')}</span></div>` : ''}
     </div>
     <p class="nota">El coste sale de lo enlazado en «Vinculado». ${tarifa ? `Tarifa por hora: ${eur(tarifa)} (una para todo el equipo).` : 'Falta la tarifa por hora para pasar las horas a euros.'}</p>
     ${esAdmin() ? `<form class="acciones" data-on-submit="pfGuardarTarifa" data-prevent="1">

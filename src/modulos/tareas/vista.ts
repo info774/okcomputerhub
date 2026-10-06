@@ -97,7 +97,7 @@ async function pintarLista(el: HTMLElement) {
         <td>${t.numero != null ? `<small class="nota">#${t.numero}</small> ` : ''}<strong>${esc(t.titulo)}</strong> ${chipPrio(t.prioridad)}${t.recurrencia && t.recurrencia !== 'ninguna' ? ` <span title="Se repite" role="img" aria-label="Se repite">${ico('repetir')}</span>` : ''}</td>
         <td>${chipEstado(t.estado)}</td><td>${fecha(t)}</td>
         <td>${t.tecnico_id ? esc(t.tecnico_id) : '<span class="chip aviso">Sin asignar</span>'}</td>
-        <td>${esc(_clientes.get(t.cliente_id ?? '') ?? '')}</td></tr>`).join('') || '<tr><td colspan="5" class="vacio">Ninguna tarea con ese filtro.</td></tr>'}</tbody></table></div>`;
+        <td>${esc(_clientes.get(t.cliente_id ?? '') ?? '—')}</td></tr>`).join('') || '<tr><td colspan="5" class="vacio">Ninguna tarea con ese filtro.</td></tr>'}</tbody></table></div>`;
   el.innerHTML = `${delHub ? '' : avisoSoloLectura('Tareas')}
     <div class="acciones mo-barra">
       <input id="ta-filtro" type="search" placeholder="Buscar por título, número, persona o cliente…" value="${esc(_q)}" data-on-input="taFiltrar:$value" aria-label="Buscar tarea">

@@ -10,7 +10,7 @@ import { equipo } from '../../core/equipo';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
-import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { esc, toast, hace, fechaHora, fecha } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { markdown } from '../../ui/markdown';
 import { nombresClientes, telWhatsApp, eur } from '../ventas/datos';
@@ -53,7 +53,7 @@ const barraSel = () => facturando() ? `<div class="acciones tr-sel" id="tr-sel">
   <button class="btn" data-action="trFacturarSel" ${_sel.size ? '' : 'disabled'}>${ico('dinero')} Facturar ${_sel.size ? `(${_sel.size})` : ''}</button></div>` : '';
 const tabla = () => { const fs = filas(); return fs.length ? `${barraSel()}<div class="tarjeta mo-scroll"><table class="tabla"><thead><tr>${facturando() ? '<th><span class="sr">Marcar</span></th>' : ''}<th>#</th><th>Trabajo</th><th>Cliente</th><th>Técnicos</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
   ${fs.map(t => `<tr class="fila-clic" data-action="trAbrir" data-p0="${t.numero}">${facturando() ? `<td><input type="checkbox" aria-label="Marcar #${t.numero}" data-action="trSel" data-p0="${t.id}" data-p1="$this" ${_sel.has(t.id) ? 'checked' : ''}></td>` : ''}<td>${t.numero}</td><td><strong>${esc(t.titulo ?? '')}</strong><br><small class="nota">${esc((t.descripcion ?? '').slice(0, 90))}</small></td>
-    <td>${esc(_nombres.get(t.cliente_id ?? '') ?? '')}</td><td>${esc((t.tecnicos ?? []).join(', '))}</td><td>${esc(t.fecha_programada ?? '')}${t.hora_llegada ? ` ${esc(t.hora_llegada.slice(0, 5))}` : ''}</td>
+    <td>${esc(_nombres.get(t.cliente_id ?? '') ?? '')}</td><td>${esc((t.tecnicos ?? []).join(', '))}</td><td>${esc(fecha(t.fecha_programada))}${t.hora_llegada ? ` ${esc(t.hora_llegada.slice(0, 5))}` : ''}</td>
     <td><span class="chip ${TONO[t.estado] ?? ''}">${esc(t.estado)}</span></td></tr>`).join('')}</tbody></table></div>` : '<p class="vacio">Ningún trabajo con ese filtro.</p>'; };
 
 // Kanban por estado (las columnas son los estados del filtro elegido); con el
@@ -70,7 +70,7 @@ const kanban = () => {
       <header><h3>${esc(e)}</h3><span class="chip">${col.length}</span></header>
       <div class="pr-col-cuerpo">${col.map(t => `<article class="pr-tarjeta" ${_escribe ? `draggable="true" data-on-dragstart="trArrastrar:${t.id}"` : ''} data-action="trAbrir" data-p0="${t.numero}">
         <strong>#${t.numero} ${esc(t.titulo ?? '')}</strong><small class="nota">${esc(_nombres.get(t.cliente_id ?? '') ?? '')}</small>
-        <small class="nota">${esc((t.tecnicos ?? []).join(', ') || 'Sin técnico')}${t.fecha_programada ? ` · ${esc(t.fecha_programada)}` : ''}</small></article>`).join('') || '<p class="vacio col-vacia">—</p>'}</div>
+        <small class="nota">${esc((t.tecnicos ?? []).join(', ') || 'Sin técnico')}${t.fecha_programada ? ` · ${esc(fecha(t.fecha_programada))}` : ''}</small></article>`).join('') || '<p class="vacio col-vacia">—</p>'}</div>
     </section>`;
   }).join('')}</div>`;
 };
@@ -98,11 +98,11 @@ async function vistaLista(): Promise<string> {
   const tec = leer('hub_tr_tecnico', '');
   const vista = leer('hub_tr_vista', 'lista');
   return `${escribe ? '' : avisoSoloLectura('Trabajos')}
-    <div class="acciones">${escribe ? '<a class="btn" href="#/trabajos/nuevo">+ Nuevo trabajo</a>' : `<a class="btn secundario" href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">+ Nuevo trabajo en la app ${ico('externo')}</a>`}
+    <div class="acciones">${escribe ? `<a class="btn" href="#/trabajos/nuevo">${ico('mas')} Nuevo trabajo</a>` : `<a class="btn secundario" href="${esc(APP_ACTUAL_URL)}" target="_blank" rel="noopener">${ico('mas')} Nuevo trabajo en la app ${ico('externo')}</a>`}
       <div class="segmentado" role="tablist" aria-label="Vista">${(['lista', 'kanban'] as const).map(v => `<button role="tab" aria-selected="${v === vista}" class="${v === vista ? 'activo' : ''}" data-action="trVista" data-p0="${v}">${v === 'lista' ? `${ico('menu')} Lista` : `${ico('widgets')} Kanban`}</button>`).join('')}</div>
       <button class="btn secundario" data-action="trExportar">${ico('descargar')} Excel</button><a class="btn secundario" href="#/trabajos/plantillas">Plantillas</a></div>
     <div class="acciones pr-barra"><div class="segmentado" role="tablist">${Object.keys(FILTROS).map(k => `<button role="tab" aria-selected="${k === f}" class="${k === f ? 'activo' : ''}" data-action="trFiltro" data-p0="${k}">${{ abiertos: 'Abiertos', facturar: 'Por facturar', cerrados: 'Cerrados', todos: 'Todos' }[k]}</button>`).join('')}</div>
-      <select id="tr-tecnico" data-on-change="trTecnico:$value" aria-label="Técnico"><option value="">Todos</option><option value="__yo" ${tec === '__yo' ? 'selected' : ''}>Los míos</option>${personas.map(p => `<option ${tec === p.nombre ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>
+      <select id="tr-tecnico" data-on-change="trTecnico:$value" aria-label="Técnico"><option value="">Todos los técnicos</option><option value="__yo" ${tec === '__yo' ? 'selected' : ''}>Los míos</option>${personas.map(p => `<option ${tec === p.nombre ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>
       <input id="tr-q" type="search" placeholder="Buscar nº, cliente, texto…" value="${esc(leer('hub_tr_q', ''))}" data-on-input="trBuscar:$value" aria-label="Buscar trabajos"></div>
     <div id="tr-lista">${cuerpoLista()}</div>`;
 }
@@ -113,7 +113,7 @@ function editorLineas(): string {
       <td><input type="number" min="0" step="any" value="${l.cantidad}" data-on-change="trLinea:${i},cantidad,$value" aria-label="Cantidad"></td>
       <td><input type="number" step="0.01" value="${l.precio}" data-on-change="trLinea:${i},precio,$value" aria-label="Precio"></td>
       <td><input type="number" min="0" max="100" value="${l.descuento}" data-on-change="trLinea:${i},descuento,$value" aria-label="Descuento"></td>
-      <td><button class="btn secundario" data-action="trQuitarLinea" data-p0="${i}" aria-label="Quitar">✕</button></td></tr>`).join('') || '<tr><td colspan="5" class="vacio">Sin material.</td></tr>'}
+      <td><button class="btn secundario" data-action="trQuitarLinea" data-p0="${i}" aria-label="Quitar">${ico('cerrar')}</button></td></tr>`).join('') || '<tr><td colspan="5" class="vacio">Sin material.</td></tr>'}
     </tbody></table>
     <form class="acciones" data-on-submit="trAnadirLinea" data-prevent="1"><input id="tr-l-q" placeholder="Material del inventario o texto libre" autocomplete="off" data-on-input="trBuscarInv:$value" aria-label="Material">
       <input id="tr-l-cant" type="number" min="0" step="any" value="1" aria-label="Cantidad"><input type="hidden" id="tr-l-inv"><input type="hidden" id="tr-l-furgo"><input type="hidden" id="tr-l-precio">
@@ -150,16 +150,16 @@ async function vistaFicha(numero: string): Promise<string> {
     ${escribe ? '' : avisoSoloLectura('Este trabajo')}
     <div class="tarjeta-cab"><h2>${ico('herramienta')} #${t.numero} ${esc(t.titulo ?? '')}</h2>
       ${escribe ? `<select id="tr-estado" data-on-change="trEstado:$value" aria-label="Estado">${ESTADOS.map(e => `<option ${e === t.estado ? 'selected' : ''}>${e}</option>`).join('')}</select>` : `<span class="chip ${TONO[t.estado] ?? ''}">${esc(t.estado)}</span>`}</div>
-    <p class="nota">Creado ${esc(hace(t.created_at))}${t.fecha_programada ? ` · para el ${esc(t.fecha_programada)}${t.hora_llegada ? ` a las ${esc(t.hora_llegada.slice(0, 5))}` : ''}` : ''}${t.zoho_invoice_number ? ` · factura ${esc(t.zoho_invoice_number)}` : ''}</p>
-    <div class="acciones">${tel ? `<a class="btn secundario" href="tel:${esc(tel)}">${ico('telefono')} Llamar</a>` : ''}${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">${ico('mensaje')} WhatsApp</a>` : ''}
+    <p class="nota">Creado ${esc(hace(t.created_at))}${t.fecha_programada ? ` · para el ${esc(fecha(t.fecha_programada))}${t.hora_llegada ? ` a las ${esc(t.hora_llegada.slice(0, 5))}` : ''}` : ''}${t.zoho_invoice_number ? ` · factura ${esc(t.zoho_invoice_number)}` : ''}</p>
+    <div class="acciones">${escribe ? `${['Facturado', 'No facturar', 'Cancelado'].includes(t.estado) ? '' : `<a class="btn" href="#/trabajos/facturar/${esc(t.id)}">${ico('dinero')} Facturar</a>`}
+      <a class="btn secundario" href="#/trabajos/${t.numero}/editar">${ico('editar')} Editar</a>` : ''}
+      ${tel ? `<a class="btn secundario" href="tel:${esc(tel)}">${ico('telefono')} Llamar</a>` : ''}${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">${ico('mensaje')} WhatsApp</a>` : ''}
       ${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">${ico('mapa')} Cómo llegar</a>` : ''}
       <a class="btn secundario" href="#/trabajos/${t.numero}/parte">${ico('imprimir')} Parte (PDF)</a>
       <a class="btn secundario" href="#/personas/gastos/gasto/t/${esc(t.id)}" title="Un gasto de este trabajo (Personas → Gastos)">${ico('recibo')} Gasto</a>
       <a class="btn secundario" href="#/personas/gastos/cobro/t/${esc(t.id)}" title="Un cobro en efectivo de este trabajo">${ico('dinero')} Cobro</a>
       ${botonChatFicha('trabajo', t.id, `#${t.numero} ${t.titulo ?? ''}`.trim(), `#/trabajos/${t.numero}`)}${enlaceHistorial('trabajos', t.id)}
-      ${escribe ? `<a class="btn secundario" href="#/trabajos/${t.numero}/editar">${ico('editar')} Editar</a>
-        <button class="btn secundario" data-action="trDuplicar">⧉ Duplicar</button>
-        ${['Facturado', 'No facturar', 'Cancelado'].includes(t.estado) ? '' : `<a class="btn" href="#/trabajos/facturar/${esc(t.id)}">${ico('dinero')} Facturar</a>`}
+      ${escribe ? `<button class="btn secundario" data-action="trDuplicar">${ico('repetir')} Duplicar</button>
         ${['Completado', 'Cancelado', 'Facturado', 'No facturar'].includes(t.estado) ? '' : `<button class="btn secundario" data-action="trContinuacion" title="Otro trabajo que sigue a este (otra visita)">${ico('reenviar')} Continuación</button>`}` : ''}</div>
     <div class="op-ficha"><div>
       <section class="tarjeta"><h3>Qué hay que hacer</h3><div class="md">${markdown(t.descripcion) || '<p class="nota">Sin descripción.</p>'}</div>
@@ -174,7 +174,7 @@ async function vistaFicha(numero: string): Promise<string> {
         <dt>Contacto</dt><dd>${esc(con.data?.nombre ?? '—')}</dd><dt>Técnicos</dt><dd>${escribe ? `<div class="tr-tecnicos">${personas.map(p => `<label class="check"><input type="checkbox" value="${esc(p.nombre)}" ${(t.tecnicos ?? []).includes(p.nombre) ? 'checked' : ''} data-on-change="trTecnicos"> ${esc(p.nombre)}</label>`).join('')}</div>` : esc((t.tecnicos ?? []).join(', ') || '—')}</dd></dl></section>
       <section class="tarjeta"><h3>Días de agenda</h3><ul class="tr-dias">${(bloques.data ?? []).map((b, i, xs) => `<li>${xs.length > 1 ? `<strong>Día ${i + 1}</strong> · ` : ''}${esc(fechaHora(b.inicio))} → ${esc(new Date(b.fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }))} · ${esc((b.tecnicos ?? []).join(', ') || 'sin técnico')}
           ${escribeAgenda ? ` <a href="#/calendario/dia/b:${esc(b.id)}" aria-label="Cambiar este día">${ico('editar')}</a>` : ''}</li>`).join('') || '<li class="nota">Sin programar.</li>'}</ul>
-        <p class="acciones">${escribeAgenda ? `<a class="btn secundario" href="#/calendario/dia/${esc(t.id)}">+ Añadir día</a>` : ''}<a href="#/calendario">Ver en el calendario</a></p></section>
+        <p class="acciones">${escribeAgenda ? `<a class="btn secundario" href="#/calendario/dia/${esc(t.id)}">${ico('mas')} Añadir día</a>` : ''}<a href="#/calendario">Ver en el calendario</a></p></section>
       <section class="tarjeta"><h3>Firma del cliente</h3>${t.firma_cliente && /^data:image\/(png|jpeg);base64,/.test(t.firma_cliente) ? `<img class="tr-firma" src="${esc(t.firma_cliente)}" alt="Firma del cliente">` : '<p class="nota">Sin firmar.</p>'}
         ${escribe ? `<p class="acciones"><button class="btn secundario" data-action="trFirmar">${ico('firma')} ${t.firma_cliente ? 'Volver a firmar' : 'Firmar'}</button></p>` : ''}</section>
       <section class="tarjeta"><h3>Fichajes · ${Math.floor(horas / 60)} h ${horas % 60} min</h3><ul>${(ses.data ?? []).map(s => `<li>${esc(s.tecnico_nombre ?? '')}: ${esc(fechaHora(s.traslado ?? s.inicio))} → ${s.fin ? esc(new Date(s.fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })) : '<strong>en curso</strong>'}</li>`).join('') || '<li class="nota">Nadie ha fichado aún.</li>'}</ul></section>

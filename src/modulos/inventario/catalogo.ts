@@ -12,7 +12,7 @@ import { esAdmin } from '../../core/estado';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
-import { esc, toast } from '../../ui/dom';
+import { esc, toast, pl } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { pestanas } from './vista';
 
@@ -123,14 +123,14 @@ registrarAcciones({
   async catCambiarCategoria() {
     const cat = val('cat-bloque-cat');
     if (!cat) { toast('Elige la categoría', 'error'); return; }
-    if (!_sel.size || !confirm(`¿Cambiar la categoría de ${_sel.size} producto(s) a «${cat}»?`)) return;
+    if (!_sel.size || !confirm(`¿Cambiar la categoría de ${pl(_sel.size, 'producto', 'productos')} a «${cat}»?`)) return;
     const r = await API.patch('catalogo', { id: `in.(${[..._sel].join(',')})` }, { categoria: cat });
     if (r.error) { toast(`No se pudo: ${r.error.message}`, 'error'); return; }
     toast(`Categoría cambiada a ${cat}`);
     _seleccionando = false; _sel = new Set(); resolver();
   },
   async catEliminarSel() {
-    if (!_sel.size || !confirm(`¿Eliminar ${_sel.size} producto(s) del catálogo?`)) return;
+    if (!_sel.size || !confirm(`¿Eliminar ${pl(_sel.size, 'producto', 'productos')} del catálogo?`)) return;
     const r = await API.delete('catalogo', { id: `in.(${[..._sel].join(',')})` });
     if (r.error) { toast(`No se pudo: ${r.error.message}`, 'error'); return; }
     toast('Productos eliminados');

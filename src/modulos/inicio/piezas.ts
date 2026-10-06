@@ -8,7 +8,7 @@ import { ir } from '../../core/router';
 import { registrarAcciones } from '../../core/dispatcher';
 import { llamarFuncion } from '../../core/funciones';
 import { grabando, grabarYTranscribir, pararGrabacion, puedeDictar } from '../../ui/dictado';
-import { esc, toast } from '../../ui/dom';
+import { esc, toast, pl } from '../../ui/dom';
 
 export interface Aviso {
   clave: string; tipo: string; gravedad: 'mal' | 'aviso' | 'info'; titulo: string; detalle: string | null;
@@ -206,8 +206,8 @@ registrarAcciones({
     const r = await llamarFuncion<{ tareas: unknown[] }>('comandas', { accion: 'crear', texto }, 120000);
     if (r.error || !r.data) { vozResultado(grupo, `<p class="nota">No se pudo repartir: ${esc(r.error)}</p>`); return; }
     _dicho.delete(grupo);
-    toast(`Comanda repartida en ${r.data.tareas.length} tarea(s)`);
-    vozResultado(grupo, `<p class="nota">Repartida en ${r.data.tareas.length} tarea(s). <a href="#/comandas">Ver comandas ›</a></p>`);
+    toast(`Comanda repartida en ${pl(r.data.tareas.length, 'tarea', 'tareas')}`);
+    vozResultado(grupo, `<p class="nota">Repartida en ${pl(r.data.tareas.length, 'tarea', 'tareas')}. <a href="#/comandas">Ver comandas ›</a></p>`);
   },
   okPreguntar(grupo: string) { const t = _dicho.get(grupo); if (t) ir('buscar', t); },
   okDescartar(grupo: string) { _dicho.delete(grupo); vozResultado(grupo, ''); },

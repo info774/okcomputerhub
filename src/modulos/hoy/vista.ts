@@ -67,12 +67,12 @@ export async function pintar(el: HTMLElement) {
     const activo = enCurso && t && enCurso.id === t.id;
     return `<article class="tarjeta ho-parada ${grande ? 'ho-siguiente' : ''}"><header><strong>${esc(hora(p.inicio) || '—')}</strong> ${t ? `<a href="#/trabajos/${t.numero}">${esc(p.titulo)}</a>` : esc(p.titulo)}
         ${t ? `<span class="chip">${esc(t.estado)}</span>` : ''}</header>
-      <p class="nota">${esc(p.cliente?.nombre ?? '')}${p.local ? ` · ${esc(p.local.nombre)}${p.local.direccion ? ` · ${esc(p.local.direccion)}` : ''}` : ''}</p>
+      ${p.cliente || p.local ? `<p class="nota">${[p.cliente?.nombre, p.local?.nombre, p.local?.direccion].filter(Boolean).map(esc).join(' · ')}</p>` : ''}
       ${grande && t?.descripcion ? `<p>${esc(t.descripcion.slice(0, 280))}</p>` : ''}
-      <div class="acciones ho-botones">${p.tel ? `<a class="btn secundario" href="tel:${esc(p.tel)}">${ico('telefono')} Llamar</a>` : ''}${wa && grande ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener" aria-label="WhatsApp">${ico('mensaje')}</a>` : ''}
+      ${p.tel || m || (escribe && t) ? `<div class="acciones ho-botones">${p.tel ? `<a class="btn secundario" href="tel:${esc(p.tel)}">${ico('telefono')} Llamar</a>` : ''}${wa && grande ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener" aria-label="WhatsApp">${ico('mensaje')}</a>` : ''}
         ${m ? `<a class="btn secundario" href="${esc(m)}" target="_blank" rel="noopener">${ico('mapa')} Cómo llegar</a>` : ''}
         ${escribe && t && !activo ? `<button class="btn" data-action="hoInicio" data-p0="${t.id}">${ico('play')} Empezar</button>` : ''}
-        ${escribe && t && (activo || grande) ? `<button class="btn secundario" data-action="hoTerminar" data-p0="${t.id}">✓ Terminar</button>` : ''}</div>
+        ${escribe && t && (activo || grande) ? `<button class="btn secundario" data-action="hoTerminar" data-p0="${t.id}">${ico('hecho')} Terminar</button>` : ''}</div>` : ''}
       ${_terminar === t?.id ? `<form class="ho-terminar" data-on-submit="hoGuardarTerminar:${t.id}" data-prevent="1"><label>Qué se hizo <textarea id="ho-hecho" rows="3" required></textarea></label>
         <label>Foto (obligatoria) <input type="file" id="ho-foto" accept="image/*" capture="environment" required></label>
         <div class="acciones"><button class="btn" type="submit">Terminar trabajo</button></div></form>` : ''}</article>`;

@@ -214,7 +214,7 @@ async function refrescarInsignias() {
   pintarDock();
 }
 const tonoInsignia = (id: string) => { const t = _insignias.get(id)?.tono; return t === 'mal' || t === 'aviso' ? t : ''; };
-// «3 mensajes sin leer»; si el subtítulo ya empieza por la cifra («1 urgente(s)»), solo él.
+// «3 mensajes sin leer»; si el subtítulo ya empieza por la cifra («1 urgente»), solo él.
 const notaInsignia = (id: string) => {
   const c = _insignias.get(id);
   if (!c || !tonoInsignia(id)) return '';
@@ -282,17 +282,26 @@ function areaEscritorio() {
   return { W: e.clientWidth, H: e.clientHeight };
 }
 
-// Sitio por defecto: a la derecha de los widgets si cabe, si no encima.
-function sitioNuevo(n: number): Pick<Ventana, 'x' | 'y' | 'w' | 'h'> {
+// Ancho con el que abre cada pantalla ancha (tableros, calendario, mapa); el
+// resto, 880 px. Si no cabe a la derecha de los widgets, se pone encima.
+const ANCHO: Record<string, number> = { calendario: 1240, mapa: 1120, oportunidades: 1180, proyectos: 1180, direccion: 1040, mantenimientos: 1100, trabajos: 1000, tickets: 1000 };
+
+// Sitio por defecto: a la derecha de los widgets si cabe, si no encima. Las
+// nuevas van en cascada de cuatro escalones con el título entero a la vista
+// (la cabecera mide 46 px); cada vuelta se corre a la derecha.
+function sitioNuevo(n: number, id = ''): Pick<Ventana, 'x' | 'y' | 'w' | 'h'> {
   const { W, H } = areaEscritorio();
   const wid = document.getElementById('os-widgets');
   // Con los widgets movidos a mano no hay columna que respetar.
   const libreX = wid && !wid.classList.contains('libre') ? wid.offsetWidth + MARGEN * 2 : MARGEN * 2;
-  const x = libreX + 640 <= W ? libreX : Math.round(W * 0.28);
-  const w = Math.max(560, Math.min(880, W - x - MARGEN));
+  const quiere = ANCHO[id.split('/')[0]] ?? 880;
+  const x0 = libreX + 640 <= W ? libreX : Math.round(W * 0.28);
+  const x = x0 + quiere > W - MARGEN && quiere + MARGEN * 2 <= W ? MARGEN : x0;
+  const w = Math.max(560, Math.min(quiere, W - x - MARGEN));
   const h = Math.max(420, H - MARGEN * 2 - 24);
-  const d = (n % 6) * 24;
-  return { x: Math.min(x + d, W - w - MARGEN), y: MARGEN + d, w, h: h - d };
+  const escalon = n % 4, vuelta = Math.floor(n / 4) % 3;
+  const dy = escalon * 46, dx = escalon * 46 + vuelta * 28;
+  return { x: Math.max(MARGEN, Math.min(x + dx, W - w - MARGEN)), y: MARGEN + dy, w, h: h - dy };
 }
 
 function geometriaZona(z: Zona) {
@@ -356,7 +365,7 @@ async function abrirVentana(id: string, params: string[], enfocarla = true) {
   let v = ventanaDe(id);
   const nueva = !v;
   if (!v) {
-    v = { id, params, min: false, snap: null, z: ++_z, ...sitioNuevo(escritorio().ventanas.length) };
+    v = { id, params, min: false, snap: null, z: ++_z, ...sitioNuevo(escritorio().ventanas.length, id) };
     escritorio().ventanas.push(v);
   } else { v.params = params; if (v.z > _z) _z = v.z; }
   let el = document.getElementById(`os-win-${id}`);

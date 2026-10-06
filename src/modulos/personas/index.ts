@@ -11,10 +11,17 @@ import { equipo, nombreDe } from '../../core/equipo';
 import { registrarAcciones } from '../../core/dispatcher';
 import { resolver } from '../../core/router';
 import { llamarFuncion } from '../../core/funciones';
-import { esc, toast, hace } from '../../ui/dom';
+import { esc, toast, hace, fecha, pl } from '../../ui/dom';
 import { ico, type IconoLinea } from '../../shell/linea';
 import { eur } from '../ventas/datos';
 import { seccionMovimientos, vistaMovimiento } from './movimientos';
+
+// '2026-09' → «Septiembre de 2026».
+const nombreMes = (m: string) => {
+  const [a, n] = m.split('-').map(Number);
+  const t = new Date(a, (n || 1) - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  return Number.isNaN(a) ? m : t.charAt(0).toUpperCase() + t.slice(1);
+};
 
 interface Dia { usuario_id: string; nombre: string; fecha: string; entrada: string | null; salida: string | null; trabajado_min: number | null;
   pausas_min: number | null; sesiones: number; ajustado: boolean; motivo_ajuste: string | null; ausencia: string | null }
@@ -82,7 +89,7 @@ async function vistaJornada(): Promise<string> {
       <table class="tabla pe-jornada"><thead><tr><th>Día</th><th>Entrada</th><th>Salida</th><th>Trabajado</th><th>Pausas</th><th>Observaciones</th>${esAdmin() ? '<th class="no-imprimir"></th>' : ''}</tr></thead><tbody>
       ${_dias.map(d => `<tr class="${d.ausencia ? 'pe-ausencia' : ''}"><td>${esc(diaSemana(d.fecha))}</td><td>${hora(d.entrada)}</td><td>${hora(d.salida)}</td>
         <td>${hm(d.trabajado_min)}</td><td>${hm(d.pausas_min)}</td>
-        <td>${(d.trabajado_min ?? 0) > 720 && !d.ajustado ? '<span class="chip mal">más de 12 h: ¿se quedó un fichaje abierto?</span> ' : ''}${d.ausencia ? ausHtml(d.ausencia) : ''}${d.ajustado ? ` <span class="chip aviso" title="${esc(d.motivo_ajuste ?? '')}">corregido: ${esc(d.motivo_ajuste ?? '')}</span>` : ''}${d.sesiones ? ` <small class="nota">${d.sesiones} fichaje(s)</small>` : ''}</td>
+        <td>${(d.trabajado_min ?? 0) > 720 && !d.ajustado ? '<span class="chip mal">más de 12 h: ¿se quedó un fichaje abierto?</span> ' : ''}${d.ausencia ? ausHtml(d.ausencia) : ''}${d.ajustado ? ` <span class="chip aviso" title="${esc(d.motivo_ajuste ?? '')}">corregido: ${esc(d.motivo_ajuste ?? '')}</span>` : ''}${d.sesiones ? ` <small class="nota">${pl(d.sesiones, 'fichaje', 'fichajes')}</small>` : ''}</td>
         ${esAdmin() ? `<td class="no-imprimir"><button class="btn secundario" data-action="peCorregir" data-p0="${esc(d.fecha)}">Corregir</button></td>` : ''}</tr>`).join('')
         || `<tr><td colspan="7" class="vacio">Sin fichajes este mes.</td></tr>`}
       </tbody><tfoot><tr><th colspan="3">Total</th><th>${hm(total)}</th><th colspan="3"></th></tr></tfoot></table></div>
@@ -143,12 +150,12 @@ async function vistaGastos(): Promise<string> {
   const total = lista.filter(g => g.estado === 'ok').reduce((s, g) => s + Number(g.total ?? 0), 0);
   return `<form class="tarjeta pe-subir" data-on-submit="peSubir" data-prevent="1"><h3>Subir un ticket de gasto</h3>
       <p class="nota">Una foto del ticket o la factura en PDF: Claude lee la fecha, el proveedor, el NIF, la base, el IGIC y el total. Lo revisas y queda para la gestoría.</p>
-      <input type="file" id="pe-archivo" accept="image/*,application/pdf" required aria-label="Foto o PDF del gasto">
+      <label>Foto o PDF del gasto <input type="file" id="pe-archivo" accept="image/*,application/pdf" required></label>
       <div class="acciones"><button class="btn" type="submit" id="pe-subir-btn">Subir y leer</button><span class="nota" id="pe-subir-estado"></span></div></form>
     <div id="pe-gasto-caja">${_gasto ? formGasto(_gasto) : ''}</div>
     <div class="acciones pr-barra"><label>Mes <input type="month" value="${esc(mes)}" data-on-change="peMes:$value"></label><span class="nota">Confirmados: ${eur(total, 2)}</span></div>
     <div class="tarjeta mo-scroll">${lista.length ? `<table class="tabla"><thead><tr><th>Fecha</th><th>Proveedor</th><th>Concepto</th><th>Total</th><th>Estado</th>${esAdmin() ? '<th>Quién</th>' : ''}</tr></thead><tbody>
-      ${lista.map(g => `<tr class="fila-clic" data-action="peAbrirGasto" data-p0="${g.id}"><td>${esc(g.fecha ?? '—')}</td><td>${esc(g.proveedor ?? '')}</td><td>${esc(g.concepto ?? g.categoria ?? '')}</td>
+      ${lista.map(g => `<tr class="fila-clic" data-action="peAbrirGasto" data-p0="${g.id}"><td>${esc(fecha(g.fecha) || '—')}</td><td>${esc(g.proveedor ?? '')}</td><td>${esc(g.concepto ?? g.categoria ?? '')}</td>
         <td>${g.total != null ? eur(g.total, 2) : '—'}</td><td><span class="chip ${g.estado === 'ok' ? 'bien' : g.estado === 'error' ? 'mal' : 'aviso'}">${esc({ ok: 'confirmado', revisar: 'por revisar', leyendo: 'leyendo…', error: 'revisar a mano' }[g.estado] ?? g.estado)}</span></td>
         ${esAdmin() ? `<td>${esc(nombreDe(g.subido_por))}</td>` : ''}</tr>`).join('')}</tbody></table>` : '<p class="vacio">Sin gastos este mes.</p>'}</div>
     ${movimientos}
@@ -165,7 +172,7 @@ async function vistaCierre(): Promise<string> {
     API.get<any[]>('jornada_cierres', { select: 'usuario_id,confirmado_at', mes: `eq.${desde}` }), equipo()]);
   const est = c.data?.estado ?? 'abierto';
   return `<div class="acciones pr-barra"><label>Mes <input type="month" value="${esc(mes)}" data-on-change="peMesCierre:$value"></label></div>
-    <section class="tarjeta"><h3>${esc(mes)} · <span class="chip ${est === 'cerrado' ? 'bien' : est === 'revisado' ? 'aviso' : ''}">${esc(est)}</span></h3>
+    <section class="tarjeta"><h3>${esc(nombreMes(mes))} <span class="chip ${est === 'cerrado' ? 'bien' : est === 'revisado' ? 'aviso' : ''}">${esc(est)}</span></h3>
       ${c.data?.revisado_at ? `<p>La gestoría (${esc(c.data.revisado_por ?? '')}) lo revisó ${esc(hace(c.data.revisado_at))}${c.data.nota_gestoria ? `: «${esc(c.data.nota_gestoria)}»` : '.'}</p>` : '<p class="nota">La gestoría aún no lo ha revisado.</p>'}
       <h4>Conformidad con la jornada</h4><ul>${personas.map(p => { const x = (conf.data ?? []).find(y => y.usuario_id === p.id); return `<li>${esc(p.nombre)}: ${x ? `✓ ${esc(hace(x.confirmado_at))}` : '<span class="nota">pendiente</span>'}</li>`; }).join('')}</ul>
       ${est !== 'cerrado' ? `<form data-on-submit="peCerrarMes" data-prevent="1"><label>Nota <input id="pe-cierre-nota" value="${esc(c.data?.nota ?? '')}"></label>
@@ -294,7 +301,7 @@ async function contador(): Promise<Contador | null> {
   ]);
   if (aus == null) return null;
   const n = aus + (gas ?? 0);
-  return { valor: n, subtitulo: esAdmin() ? `${aus} ausencia(s) por decidir · ${gas ?? 0} gasto(s) por revisar` : 'cosas tuyas pendientes', tono: n ? 'aviso' : 'bien' };
+  return { valor: n, subtitulo: esAdmin() ? `${pl(aus, 'ausencia', 'ausencias')} por decidir · ${pl(gas ?? 0, 'gasto', 'gastos')} por revisar` : 'cosas tuyas pendientes', tono: n ? 'aviso' : 'bien' };
 }
 
 export const moduloPersonas: Modulo = {

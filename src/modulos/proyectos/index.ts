@@ -5,6 +5,7 @@ import type { Modulo, Contador } from '../../core/modulo';
 import { API } from '../../core/api';
 import { pintarListaProyectos } from './lista';
 import { pintarFicha } from './ficha';
+import { pl } from '../../ui/dom';
 
 async function contador(): Promise<Contador | null> {
   const hoy = new Date().toLocaleDateString('sv-SE');
@@ -16,7 +17,7 @@ async function contador(): Promise<Contador | null> {
   if (abiertos == null) return null;
   return {
     valor: abiertos,
-    subtitulo: vencidas ? `${vencidas} tarea(s) vencida(s)` : `${desarrollo ?? 0} en desarrollo`,
+    subtitulo: vencidas ? `${pl(vencidas, 'tarea vencida', 'tareas vencidas')}` : `${desarrollo ?? 0} en desarrollo`,
     tono: vencidas ? 'aviso' : 'neutro',
   };
 }

@@ -13,7 +13,7 @@ import { equipo, nombreDe } from '../../core/equipo';
 import { registrarAcciones } from '../../core/dispatcher';
 import { bloqueZohoBilling } from '../mantenimientos/zoho-billing';
 import { ir, resolver } from '../../core/router';
-import { esc, toast, hace, fechaHora } from '../../ui/dom';
+import { esc, toast, hace, fechaHora, fecha } from '../../ui/dom';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
 import { descargarCsv } from '../../ui/csv';
@@ -61,18 +61,19 @@ async function pintarLista(el: HTMLElement) {
     el.innerHTML = `${barraLista(escribe)}
       <div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Cliente de baja</th><th>Contacto</th><th></th></tr></thead><tbody>
       ${_visibles.map(c => `<tr class="fila-clic" data-action="clAbrir" data-p0="${esc(c.id)}"><td><strong>${esc(c.nombre)}</strong>${c.nif ? `<br><small class="nota">${esc(c.nif)}</small>` : ''}</td>
-        <td>${esc(c.telefono ?? '')}${c.email ? `<br><small class="nota">${esc(c.email)}</small>` : ''}</td>
+        <td>${esc(c.telefono ?? (c.email ? '' : '—'))}${c.email ? `<br><small class="nota">${esc(c.email)}</small>` : ''}</td>
         <td>${escribe ? `<button class="btn secundario" data-action="clReactivar" data-p0="${esc(c.id)}" data-stop="1">Reactivar</button>` : ''}</td></tr>`).join('')
         || '<tr><td colspan="3" class="vacio">Ningún cliente de baja.</td></tr>'}</tbody></table></div>`;
     return;
   }
   const sig = new Map((crm.data ?? []).map(c => [c.cliente_id, c]));
   const q = _filtro.toLowerCase();
-  const filtrados = _lista.filter(c => (!_clase || cs.get(c.id)?.clase === _clase) &&
+  const filtrados = _lista.filter(c => (!_clase || (cs.get(c.id)?.clase ?? 'C') === _clase) &&
     (!q || [c.nombre, c.nif, c.telefono, c.email].some(x => (x ?? '').toLowerCase().includes(q))));
   const orden = { A: 0, B: 1, C: 2 } as Record<string, number>;
   filtrados.sort((a, b) => (orden[cs.get(a.id)?.clase ?? 'C'] - orden[cs.get(b.id)?.clase ?? 'C']) || a.nombre.localeCompare(b.nombre));
-  const cuenta = (k: string) => _lista.filter(c => cs.get(c.id)?.clase === k).length;
+  // Sin clase calculada (nada facturado en 12 meses) es C, como en el orden.
+  const cuenta = (k: string) => _lista.filter(c => (cs.get(c.id)?.clase ?? 'C') === k).length;
   _visibles = filtrados;
   el.innerHTML = `${barraLista(escribe)}
     <div class="acciones mo-barra">
@@ -84,9 +85,9 @@ async function pintarLista(el: HTMLElement) {
     <tbody>${filtrados.slice(0, 150).map(c => {
       const s = sig.get(c.id);
       return `<tr class="fila-clic" data-action="clAbrir" data-p0="${esc(c.id)}">
-        <td>${chipClase(cs.get(c.id)?.clase)}</td><td><strong>${esc(c.nombre)}</strong>${c.nif ? `<br><small class="nota">${esc(c.nif)}</small>` : ''}</td>
-        <td>${esc(c.telefono ?? '')}${c.email ? `<br><small class="nota">${esc(c.email)}</small>` : ''}</td>
-        <td>${s?.siguiente_fecha ? `<span class="${s.siguiente_fecha < hoy() ? 'mal' : ''}">${esc(s.siguiente_fecha)}</span> ${esc(s.siguiente_texto ?? '')}` : ''}</td></tr>`;
+        <td>${chipClase(cs.get(c.id)?.clase ?? 'C')}</td><td><strong>${esc(c.nombre)}</strong>${c.nif ? `<br><small class="nota">${esc(c.nif)}</small>` : ''}</td>
+        <td>${esc(c.telefono ?? (c.email ? '' : '—'))}${c.email ? `<br><small class="nota">${esc(c.email)}</small>` : ''}</td>
+        <td>${s?.siguiente_fecha ? `<span class="${s.siguiente_fecha < hoy() ? 'mal' : ''}">${esc(fecha(s.siguiente_fecha))}</span> ${esc(s.siguiente_texto ?? '')}` : '<span class="nota">—</span>'}</td></tr>`;
     }).join('') || '<tr><td colspan="4" class="vacio">Ningún cliente con ese filtro.</td></tr>'}</tbody></table></div>`;
 }
 
@@ -95,7 +96,7 @@ function barraLista(escribe: boolean): string {
       <input id="cl-filtro" type="search" placeholder="Buscar por nombre, NIF, teléfono o email…" value="${esc(_filtro)}" data-on-input="clFiltrar:$value" aria-label="Buscar cliente">
       <button class="chip-boton ${_bajas ? 'activo' : ''}" data-action="clBajas" aria-pressed="${_bajas}">De baja</button>
       <button class="btn secundario" data-action="clExcel">${ico('descargar')} Excel</button>
-      ${escribe ? '<a class="btn" href="#/clientes/nuevo">+ Nuevo cliente</a>' : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener">+ Nuevo cliente en la app ${ico('externo')}</a>`}
+      ${escribe ? `<a class="btn" href="#/clientes/nuevo">${ico('mas')} Nuevo cliente</a>` : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener">${ico('mas')} Nuevo cliente en la app ${ico('externo')}</a>`}
     </div>`;
 }
 
@@ -176,7 +177,7 @@ async function tabActividad(c: Cliente): Promise<string> {
 async function tabSedes(c: Cliente): Promise<string> {
   const { data } = await API.get<any[]>('locales', { select: 'id,nombre,direccion,plan,estado_pago,importe_mantenimiento,programa_tpv,lat,lng,maps_url,activo', cliente_id: `eq.${c.id}`, order: 'nombre' });
   const ls = data ?? [];
-  const nueva = await esDelHub('locales') ? `<p class="acciones"><a class="btn" href="#/sitios/nuevo/${esc(c.id)}">+ Nueva sede</a></p>` : '';
+  const nueva = await esDelHub('locales') ? `<p class="acciones"><a class="btn" href="#/sitios/nuevo/${esc(c.id)}">${ico('mas')} Nueva sede</a></p>` : '';
   // Cartera vieja de Zoho Billing: buscar sus suscripciones y vincularlas a una sede (admin).
   const zb = esAdmin() && c.zoho_id ? bloqueZohoBilling(c.zoho_id, ls.filter(l => l.activo !== false).map(l => ({ id: l.id, nombre: l.nombre }))) : '';
   if (!ls.length) return `${nueva}<p class="vacio">Este cliente no tiene sedes todavía.</p>`;
@@ -198,7 +199,7 @@ async function tabSedes(c: Cliente): Promise<string> {
 async function tabContactos(c: Cliente): Promise<string> {
   const { data } = await API.get<any[]>('contactos', { select: 'id,nombre,cargo,telefono,telefono2,email,local_id,favorito', cliente_id: `eq.${c.id}`, activo: 'eq.true', order: 'favorito.desc.nullslast,nombre' });
   const cs = data ?? [];
-  const nuevo = await esDelHub('contactos') ? `<p class="acciones"><a class="btn" href="#/contactos/nuevo/c/${esc(c.id)}">+ Nuevo contacto</a></p>` : '';
+  const nuevo = await esDelHub('contactos') ? `<p class="acciones"><a class="btn" href="#/contactos/nuevo/c/${esc(c.id)}">${ico('mas')} Nuevo contacto</a></p>` : '';
   if (!cs.length) return `${nuevo}<p class="vacio">Sin contactos todavía.</p>`;
   return `${nuevo}<div class="cl-contactos">${cs.map(p => {
     const wa = telWhatsApp(p.telefono);
@@ -211,10 +212,10 @@ async function tabContactos(c: Cliente): Promise<string> {
 
 async function tabOportunidades(c: Cliente): Promise<string> {
   const { data } = await API.get<Oportunidad[]>('oportunidades', { select: '*', cliente_id: `eq.${c.id}`, order: 'cerrada_at.nullsfirst,created_at.desc' });
-  return `<div class="acciones mo-barra"><button class="btn" data-action="clNuevaOportunidad">+ Nueva oportunidad</button></div>
+  return `<div class="acciones mo-barra"><button class="btn" data-action="clNuevaOportunidad">${ico('mas')} Nueva oportunidad</button></div>
     ${(data ?? []).length ? `<div class="tarjeta mo-scroll"><table class="tabla"><thead><tr><th>Oportunidad</th><th>Etapa</th><th>Valor</th><th>Seguimiento</th></tr></thead>
     <tbody>${(data ?? []).map(o => `<tr class="fila-clic" data-action="clAbrirOportunidad" data-p0="${esc(o.id)}"><td>${esc(o.titulo)}</td><td>${esc(o.estado)}</td>
-      <td>${eur(o.valor_estimado)}</td><td>${esc(o.fecha_seguimiento ?? '')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="vacio">Ninguna.</p>'}`;
+      <td>${eur(o.valor_estimado)}</td><td>${esc(fecha(o.fecha_seguimiento))}</td></tr>`).join('')}</tbody></table></div>` : '<p class="vacio">Ninguna.</p>'}`;
 }
 
 async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {

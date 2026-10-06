@@ -83,7 +83,7 @@ async function pintar(el: HTMLElement) {
   const sec = antes ? seccionDe(antes) : '';
   const pantallas = modulos().filter(m => !m.enlaceExterno && m.id !== 'feedback');
   el.innerHTML = `
-    <form class="tarjeta" id="fb-form" data-on-submit="fbEnviar" data-prevent="1"><h3>Cuéntalo</h3>
+    <form class="tarjeta" id="fb-form" data-on-submit="fbEnviar" data-prevent="1"><h2>Cuéntalo</h2>
       <div class="in-campos">
         <label>Qué es <select id="fb-tipo">${Object.entries(TIPOS).map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select></label>
         <label>Dónde <select id="fb-seccion"><option value="">(en general)</option>${pantallas.map(m => `<option value="${esc(m.id)}" ${m.id === sec ? 'selected' : ''}>${esc(m.titulo)}</option>`).join('')}</select></label>
@@ -93,7 +93,7 @@ async function pintar(el: HTMLElement) {
       <div class="acciones"><button class="btn" type="submit">Enviar</button>
         ${puedeDictar() ? `<button type="button" class="btn secundario" id="fb-dictar" data-action="fbDictar" aria-pressed="false">${ico('micro')} Dictar</button>` : ''}</div>
     </form>
-    <section class="fb-zona"><div class="acciones"><h3>${esAdmin() ? 'Lo que ha contado el equipo' : 'Lo que has contado'}</h3>
+    <section class="fb-zona"><div class="acciones"><h2>${esAdmin() ? 'Lo que ha contado el equipo' : 'Lo que has contado'}</h2>
       <div class="segmentado fb-filtros" role="tablist">${FILTROS.map(([k, t]) => `<button type="button" data-action="fbFiltro" data-p0="${k}" class="${k === _filtro ? 'activo' : ''}">${t}</button>`).join('')}</div></div>
       <div id="fb-lista"><p class="cargando">Cargando…</p></div></section>`;
   el.dataset.ruta = antes;

@@ -69,7 +69,7 @@ function filaContrato(c: Contrato, escribe: boolean, admin: boolean): string {
       ${c.estado === 'firmado' ? `<a class="btn secundario" href="#/mantenimientos/contrato/${esc(c.id)}/ver">${ico('ver')} Ver firmado</a>` : ''}
       ${c.estado !== 'anulado' ? `<a class="btn secundario" href="#/mantenimientos/contrato/${esc(c.id)}/enlace">${ico('enlace')} Enlace / enviar</a>` : ''}
       ${c.estado !== 'anulado' && escribe ? `<a class="btn secundario" href="#/mantenimientos/contrato/${esc(c.id)}">${ico('editar')} Editar</a>` : ''}
-      ${c.estado === 'pendiente' && escribe && admin ? `<button class="btn secundario" data-action="mdoAnular" data-p0="${esc(c.id)}">✕ Anular</button>` : ''}
+      ${c.estado === 'pendiente' && escribe && admin ? `<button class="btn secundario" data-action="mdoAnular" data-p0="${esc(c.id)}">${ico('cerrar')} Anular</button>` : ''}
       ${escribe && admin ? `<button class="btn peligro" data-action="mdoEliminar" data-p0="${esc(c.id)}">${ico('eliminar')} Eliminar</button>` : ''}</div></li>`;
 }
 

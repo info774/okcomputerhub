@@ -194,7 +194,7 @@ try {
     await p3.waitForSelector('#os-dock .os-ditem[data-mod="direccion"] .os-dinsignia.g-mal', { timeout: 5000 }).catch(() => {});
     ok(!!(await p3.$('#os-dock .os-ditem[data-mod="direccion"] .os-dinsignia.g-mal')), 'un aviso urgente pone la insignia roja en Puesto de mando');
     await p3.screenshot({ path: `${CAPTURAS}/dock-insignia-reposo.png`, clip: { x: 250, y: 780, width: 1100, height: 120 } });
-    ok((await p3.textContent('#os-dock .os-ditem[data-mod="direccion"] .os-dlabel small')) === '1 urgente(s)', 'y el nombre del icono lo cuenta («1 urgente(s)», sin repetir la cifra)');
+    ok((await p3.textContent('#os-dock .os-ditem[data-mod="direccion"] .os-dlabel small')) === '1 urgente', 'y el nombre del icono lo cuenta («1 urgente», sin repetir la cifra)');
     ok(await p3.$$eval('#os-dock .os-dinsignia', es => es.length) === 1, 'lo que no pide atención no lleva insignia');
     await p3.mouse.move(800, 300);
     await p3.click('#os-dock .os-ditem[data-mod="direccion"]', { button: 'right' });

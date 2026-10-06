@@ -118,7 +118,7 @@ async function pintarLista(el: HTMLElement) {
     <div class="pp-cabeza">${cifras()}${reparto()}</div>
     <div class="acciones mo-barra">
       <input id="pp-filtro" type="search" placeholder="Buscar por número, título, cliente o persona…" value="${esc(_q)}" data-on-input="ppFiltrar:$value" aria-label="Buscar presupuesto">
-      ${delHub ? '<a class="btn" href="#/presupuestos/nuevo">+ Nuevo presupuesto</a>' : ''}
+      ${delHub ? `<a class="btn" href="#/presupuestos/nuevo">${ico('mas')} Nuevo presupuesto</a>` : ''}
       <a class="btn secundario" href="#/presupuestos/plantillas">Plantillas</a>
       <select id="pp-persona" data-on-change="ppPersona:$value" aria-label="Persona">
         <option value="">Todo el equipo</option><option value="__mios" ${_persona === '__mios' ? 'selected' : ''}>Los míos</option>
@@ -131,8 +131,8 @@ async function pintarLista(el: HTMLElement) {
         <td><strong>${esc(nombre(p))}</strong>${p.zoho_estimate_id ? ' <span class="chip" title="Ya está en Zoho Books">Zoho</span>' : ''}</td>
         <td>${chipEstado(p.estado)}${sinRespuesta(p) ? ` <span class="chip mal" title="Enviado y sin respuesta">${diasDesde(p)} d</span>` : ''}</td>
         <td>${fechaCorta(p)}</td>
-        <td>${esc(_clientes.get(p.cliente_id ?? '') ?? '')}</td>
-        <td>${esc(p.tecnico_id ?? '')}</td>
+        <td>${esc(_clientes.get(p.cliente_id ?? '') ?? '—')}</td>
+        <td>${esc(p.tecnico_id ?? '—')}</td>
         <td class="num">${eur(p.total, 2)}</td></tr>`).join('') || '<tr><td colspan="6" class="vacio">Ningún presupuesto con ese filtro.</td></tr>'}</tbody></table></div>`;
 }
 
@@ -162,7 +162,7 @@ async function pintarFicha(el: HTMLElement, id: string) {
       <div class="acciones">${botonChatFicha('presupuesto', p.id, nombre(p), `#/presupuestos/${p.id}`)}${enlaceHistorial('presupuestos', p.id)}
         <a class="btn secundario" href="#/presupuestos/${esc(p.id)}/pdf">${ico('imprimir')} PDF</a>
         ${delHub ? `<a class="btn secundario" href="#/presupuestos/${esc(p.id)}/editar">${ico('editar')} Editar</a>
-          <button class="btn secundario" data-action="ppDuplicar" data-p0="${esc(p.id)}">⧉ Duplicar</button>
+          <button class="btn secundario" data-action="ppDuplicar" data-p0="${esc(p.id)}">${ico('repetir')} Duplicar</button>
           <button class="btn secundario" data-action="ppZoho" data-p0="${esc(p.id)}" title="${p.zoho_estimate_id ? 'Ya está en Zoho: se actualiza' : 'Crea el presupuesto en Zoho Books y lo deja «Enviado»'}">${ico('subir')} ${p.zoho_estimate_id ? 'Actualizar en Zoho' : 'Enviar a Zoho'}</button>
           ${p.estado === 'Aceptado' && delTrabajos ? `<a class="btn" href="#/presupuestos/${esc(p.id)}/trabajo">${ico('herramienta')} Convertir en trabajo</a>` : ''}
           ${esAdmin() ? `<button class="btn peligro" data-action="ppEliminar" data-p0="${esc(p.id)}">Eliminar</button>` : ''}`

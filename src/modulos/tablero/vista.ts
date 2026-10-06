@@ -30,7 +30,7 @@ function tarjetas(): string {
   return xs.map(n => `<article class="tarjeta tb-nota" data-id="${esc(n.id)}"><h3>${esc(n.titulo)}</h3>${n.descripcion ? `<div class="md">${markdown(n.descripcion)}</div>` : ''}
     <footer><small class="nota" title="${esc(fechaHora(n.created_at))}">${esc(nombreDe(n.user_id) || '—')} · ${esc(hace(n.created_at))}</small>
       ${_escribe && n.user_id === yo ? `<span><button class="icono-btn pequeno" data-action="tbEditar" data-p0="${esc(n.id)}" aria-label="Editar la nota">${ico('editar')}</button>
-        <button class="icono-btn pequeno" data-action="tbBorrar" data-p0="${esc(n.id)}" aria-label="Borrar la nota">✕</button></span>` : ''}</footer></article>`).join('')
+        <button class="icono-btn pequeno" data-action="tbBorrar" data-p0="${esc(n.id)}" aria-label="Borrar la nota">${ico('cerrar')}</button></span>` : ''}</footer></article>`).join('')
     || `<p class="vacio">${q ? 'Ninguna nota con eso.' : `Sin notas.${_escribe ? ' Pulsa «+ Nueva nota» para empezar.' : ''}`}</p>`;
 }
 
@@ -51,7 +51,7 @@ export async function pintar(el: HTMLElement) {
   _editando = null;
   el.innerHTML = `${escribe ? '' : avisoSoloLectura('El tablero')}
     <div class="acciones tb-barra"><input id="tb-q" type="search" placeholder="Buscar en las notas…" value="${esc(_q)}" data-on-input="tbBuscar:$value" aria-label="Buscar nota">
-      ${escribe ? `<button class="btn" data-action="tbNueva">+ Nueva nota</button>${puedeDictar() ? `<button class="btn secundario" data-action="tbVoz">${ico('micro')} Nota de voz</button>` : ''}` : ''}</div>
+      ${escribe ? `<button class="btn" data-action="tbNueva">${ico('mas')} Nueva nota</button>${puedeDictar() ? `<button class="btn secundario" data-action="tbVoz">${ico('micro')} Nota de voz</button>` : ''}` : ''}</div>
     <div id="tb-hueco"></div>
     <div class="tb-rejilla" id="tb-rejilla">${tarjetas()}</div>`;
 }

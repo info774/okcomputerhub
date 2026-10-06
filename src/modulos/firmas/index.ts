@@ -26,7 +26,7 @@ let _timer = 0;
 async function vistaLista(): Promise<string> {
   const { data } = await API.get<Firma[]>('firmas', { select: 'id,created_at,titulo,firmante_nombre,estado,firmado_at,caduca_at,cliente_id,creado_por', order: 'created_at.desc', limit: '200' });
   const nombres = await nombresClientes((data ?? []).map(f => f.cliente_id));
-  return `<div class="acciones pr-barra"><a class="btn" href="#/firmas/nueva">+ Documento para firmar</a></div>
+  return `<div class="acciones pr-barra"><a class="btn" href="#/firmas/nueva">${ico('mas')} Documento para firmar</a></div>
     <div class="tarjeta mo-scroll">${(data ?? []).length ? `<table class="tabla"><thead><tr><th>Documento</th><th>Firmante</th><th>Estado</th><th>Cuándo</th></tr></thead><tbody>
     ${(data ?? []).map(f => `<tr class="fila-clic" data-action="fiAbrir" data-p0="${f.id}"><td><strong>${esc(f.titulo)}</strong>${f.cliente_id ? `<br><small class="nota">${esc(nombres.get(f.cliente_id) ?? '')}</small>` : ''}</td>
       <td>${esc(f.firmante_nombre ?? '')}</td><td><span class="chip ${TONO[f.estado] ?? ''}">${esc(f.estado)}</span>${f.estado === 'pendiente' && f.caduca_at < new Date().toISOString() ? ' <span class="chip mal">caducado</span>' : ''}</td>
