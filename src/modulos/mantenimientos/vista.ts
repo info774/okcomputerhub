@@ -3,7 +3,8 @@
 //                               atención, próximas visitas, garantías)
 //   #/mantenimientos/locales    la TABLA MAESTRA: una fila por sede con plan,
 //                               cobro, certificado, copia, control horario,
-//                               revisiones, teléfonos y código de verificación
+//                               revisiones, teléfonos, AnyDesk y código de verificación
+//                               (solo LOCALES: las viviendas no llevan mantenimiento)
 //   #/mantenimientos/ficha/<id> la ficha de mantenimiento de una sede (ficha.ts)
 //   #/mantenimientos/alta[/<id>] «+ Contrato»: plan, cuota y frecuencia de una sede (alta.ts)
 //   #/mantenimientos/checklist  tareas del plan del periodo (checklist.ts)
@@ -34,12 +35,14 @@ const PASARELA: Record<Pasarela, [string, string]> = {
 const FILTROS: [string, string][] = [['', 'Todas'], ['torcido', 'Cobro torcido'], ['en_curso', 'Cobro en curso'], ['nadie', 'Sin domiciliar'],
   ['espera', 'Esperando pago'], ['stripe', 'Stripe'], ['zoho', 'Zoho']];
 const FICHA: [string, string][] = [['', 'Ficha: todo'], ['cert', 'Certificado vencido o ≤ 30 días'], ['sin_cert', 'Sin fecha de certificado'],
-  ['backup', 'Copia del plan pendiente'], ['sin_backup', 'Sin copia en el plan'], ['ch', 'Control horario sin dato'], ['revision', 'Revisiones atrasadas'], ['sin_dueno', 'Sin teléfono de dueño']];
+  ['backup', 'Copia del plan pendiente'], ['sin_backup', 'Sin copia en el plan'], ['ch', 'Control horario sin dato'], ['revision', 'Revisiones atrasadas'], ['sin_dueno', 'Sin teléfono de dueño'],
+  ['sin_anydesk', 'Sin AnyDesk'], ['con_anydesk', 'Con AnyDesk']];
 
 let _lista: Sede[] = [];
 let _listaAt = 0;
 let _clientes = new Map<string, { nombre: string; email: string | null }>();
 let _tels = new Map<string, Telefono[]>();
+let _anydesk = new Map<string, string[]>();   // sede → AnyDesk de su Hardware y Software (los del botón «Remoto»)
 let _backup = new Map<string, string>();
 let _revision = new Map<string, string>();
 let _contratos: Contrato[] = [];
@@ -63,12 +66,15 @@ const chipPago = (s: Sede) => {
 
 async function cargar() {
   if (_lista.length && Date.now() - _listaAt < 5 * 60_000) return null;
-  const [ls, cs, ts, ks, bs] = await Promise.all([
-    API.fetchAll<Sede>('locales', { select: colsSede(), plan: 'not.in.("Sin mantenimiento","")', activo: 'neq.false', order: 'nombre' }),
+  const [ls, cs, ts, ks, bs, hw, sw] = await Promise.all([
+    // Solo LOCALES (como la app desde el 2026-10-05): `tipo=neq.Vivienda` a secas dejaría fuera las sedes sin tipo.
+    API.fetchAll<Sede>('locales', { select: colsSede(), plan: 'not.in.("Sin mantenimiento","")', activo: 'neq.false', or: '(tipo.is.null,tipo.neq.Vivienda)', order: 'nombre' }),
     _clientes.size ? Promise.resolve(null) : API.fetchAll<{ id: string; nombre: string; email: string | null }>('clientes', { select: 'id,nombre,email' }),
     API.fetchAll<Telefono>('local_telefonos', { select: 'id,local_id,nombre,numero,rol', order: 'created_at' }),
     API.fetchAll<Contrato>('contratos', { select: COLS_CONTRATO, order: 'created_at.desc' }),
     API.fetchAll<{ id: string }>('locales', { select: 'id', activo: 'eq.false' }),
+    API.fetchAll<{ local_id: string; anydesk_id: string }>('local_hardware', { select: 'local_id,anydesk_id', anydesk_id: 'not.is.null', order: 'created_at' }),
+    API.fetchAll<{ local_id: string; anydesk_id: string }>('local_software', { select: 'local_id,anydesk_id', anydesk_id: 'not.is.null', order: 'created_at' }),
   ]);
   _bajas = new Set((bs.data ?? []).map(b => b.id));
   _contratos = ks.data ?? [];
@@ -77,6 +83,14 @@ async function cargar() {
   _lista = ls.data ?? []; _listaAt = Date.now();
   _tels = new Map();
   for (const t of ts.data ?? []) _tels.set(t.local_id, [...(_tels.get(t.local_id) ?? []), t]);
+  // anydesksDe de la app: Hardware y Software, sin repetir; «123 456 789» y «123456789» son el mismo.
+  _anydesk = new Map();
+  const vistos = new Set<string>();
+  for (const x of [...(hw.data ?? []), ...(sw.data ?? [])]) {
+    const ad = String(x.anydesk_id ?? '').trim(), k = `${x.local_id}|${ad.replace(/\s+/g, '')}`;
+    if (!ad || vistos.has(k)) continue;
+    vistos.add(k); _anydesk.set(x.local_id, [...(_anydesk.get(x.local_id) ?? []), ad]);
+  }
   ({ backup: _backup, revision: _revision } = await estadosDelPlan(_lista));
   _renovSinAvisar = renovaciones().filter(x => !x.r.avisado).length;
   return null;
@@ -86,6 +100,7 @@ async function cargar() {
 const renovaciones = () => renovacionesProximas(_contratos, id => !!id && _bajas.has(id));
 const nombreCliente = (s: Sede) => _clientes.get(s.cliente_id ?? '')?.nombre ?? '';
 const certAlerta = (s: Sede) => { const d = diasHasta(s.cert_caducidad); return d != null && d <= 30; };
+const anydesks = (s: Sede) => _anydesk.get(s.id) ?? [];
 const sinDueno = (s: Sede) => !(_tels.get(s.id) ?? []).some(t => ROLES_SENSIBLES.includes(t.rol ?? ''));
 
 function filtradas(): Sede[] {
@@ -102,8 +117,12 @@ function filtradas(): Sede[] {
     if (_ficha === 'ch' && s.control_horario != null) return false;
     if (_ficha === 'revision' && _revision.get(s.id) !== 'atrasada') return false;
     if (_ficha === 'sin_dueno' && !sinDueno(s)) return false;
+    // «Sin AnyDesk» no cuenta las sedes sin software: no lo necesitan.
+    if (_ficha === 'con_anydesk' && !anydesks(s).length) return false;
+    if (_ficha === 'sin_anydesk' && (anydesks(s).length || s.tiene_software === false)) return false;
     if (!q) return true;
     return [s.nombre, s.plan, nombreCliente(s), s.codigo_verificacion].some(x => sinAcentos(x).includes(q))
+      || anydesks(s).some(ad => ad.replace(/\s+/g, '').includes(_q.replace(/\s+/g, '')))
       || (dq.length >= 3 && (_tels.get(s.id) ?? []).some(t => t.numero.replace(/\D/g, '').includes(dq)));
   });
 }
@@ -197,6 +216,14 @@ function celdaTels(s: Sede): string {
   return `${sens.map(t => `<a href="tel:${esc(t.numero)}">${esc(t.numero)}</a> <small class="nota">${esc(t.nombre ?? '')}</small>`).join('<br>') || '<span class="g-aviso">Sin dueño</span>'}
     ${ts.length > sens.length ? `<br><small class="nota">${ts.length} en total</small>` : ''}`;
 }
+// AnyDesk: clic = copiar el ID y abrir AnyDesk. Sin ninguno, en rojo y a la pestaña Hardware del sitio; sin software, no aplica.
+function celdaAnyDesk(s: Sede): string {
+  const ads = anydesks(s);
+  if (ads.length) return ads.slice(0, 2).map(ad => `<button class="btn secundario" title="Copiar el ID y abrir AnyDesk" data-action="mtAnyDesk" data-p0="${esc(ad)}">${ico('monitor')} ${esc(ad)}</button>`).join('<br>')
+    + (ads.length > 2 ? `<br><small class="nota">${ads.length} en total</small>` : '');
+  if (s.tiene_software === false) return '<small class="nota">No aplica</small>';
+  return `<a class="g-mal" href="#/sitios/${esc(s.id)}/hardware" title="Ningún equipo de la ficha del sitio tiene AnyDesk ID: pulsa para apuntarlo">Sin AnyDesk</a>`;
+}
 function celdaCodigo(s: Sede): string {
   if (!s.codigo_verificacion) return '—';
   const tel = (_tels.get(s.id) ?? []).find(t => ROLES_SENSIBLES.includes(t.rol ?? ''));
@@ -225,7 +252,7 @@ async function pintarLocales(el: HTMLElement, escribe: boolean) {
   const rev = (s: Sede) => ({ al_dia: '<span class="chip bien">Al día</span>', atrasada: '<span class="chip aviso">Atrasada</span>' } as Record<string, string>)[_revision.get(s.id) ?? ''] ?? '—';
   el.innerHTML = `${escribe ? '' : avisoSoloLectura('La ficha de mantenimiento de las sedes')}${navPestanas('locales')}
     <div class="acciones mo-barra">
-      <input id="mt-filtro" type="search" placeholder="Buscar sede, cliente, plan, teléfono…" value="${esc(_q)}" data-on-input="mtFiltrar:$value" aria-label="Buscar sede">
+      <input id="mt-filtro" type="search" placeholder="Buscar sede, cliente, plan, teléfono, AnyDesk…" value="${esc(_q)}" data-on-input="mtFiltrar:$value" aria-label="Buscar sede">
       <select id="mt-plan" data-on-change="mtPlan:$value" aria-label="Plan"><option value="">Todos los planes</option>
         ${planes.map(p => `<option ${p === _plan ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>
       <select id="mt-ficha" data-on-change="mtFicha:$value" aria-label="Ficha">${FICHA.map(([k, n]) => `<option value="${k}" ${k === _ficha ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
@@ -234,7 +261,7 @@ async function pintarLocales(el: HTMLElement, escribe: boolean) {
     <div class="acciones mo-barra">${FILTROS.map(([k, n]) => `<button class="chip-boton ${_filtro === k ? 'activo' : ''}" data-action="mtFiltro" data-p0="${k}">${n}</button>`).join('')}</div>
     <p class="nota">Mostrando ${Math.min(lista.length, 300)} de ${lista.length}${admin ? ` · ${eur(lista.reduce((t, s) => t + netoMensual(s), 0), 2)} al mes sin impuestos` : ''}.</p>
     <div class="tarjeta mo-scroll"><table class="tabla mt-maestra" id="mt-tabla"><thead><tr><th>Sede</th><th>Plan y cuota</th><th>Cobro</th><th>Cert. digital</th><th>Copia de seguridad</th>
-      <th>Control horario</th><th>Revisiones</th><th>Teléfonos</th><th>Código</th><th></th></tr></thead>
+      <th>Control horario</th><th>Revisiones</th><th>Teléfonos</th><th>AnyDesk</th><th>Código</th><th></th></tr></thead>
       <tbody>${lista.slice(0, 300).map(s => {
         const [txt, tono] = PASARELA[pasarela(s)];
         return `<tr data-sede="${esc(s.id)}">
@@ -242,9 +269,9 @@ async function pintarLocales(el: HTMLElement, escribe: boolean) {
         <td><span class="chip">${esc(s.plan ?? '')}</span> ${celdaContrato(s, escribe)}${admin && s.importe_mantenimiento ? `<br>${eur(netoMensual(s), 2)}/mes${mesesDe(s.frecuencia_pago) > 1 ? ` <small class="nota">· ${esc(s.frecuencia_pago)}</small>` : ''}` : ''}</td>
         <td><span class="chip ${tono}">${esc(txt)}</span><br>${chipPago(s)}${s.proxima_cuota ? `<br><small class="${(diasHasta(s.proxima_cuota) ?? 99) <= 7 ? 'g-mal' : 'nota'}">Cuota ${esc(fechaCorta(s.proxima_cuota))}</small>` : ''}</td>
         <td>${celdaCert(s, escribe)}</td><td>${celdaBackup(s, escribe)}</td><td>${celdaCh(s, escribe)}</td><td>${rev(s)}</td>
-        <td>${celdaTels(s)}</td><td>${celdaCodigo(s)}</td>
+        <td>${celdaTels(s)}</td><td>${celdaAnyDesk(s)}</td><td>${celdaCodigo(s)}</td>
         <td><a class="btn secundario" href="#/mantenimientos/ficha/${esc(s.id)}">Ficha</a></td></tr>`;
-      }).join('') || '<tr><td colspan="10" class="vacio">Ninguna sede con ese filtro.</td></tr>'}</tbody></table></div>`;
+      }).join('') || '<tr><td colspan="11" class="vacio">Ninguna sede con ese filtro.</td></tr>'}</tbody></table></div>`;
 }
 
 export async function pintarMantenimientos(el: HTMLElement, params: string[] = []) {
@@ -268,6 +295,12 @@ let _timer: number | undefined;
 registrarAcciones({
   mtFiltro(k: string) { _filtro = k; resolver(); },
   mtPlan(v: string) { _plan = v; resolver(); },
+  // mantAbrirAnyDesk de la app: el ID al portapapeles y AnyDesk abierto.
+  async mtAnyDesk(ad: string) {
+    try { await navigator.clipboard.writeText(ad); toast(`ID ${ad} copiado`); } catch { /* sin portapapeles, se abre igual */ }
+    const { abrirRemoto } = await import('../sitios/equipamiento');
+    void abrirRemoto({ tipo: 'anydesk', id: ad.replace(/\s+/g, ''), nombre: '' }, '');
+  },
   mtFicha(v: string) { _ficha = v; resolver(); },
   // La barra de un plan lleva a la tabla filtrada por él; pulsarla otra vez lo quita.
   mtPlanBarra(v: string) { _plan = v === _plan ? '' : v; ir('mantenimientos', 'locales'); },

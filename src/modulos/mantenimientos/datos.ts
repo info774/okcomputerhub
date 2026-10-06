@@ -15,6 +15,7 @@ export interface Sede {
   stripe_cobro_en_curso_at: string | null; stripe_ultimo_error: string | null; programa_tpv: string | null;
   cert_caducidad: string | null; backup_tipo: string | null; backup_destino: string | null; backup_comprobado: string | null;
   control_horario: boolean | null; control_horario_sistema: string | null; control_horario_nuestro: boolean | null; codigo_verificacion: string | null;
+  tipo?: string | null; tiene_software?: boolean | null;
   importe_mantenimiento?: number | null; importe_incluye_impuesto?: boolean | null; zoho_deuda?: number | null; zoho_sync_error?: string | null;
 }
 export type Pasarela = 'stripe' | 'espera' | 'zoho' | 'nadie';
@@ -47,7 +48,7 @@ export const normalizaFrecuencia = (f: string | null | undefined) => FRECUENCIAS
 
 export const COLS_SEDE = `id,nombre,cliente_id,plan,estado_pago,frecuencia_pago,forma_pago,proxima_cuota,fecha_activacion,zoho_subscription_id,zoho_estado,
   stripe_subscription_id,stripe_mandato_estado,stripe_cobro_en_curso_at,stripe_ultimo_error,programa_tpv,cert_caducidad,backup_tipo,backup_destino,
-  backup_comprobado,control_horario,control_horario_sistema,control_horario_nuestro,codigo_verificacion,zoho_sync_error`.replace(/\s+/g, '');
+  backup_comprobado,control_horario,control_horario_sistema,control_horario_nuestro,codigo_verificacion,zoho_sync_error,tipo,tiene_software`.replace(/\s+/g, '');
 export const colsSede = () => COLS_SEDE + (esAdmin() ? ',importe_mantenimiento,importe_incluye_impuesto,zoho_deuda' : '');
 
 /** Por sede: copias de seguridad ('sin_backup' | 'al_dia' | 'pendiente') y revisiones ('sin' | 'al_dia' | 'atrasada') del periodo actual. */

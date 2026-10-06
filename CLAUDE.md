@@ -557,7 +557,10 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   y deuda solo para admins. Arnés `verify-mantenimientos.mjs`.
   Desde el 2026-10-04 (paridad bloque 4, tanda 1, PREPARADO para el corte) con
   las pestañas de la app: Resumen, Locales (tabla maestra; certificado, copia y
-  control horario se editan en la fila), ficha de cada sede (`ficha.ts`, `fm-`,
+  control horario se editan en la fila; columna AnyDesk = los de Hardware y
+  Software de la sede sin repetir el mismo ID con o sin espacios, «Sin AnyDesk»
+  no cuenta las sedes con `tiene_software = false`; las de tipo Vivienda no
+  entran, `or=(tipo.is.null,tipo.neq.Vivienda)`), ficha de cada sede (`ficha.ts`, `fm-`,
   teléfonos con rol), Checklist (tareas del plan por periodo), Seguimiento
   (`mse-`), Plantillas (planes SOLO admin y por NOMBRE —las sedes lo llevan
   así, no se renombra—, sus tareas y checklists de visita) y «+ Contrato»

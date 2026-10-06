@@ -22,7 +22,11 @@ const FIX = {
     { id: 'u-fran', nombre: 'Fran Admin', email: 'admin@ok.test', rol: 'admin', activo: true },
     { id: 'u-mat', nombre: 'Matteo Monastero', email: 'tec@ok.test', rol: 'tecnico', activo: true },
   ],
-  sync_estado: [], config: [], clientes_crm: [], tickets: [], local_hardware: [], agenda: [], sesiones: [], documento_lineas: [],
+  sync_estado: [], config: [], clientes_crm: [], tickets: [], agenda: [],
+  // AnyDesk de la tabla maestra: el mismo ID escrito de dos formas cuenta una vez.
+  local_hardware: [{ id: 'h1', local_id: 'l2', tipo: 'TPV', nombre: 'Caja', anydesk_id: '123 456 789', created_at: dia(-5) }],
+  local_software: [{ id: 's1', local_id: 'l2', nombre: 'Glop', anydesk_id: '123456789', created_at: dia(-4) }],
+  sesiones: [], documento_lineas: [],
   trabajo_comentarios: [], trabajo_fotos: [], sitio_tarea_seguimiento: [], mant_seguimiento: [], checklist_respuestas: [], areas: [],
   contactos: [{ id: 'k1', nombre: 'Lola', cliente_id: 'c2', activo: true }],
   clientes: [{ id: 'c1', nombre: 'Polinesia Restaurante', activo: true }, { id: 'c2', nombre: 'Bananas Cafetería', activo: true }],
@@ -31,6 +35,8 @@ const FIX = {
     { id: 'l2', nombre: 'Bananas Cafetería', cliente_id: 'c2', activo: true, plan: 'Silver', importe_mantenimiento: 39, estado_pago: 'Al corriente' },
     { id: 'l3', nombre: 'Polinesia · Los Cristianos', cliente_id: 'c1', activo: true, plan: null },
     { id: 'l6', nombre: 'Bar sin plan', activo: true, plan: 'Sin mantenimiento' },
+    { id: 'l7', nombre: 'Chalet de Ana', activo: true, plan: 'Básico', tipo: 'Vivienda' },
+    { id: 'l8', nombre: 'Peluquería sin PC', activo: true, plan: 'Básico', tipo: 'Local', tiene_software: false },
   ],
   local_telefonos: [{ id: 'lt1', local_id: 'l1', nombre: 'Lola', numero: '600111222', rol: 'empleado', created_at: dia(-30) }],
   planes_mantenimiento: [
@@ -81,6 +87,26 @@ try {
   await page.selectOption('#mt-tabla tr[data-sede="l2"] select[aria-label="Control horario"]', 'no');
   await espera(() => esc(base, 'PATCH', 'locales').length === 2);
   ok(esc(base, 'PATCH', 'locales')[1].cuerpo.control_horario === false, 'control horario «No» = false');
+
+  // AnyDesk (app 850a0ec) y fuera las viviendas.
+  ok(!(await page.$('#mt-tabla tr[data-sede="l7"]')), 'las viviendas no salen en la tabla maestra');
+  const ad2 = await page.$$eval('#mt-tabla tr[data-sede="l2"] [data-action="mtAnyDesk"]', bs => bs.map(b => b.dataset.p0));
+  ok(ad2.length === 1 && ad2[0] === '123 456 789', 'AnyDesk: los de Hardware y Software, sin repetir el mismo ID');
+  ok((await page.getAttribute('#mt-tabla tr[data-sede="l1"] a.g-mal', 'href')) === '#/sitios/l1/hardware', 'sin AnyDesk: en rojo y a la pestaña Hardware del sitio');
+  ok((await page.textContent('#mt-tabla tr[data-sede="l8"]')).includes('No aplica'), 'sede sin software: AnyDesk no aplica');
+  await page.selectOption('#mt-ficha', 'sin_anydesk');
+  await page.waitForFunction(() => !document.querySelector('#mt-tabla tr[data-sede="l2"]'));
+  ok(await page.$('#mt-tabla tr[data-sede="l1"]') && !(await page.$('#mt-tabla tr[data-sede="l8"]')), 'filtro «Sin AnyDesk»: no cuenta las sedes sin software');
+  await page.selectOption('#mt-ficha', '');
+  await page.fill('#mt-filtro', '123456');
+  await page.waitForFunction(() => !document.querySelector('#mt-tabla tr[data-sede="l1"]') && !!document.querySelector('#mt-tabla tr[data-sede="l2"]'));
+  ok(true, 'el buscador encuentra la sede por su AnyDesk');
+  await page.evaluate(() => { window.__abiertos = []; window.open = u => { window.__abiertos.push(String(u)); return null; }; });
+  await page.click('#mt-tabla tr[data-sede="l2"] [data-action="mtAnyDesk"]');
+  await page.waitForFunction(() => window.__abiertos.length > 0);
+  ok((await page.evaluate(() => window.__abiertos[0])) === 'anydesk://123456789', 'clic en el AnyDesk: abre AnyDesk con el ID');
+  await page.fill('#mt-filtro', '');
+  await page.waitForSelector('#mt-tabla tr[data-sede="l1"]');
 
   // ── Ficha de mantenimiento ─────────────────────────────────────────────
   await page.click('#mt-tabla tr[data-sede="l1"] a[href="#/mantenimientos/ficha/l1"]');
