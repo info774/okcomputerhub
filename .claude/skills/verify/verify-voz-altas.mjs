@@ -2,8 +2,9 @@
 // no existe, tarea, ticket, presupuesto con líneas dictadas (precio del
 // catálogo, dicho o a cero) por hub.presupuesto_guardar_lineas, añadir líneas
 // (se mandan las de antes más las nuevas), cliente con aviso de parecido y
-// alta forzada (Zoho), sede repetida y nueva, y el alta desde Google Maps (por
-// voz y tocando la tarjeta, con la confirmación de «no está en Tenerife").
+// alta forzada (SIN Zoho, como la app; se sube desde su ficha), sede repetida
+// y nueva, y el alta desde Google Maps (por voz y tocando la tarjeta, con la
+// confirmación de «no está en Tenerife»).
 // Con las áreas de la app: lo dice y no escribe nada.
 // Función `voz` y Google Maps SIMULADOS. Sin datos reales.
 //   npm run build && node .claude/skills/verify/verify-voz-altas.mjs
@@ -135,7 +136,7 @@ try {
   ok(r.includes('Ya hay un cliente') && db.clientes.length === 1 && !zoho.length, 'cliente con nombre parecido: avisa y no crea');
   r = await hablar('da de alta el cliente hoteles oasis, sí, créalo');
   const nc = db.clientes[1];
-  ok(nc?.nombre === 'Hoteles Oasis' && nc.nif === 'B22222222' && nc.activo === true && zoho.some(z => z.accion === 'zoho_alta' && z.cliente_id === nc.id) && r.includes('Zoho'), 'cliente forzado: NIF limpio, alta y a Zoho (crearCliente)');
+  ok(nc?.nombre === 'Hoteles Oasis' && nc.nif === 'B22222222' && nc.activo === true && !zoho.length && r.includes('a Zoho no sube solo'), 'cliente forzado: NIF limpio y alta SIN Zoho, como en la app (lo dice)');
 
   r = await hablar('crea el sitio hotel oasis');
   ok(r.includes('Ya existe Hotel Oasis') && db.locales.length === 2, 'sede repetida: avisa y no la crea');
@@ -147,7 +148,7 @@ try {
   r = await hablar('el primero');
   const cli = db.clientes.find(c => c.nombre === 'Bar La Tasca'), sede = db.locales.find(l => l.nombre === 'Bar La Tasca');
   ok(cli && sede?.cliente_id === cli.id && sede.direccion === 'C. Real 5, Adeje' && sede.maps_url === 'https://maps.google.com/?cid=1' && sede.horario === 'lunes: 9:00–23:00' && sede.lat === 28.12 && sede.activo === true, 'alta desde Maps: cliente y sede con dirección, enlace, horario y coordenadas');
-  ok(db.local_telefonos.some(x => x.local_id === sede?.id && x.numero === '922111222' && x.rol === 'otro') && r.includes('Alta hecha'), 'alta desde Maps: con su teléfono');
+  ok(db.local_telefonos.some(x => x.local_id === sede?.id && x.numero === '922111222' && x.rol === 'otro') && r.includes('Alta hecha') && !zoho.length, 'alta desde Maps: con su teléfono y sin Zoho');
 
   // Tocar la tarjeta de un lugar fuera de Tenerife: se pregunta y se da de alta.
   await hablar('busca en maps el bar la tasca');
@@ -158,6 +159,13 @@ try {
   await page.waitForFunction(n => document.querySelectorAll('.vz-assistant').length > n, n);
   ok(pregunta.includes('no está en Tenerife') && db.locales.some(l => l.nombre === 'Bar de Madrid') && (await ultima()).includes('Alta hecha'), 'tarjeta de un lugar fuera de Tenerife: lo pregunta y, aceptado, lo da de alta');
   await page.screenshot({ path: `${CAPTURAS}/voz-altas.png` });
+
+  // El cliente que nació sin Zoho se sube desde su ficha.
+  await page.click('[data-action="vozCerrar"]');
+  await page.goto(`${srv.base}/#/clientes/${nc.id}`);
+  await page.click('[data-action="clZohoAlta"]');
+  await page.waitForFunction(() => document.body.textContent.includes('Dado de alta en Zoho'));
+  ok(zoho.some(z => z.accion === 'zoho_alta' && z.cliente_id === nc.id), 'ficha del cliente sin Zoho: «Dar de alta en Zoho» (zoho_alta)');
   await ctx.close();
 
   // ── Áreas aún de la app: lo dice y no escribe ─────────────────────────────

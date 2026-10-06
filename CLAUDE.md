@@ -988,7 +988,9 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   emitirlas): trabajo, tarea, ticket, presupuesto con líneas dictadas (precio
   del catálogo, el dicho o a cero) y añadir líneas (`hub.presupuesto_guardar_lineas`
   SUSTITUYE: se mandan las de antes más las nuevas), cliente (por
-  `crearCliente()`, así que va a Zoho), sede (≥ 80 % = «ya existe») y alta
+  `crearCliente(…, { externos: false })`: SIN Zoho ni Google, como la voz de la
+  app, decisión de Fran; se sube con «Dar de alta en Zoho» de la ficha del
+  cliente, `clZohoAlta`), sede (≥ 80 % = «ya existe») y alta
   desde Google Maps (`buscarLugares`/`detalleLugar` de `ui/maps.ts`; la tarjeta
   de un lugar tocada en la ventana da el alta con `altaDesdeLugar`, que
   pregunta con `confirm` lo que solo espera un sí). Arnés `verify-voz-altas.mjs`.
