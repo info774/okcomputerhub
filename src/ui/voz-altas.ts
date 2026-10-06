@@ -2,7 +2,7 @@
 // trabajo, tarea, ticket, presupuesto con sus líneas dictadas (precio del
 // catálogo si no se dice), añadir líneas, cliente, sede y el alta desde Google
 // Maps. El modelo las CONFIRMA antes de emitirlas (prompt de la función `voz`).
-// Van por las piezas del hub: `crearCliente()` (NIF repetido no, alta en Zoho),
+// Van por las piezas del hub: `crearCliente()` (NIF repetido no; SIN Zoho, como la app),
 // `hub.presupuesto_guardar_lineas` (deja el total) y, en cada área, `esDelHub`
 // antes de escribir.
 import { API } from '../core/api';
@@ -183,12 +183,12 @@ async function crearClienteVoz(d: Datos): Promise<Respuesta> {
     if (ya.length) return { ok: false, mensaje: `Ya hay ${ya.length === 1 ? 'un cliente' : 'clientes'} con ese nombre: ${ya.map(c => c.nombre).join(', ')}. ¿Lo creo de todas formas?` };
   }
   const { crearCliente } = await import('../modulos/clientes/formulario');
-  const r = await crearCliente({ tipo: norm(d.tipo).startsWith('particular') ? 'individuo' : 'empresa', nombre, nif, telefono: String(d.telefono ?? '').trim() || null, email: String(d.email ?? '').trim() || null });
+  const r = await crearCliente({ tipo: norm(d.tipo).startsWith('particular') ? 'individuo' : 'empresa', nombre, nif, telefono: String(d.telefono ?? '').trim() || null, email: String(d.email ?? '').trim() || null }, { externos: false });
   if (r.duplicado) return { ok: false, mensaje: `Ese NIF ya está dado de alta como ${r.duplicado.nombre}.` };
   if (!r.id) return { ok: false, mensaje: 'No pude crear el cliente. Inténtalo de nuevo.' };
   olvidarSedes(); refrescar();
   return { ok: true, resultados: [{ tipo: 'cliente', id: r.id, ruta: `#/clientes/${r.id}`, titulo: nombre, sub: nif ?? '' }],
-    mensaje: `Cliente creado: ${nombre}. ${r.zoho ? `En Zoho: ${r.zoho}.` : ''}`.trim(), contexto: `Cliente ${nombre} creado${nif ? ` con NIF ${nif}` : ''}. Zoho: ${r.zoho ?? 'sin respuesta'}.` };
+    mensaje: `Cliente creado: ${nombre}. Recuerda que a Zoho no sube solo: eso se hace desde su ficha.`, contexto: `Cliente ${nombre} creado${nif ? ` con NIF ${nif}` : ''}. No se ha sincronizado con Zoho.` };
 }
 
 // ¿Hay ya una sede con ese nombre (o muy parecido)? La misma regla que el formulario (≥ 80 %).
@@ -260,7 +260,7 @@ async function crearDesdeMaps(d: Datos): Promise<Respuesta> {
   }
   const tel = (lugar.telefono || '').replace(/\s/g, '') || null;
   const { crearCliente } = await import('../modulos/clientes/formulario');
-  const c = await crearCliente({ tipo: 'empresa', nombre: lugar.nombre, telefono: tel, direccion: lugar.direccion || null });
+  const c = await crearCliente({ tipo: 'empresa', nombre: lugar.nombre, telefono: tel, direccion: lugar.direccion || null }, { externos: false });
   if (!c.id) return { ok: false, mensaje: c.duplicado ? `Ese cliente ya existe: ${c.duplicado.nombre}.` : 'No pude crear el cliente. Inténtalo de nuevo.' };
   const { mapaDeDireccion } = await import('../modulos/sitios/formulario');
   const l = await API.post<{ id: string }[]>('locales', {
@@ -273,7 +273,7 @@ async function crearDesdeMaps(d: Datos): Promise<Respuesta> {
   olvidarSedes(); (await import('../modulos/sitios/vista')).olvidarSitios(); refrescar();
   return {
     ok: true, resultados: [{ tipo: 'cliente', id: c.id, ruta: `#/clientes/${c.id}`, titulo: lugar.nombre, sub: lugar.direccion || '' }],
-    mensaje: `Alta hecha: ${lugar.nombre}, en ${lugar.direccion || 'Tenerife'}${tel ? ', con su teléfono' : ''}.${c.zoho ? ` En Zoho: ${c.zoho}.` : ''}${localId ? '' : ' Ojo: el cliente sí, pero el sitio no se ha podido crear.'}`,
+    mensaje: `Alta hecha: ${lugar.nombre}, en ${lugar.direccion || 'Tenerife'}${tel ? ', con su teléfono' : ''}. Recuerda que a Zoho no sube solo.${localId ? '' : ' Ojo: el cliente sí, pero el sitio no se ha podido crear.'}`,
     contexto: `Creado el cliente ${lugar.nombre} y su local desde Google Maps. Dirección: ${lugar.direccion}. Teléfono: ${tel || 'ninguno'}.`,
   };
 }

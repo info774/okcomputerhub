@@ -35,8 +35,10 @@ export async function clientePorNif(nif: string, salvo?: string | null): Promise
  * Alta de un cliente con las reglas de la app: con NIF repetido NO se crea, y
  * el nuevo se da de alta en Zoho Books (si Zoho falla, queda creado y se avisa).
  * La usan este formulario y el cliente rápido del alta de trabajo.
+ * `externos: false` = solo aquí, sin Zoho ni Google (el alta por voz, como en
+ * la app); se sube después con «Dar de alta en Zoho» de la ficha.
  */
-export async function crearCliente(cuerpo: Record<string, unknown>): Promise<{ id?: string; error?: string; duplicado?: { id: string; nombre: string }; zoho?: string }> {
+export async function crearCliente(cuerpo: Record<string, unknown>, { externos = true } = {}): Promise<{ id?: string; error?: string; duplicado?: { id: string; nombre: string }; zoho?: string }> {
   const nif = String(cuerpo.nif ?? '').trim();
   if (nif) {
     const dup = await clientePorNif(nif);
@@ -45,6 +47,7 @@ export async function crearCliente(cuerpo: Record<string, unknown>): Promise<{ i
   const r = await API.post<{ id: string }[]>('clientes', { plan: 'Sin mantenimiento', estado: 'activo', tipo: 'empresa', ...cuerpo, activo: true });
   const nuevo = r.data?.[0];
   if (r.error || !nuevo) return { error: `No se pudo crear: ${r.error?.message ?? 'sin respuesta'}` };
+  if (!externos) return { id: nuevo.id };
   const z = await llamarFuncion<{ zoho_id: string; reutilizado?: boolean }>('clientes', { accion: 'zoho_alta', cliente_id: nuevo.id }, 40000);
   // Y a Google Contactos, como la app (sin esperar: si falla, el alta vale igual).
   void llamarFuncion('google', { accion: 'contacto', cliente_id: nuevo.id });

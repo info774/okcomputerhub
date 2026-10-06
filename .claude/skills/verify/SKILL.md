@@ -322,7 +322,8 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   escribe nada.
 - `verify-voz-altas.mjs`: altas del asistente (función `voz` y Google Maps
   SIMULADOS): trabajo, tarea, ticket, presupuesto con líneas del catálogo,
-  añadir líneas, cliente (aviso de parecido y forzado, a Zoho), sede, alta
+  añadir líneas, cliente (aviso de parecido y forzado, SIN Zoho; «Dar de alta
+  en Zoho» desde la ficha), sede, alta
   desde Maps por voz y tocando la tarjeta; con las áreas de la app no escribe.
 
 `npm run verify` pasa todos los de la lista.

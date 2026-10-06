@@ -228,6 +228,7 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'resumen') {
   const botones = escribe
     ? `<a class="btn secundario" href="#/clientes/${esc(c.id)}/editar">${ico('editar')} Editar</a>
        ${deBaja ? `<button class="btn secundario" data-action="clReactivar" data-p0="${esc(c.id)}">Reactivar</button>` : '<button class="btn secundario" data-action="clBaja">Dar de baja</button>'}
+       ${!deBaja && !c.zoho_id ? '<button class="btn secundario" data-action="clZohoAlta">Dar de alta en Zoho</button>' : ''}
        ${esAdmin() ? '<button class="btn peligro" data-action="clEliminar">Eliminar</button>' : ''}`
     : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los datos del cliente se editan en la app actual">Editar en la app ${ico('externo')}</a>`;
   const p = PESTANAS.some(([k]) => k === pestana) ? pestana : 'resumen';
@@ -322,6 +323,13 @@ registrarAcciones({
     _lista = [];
     toast(z.error ? `Cliente eliminado, pero no se pudo quitar de Zoho Books: ${z.error}` : 'Cliente eliminado', z.error ? 'error' : 'info');
     ir('clientes');
+  },
+  // Un cliente que nació sin Zoho (alta por voz, como en la app): la misma zoho_alta del formulario.
+  async clZohoAlta() {
+    if (!_cliente) return;
+    const z = await llamarFuncion<{ zoho_id: string; reutilizado?: boolean }>('clientes', { accion: 'zoho_alta', cliente_id: _cliente.id }, 40000);
+    if (z.error) { toast(`No se pudo dar de alta en Zoho: ${z.error}`, 'error'); return; }
+    _lista = []; toast(z.data?.reutilizado ? 'Enlazado con su contacto de Zoho' : 'Dado de alta en Zoho'); resolver();
   },
   clNuevaOportunidad() { if (_cliente) ir('oportunidades', 'nueva', _cliente.id); },
   clAbrirOportunidad(id: string) { ir('oportunidades', id); },
