@@ -53,6 +53,7 @@ try {
   await A.page.goto(`${srv.base}/#/trabajos/151`);
   await A.page.waitForSelector('.op-ficha');
   ok(await A.page.locator('img.tr-firma').count() === 1 && await A.page.locator('[data-action="trFirmar"]').count() === 0, 'sin corte: la firma se ve y no se pide');
+  await A.page.click('details.menu-mas > summary');
   await A.page.click('a[href="#/trabajos/151/parte"]');
   await A.page.waitForSelector('.tr-parte');
   const parte = await A.page.textContent('.tr-parte');

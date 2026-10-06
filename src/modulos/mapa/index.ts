@@ -84,7 +84,7 @@ function punto(s: Sede, capa: Capa): Punto {
   }
   const o = d.opor.get(cli);
   if (!o) return { color: '--texto-suave', radio: 4, texto: 'Sin oportunidades abiertas', valor: 0 };
-  return { color: '--primario', radio: Math.min(16, 6 + Math.sqrt(o.valor) / 12), texto: `${o.n} oportunidad(es) · ${eur(o.valor)}`, valor: 1 };
+  return { color: '--primario', radio: Math.min(16, 6 + Math.sqrt(o.valor) / 12), texto: `${pl(o.n, 'oportunidad', 'oportunidades')} · ${eur(o.valor)}`, valor: 1 };
 }
 
 function pintarCapa(capa: Capa) {

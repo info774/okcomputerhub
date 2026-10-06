@@ -20,6 +20,7 @@ import { descargarCsv } from '../../ui/csv';
 import { botonChatFicha } from '../../ui/chat-ficha';
 import { seccionChecklist } from './checklist-visita';
 import { enlaceHistorial } from '../../ui/historial';
+import { menuMas } from '../../ui/menu-mas';
 
 interface Trabajo { id: string; numero: number; created_at: string; titulo: string | null; tipo?: string | null; chain_root_id?: string | null; descripcion: string | null; estado: string; tecnicos: string[] | null;
   cliente_id: string | null; local_id: string | null; contacto_id: string | null; fecha_programada: string | null; hora_llegada: string | null; prioridad: string | null;
@@ -155,12 +156,13 @@ async function vistaFicha(numero: string): Promise<string> {
       <a class="btn secundario" href="#/trabajos/${t.numero}/editar">${ico('editar')} Editar</a>` : ''}
       ${tel ? `<a class="btn secundario" href="tel:${esc(tel)}">${ico('telefono')} Llamar</a>` : ''}${wa ? `<a class="btn secundario" href="https://wa.me/${wa}" target="_blank" rel="noopener">${ico('mensaje')} WhatsApp</a>` : ''}
       ${mapa ? `<a class="btn secundario" href="${esc(mapa)}" target="_blank" rel="noopener">${ico('mapa')} Cómo llegar</a>` : ''}
-      <a class="btn secundario" href="#/trabajos/${t.numero}/parte">${ico('imprimir')} Parte (PDF)</a>
-      <a class="btn secundario" href="#/personas/gastos/gasto/t/${esc(t.id)}" title="Un gasto de este trabajo (Personas → Gastos)">${ico('recibo')} Gasto</a>
-      <a class="btn secundario" href="#/personas/gastos/cobro/t/${esc(t.id)}" title="Un cobro en efectivo de este trabajo">${ico('dinero')} Cobro</a>
-      ${botonChatFicha('trabajo', t.id, `#${t.numero} ${t.titulo ?? ''}`.trim(), `#/trabajos/${t.numero}`)}${enlaceHistorial('trabajos', t.id)}
-      ${escribe ? `<button class="btn secundario" data-action="trDuplicar">${ico('repetir')} Duplicar</button>
-        ${['Completado', 'Cancelado', 'Facturado', 'No facturar'].includes(t.estado) ? '' : `<button class="btn secundario" data-action="trContinuacion" title="Otro trabajo que sigue a este (otra visita)">${ico('reenviar')} Continuación</button>`}` : ''}</div>
+      ${botonChatFicha('trabajo', t.id, `#${t.numero} ${t.titulo ?? ''}`.trim(), `#/trabajos/${t.numero}`)}
+      ${menuMas(`<a href="#/trabajos/${t.numero}/parte">${ico('imprimir')} Parte (PDF)</a>
+        <a href="#/personas/gastos/gasto/t/${esc(t.id)}" title="Un gasto de este trabajo (Personas → Gastos)">${ico('recibo')} Gasto</a>
+        <a href="#/personas/gastos/cobro/t/${esc(t.id)}" title="Un cobro en efectivo de este trabajo">${ico('dinero')} Cobro</a>
+        ${enlaceHistorial('trabajos', t.id).replace('class="btn secundario" ', '')}
+        ${escribe ? `<button data-action="trDuplicar">${ico('repetir')} Duplicar</button>
+        ${['Completado', 'Cancelado', 'Facturado', 'No facturar'].includes(t.estado) ? '' : `<button data-action="trContinuacion" title="Otro trabajo que sigue a este (otra visita)">${ico('reenviar')} Continuación</button>`}` : ''}`)}</div>
     <div class="op-ficha"><div>
       <section class="tarjeta"><h3>Qué hay que hacer</h3><div class="md">${markdown(t.descripcion) || '<p class="nota">Sin descripción.</p>'}</div>
         ${t.observaciones ? `<h4>Lo que se hizo</h4><div class="md">${markdown(t.observaciones)}</div>` : ''}</section>

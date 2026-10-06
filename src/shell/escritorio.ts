@@ -121,9 +121,9 @@ export function pintarEscritorio(raiz: HTMLElement) {
   el.id = 'os-root';
   el.innerHTML = `
     <header id="os-barra">
-      <a class="os-marca" href="#/inicio"><span class="hex" aria-hidden="true">OK</span>Ok Computer <b>Hub</b></a>
+      <div class="os-barra-izq"><a class="os-marca" href="#/inicio"><span class="hex" aria-hidden="true">OK</span>Ok Computer <b>Hub</b></a>
       <span id="os-frente" class="os-frente" aria-live="polite"></span>
-      <nav id="os-escritorios" aria-label="Escritorios"></nav>
+      <nav id="os-escritorios" aria-label="Escritorios"></nav></div>
       <button class="os-buscar" data-action="abrirBuscador" aria-label="Buscar o pedir algo">${svgBarra('buscar')}<span>Buscar o pedir algo a Claude…</span><kbd>Ctrl</kbd><kbd>K</kbd></button>
       <div class="os-barra-der">
         <span id="os-sync" class="chip"><i class="os-sync-punto"></i>Sync…</span>
