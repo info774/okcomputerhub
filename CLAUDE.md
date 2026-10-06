@@ -664,6 +664,11 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   `@media` de una pantalla que deba valer también dentro de una ventana se
   repite como `@container ventana (…)` en `escritorio.css`; el ancho con el
   que abre cada pantalla ancha está en `ANCHO` (`shell/escritorio.ts`).
+  Ficha con muchas acciones: las secundarias van en `menuMas(html)` de
+  `src/ui/menu-mas.ts` (un `<details class="menu-mas">` que se cierra al pulsar
+  fuera o con Esc; un arnés abre antes `details.menu-mas > summary`). La barra
+  del modo escritorio es una rejilla de tres columnas (buscador en el centro).
+  En tema noche los mosaicos del mapa se oscurecen por CSS.
   `verify-galeria.mjs` recorre además las subpantallas (`GALERIA_FICHAS=1`) y el
   modo escritorio (`GALERIA_ESCRITORIO=1`), en español, y falla si en pantalla
   sale `${`, «undefined», «NaN», «Invalid Date» o «[object Object]».

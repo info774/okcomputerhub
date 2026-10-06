@@ -727,3 +727,9 @@ body.os-modo .os-pantalla .ch-mensajes { max-height: none; min-height: 0; }
 /* En el medidor pequeño del widget solo cabe «SLA» (el rótulo largo no entraba en el hexágono). */
 .os-widget.ok-stats .ok-med-txt span { font-size: 0; }
 .os-widget.ok-stats .ok-med-txt span::after { content: 'SLA'; font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+
+/* Barra: tres columnas (izquierda · buscador · derecha) para que el buscador
+   quede siempre en el centro y no salte con lo largo del título de delante. */
+#os-barra { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.os-barra-izq { display: flex; align-items: center; gap: 12px; min-width: 0; overflow: hidden; }
+#os-barra .os-buscar { margin: 0; }

@@ -19,6 +19,7 @@ import { empezarTour, tourSiguiente, tourCerrar, tourSiEsNuevo } from './shell/t
 import { iniciarVersion, recargarVersion } from './shell/version';
 import { aplicarTexto } from './shell/texto';
 import './shell/atajos';
+import './ui/menu-mas';
 import { pintarPendientes, enviarAlEntrar } from './shell/pendientes';
 import { limpiarHistorial } from './core/deshacer';
 import { refrescarPush, escucharAvisos } from './core/push';

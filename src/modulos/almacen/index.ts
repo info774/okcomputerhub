@@ -10,7 +10,7 @@ import { esAdmin } from '../../core/estado';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { APP_ACTUAL_URL } from '../../core/config';
-import { esc, toast, hace, fecha } from '../../ui/dom';
+import { esc, toast, hace, fecha, pl } from '../../ui/dom';
 import { ico } from '../../shell/linea';
 import { eur, limpio } from '../ventas/datos';
 import { vistaFacturas, vistaFactura } from './facturas';
@@ -59,7 +59,7 @@ function tablaStock(): string {
   if (!filas.length) return '<p class="vacio">Nada con ese filtro.</p>';
   return `<div class="tarjeta mo-scroll"><table class="tabla al-tabla"><thead><tr><th>Material</th><th>Stock</th><th>Mínimo</th><th>Consumo 90 d</th><th>Cobertura</th><th>En camino</th><th>Proveedor</th></tr></thead><tbody>
     ${filas.map(m => `<tr class="${m.urgente ? 'al-urgente' : ''}"><td><strong>${esc(m.nombre)}</strong>${m.categoria ? `<br><small class="nota">${esc(m.categoria)}</small>` : ''}
-      <details><summary class="nota">${m.ubicaciones.length} ubicación(es)</summary><ul>${m.ubicaciones.map(u => `<li>${esc(u.ubicacion ?? '—')}: ${num(u.cantidad)}${u.minimo ? ` (mín. ${num(u.minimo)})` : ''}</li>`).join('')}</ul></details></td>
+      <details><summary class="nota">${pl(m.ubicaciones.length, 'ubicación', 'ubicaciones')}</summary><ul>${m.ubicaciones.map(u => `<li>${esc(u.ubicacion ?? '—')}: ${num(u.cantidad)}${u.minimo ? ` (mín. ${num(u.minimo)})` : ''}</li>`).join('')}</ul></details></td>
       <td class="${m.stock < m.minimo ? 'mal' : ''}">${num(m.stock)}</td><td>${num(m.minimo)}</td><td>${num(m.consumo_90)}</td>
       <td>${m.cobertura_dias == null ? '—' : `${num(m.cobertura_dias)} días`}</td><td>${m.en_camino ? num(m.en_camino) : ''}</td>
       <td>${m.proveedor ? `<a href="#/almacen/proveedores/${esc(m.proveedor_id)}">${esc(m.proveedor)}</a>` : '<span class="nota">—</span>'}</td></tr>`).join('')}</tbody></table></div>`;

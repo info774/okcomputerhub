@@ -116,13 +116,15 @@ try {
 
   // Duplicar y continuación
   await page.goto(`${srv.base}/#/trabajos/150`);
-  await page.waitForSelector('[data-action="trDuplicar"]');
+  await page.waitForSelector('[data-action="trDuplicar"]', { state: 'attached' });
+  await page.click('details.menu-mas > summary');
   await page.click('[data-action="trDuplicar"]');
   await page.waitForFunction(() => location.hash !== '#/trabajos/150');
   const dup = posts(base, 'trabajos').at(-1)?.cuerpo;
   ok(dup?.titulo === 'Revisar alarma (copia)' && dup?.estado === 'Pendiente' && !('fecha_programada' in dup), 'duplicar: copia en Pendiente y sin programar');
   await page.goto(`${srv.base}/#/trabajos/150`);
-  await page.waitForSelector('[data-action="trContinuacion"]');
+  await page.waitForSelector('[data-action="trContinuacion"]', { state: 'attached' });
+  await page.click('details.menu-mas > summary');
   await page.click('[data-action="trContinuacion"]');
   await page.waitForFunction(() => location.hash !== '#/trabajos/150');
   const cont = posts(base, 'trabajos').at(-1)?.cuerpo;
