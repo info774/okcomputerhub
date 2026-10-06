@@ -978,6 +978,20 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   (`registrarAccionesVoz`), desplegando la función en el mismo rato. Oki:
   con asistente configurado (`asistenteDisponible()`), lo dictado va a él; si
   no, como antes (buscador o comanda). Arnés `verify-voz.mjs`.
+  Tanda 2: ÓRDENES DIRECTAS en `src/ui/voz-ordenes.ts` (carga diferida desde
+  `ejecutarAccion`): fichar (`hub.fichar`), estados (trabajo SIEMPRE por
+  `hub.trabajo_estado`), programar/mover (`hub.agenda_mover`; el técnico se
+  AÑADE al trabajo), cita, gasto, nota, descripción y comanda. Se ejecutan sin
+  confirmar; antes de escribir en un área, `esDelHub` (si es de la app, lo dice
+  con `enLaApp` y no escribe). Arnés `verify-voz-ordenes.mjs`.
+  Tanda 3: ALTAS en `src/ui/voz-altas.ts` (las confirma el modelo antes de
+  emitirlas): trabajo, tarea, ticket, presupuesto con líneas dictadas (precio
+  del catálogo, el dicho o a cero) y añadir líneas (`hub.presupuesto_guardar_lineas`
+  SUSTITUYE: se mandan las de antes más las nuevas), cliente (por
+  `crearCliente()`, así que va a Zoho), sede (≥ 80 % = «ya existe») y alta
+  desde Google Maps (`buscarLugares`/`detalleLugar` de `ui/maps.ts`; la tarjeta
+  de un lugar tocada en la ventana da el alta con `altaDesdeLugar`, que
+  pregunta con `confirm` lo que solo espera un sí). Arnés `verify-voz-altas.mjs`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto
