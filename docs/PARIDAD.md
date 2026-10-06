@@ -6,7 +6,7 @@ en que la sustituya. Mientras tanto las dos avanzan en paralelo y la app sigue
 siendo la de uso diario: el hub no la interrumpe ni la molesta (decisión de
 Fran, 2026-10-03).
 
-**Revisado hasta**: `73b8ff6` (2026-10-02) — «WhatsApp: fotos y vídeos del cliente al ticket, con descripción de la IA (#161)». Comprobado de nuevo el 2026-10-05: la app no tiene commits nuevos en `main` desde entonces.
+**Revisado hasta**: `2d57b29` (2026-10-06) — «Backup diario: hacer checkout antes de los scripts». Revisado el 2026-10-06: `850a0ec` (columna AnyDesk y fuera las viviendas en Mantenimientos → Locales) PORTADO; `2d57b29` (checkout en el backup de la app) no aplica: el `backup.yml` del hub no usa scripts del repo.
 
 ## Cómo se usa
 
@@ -224,7 +224,7 @@ Fran, 2026-10-03).
 | Función de la app | Estado | Dónde en el hub | Qué falta |
 |---|---|---|---|
 | Resumen (garantías, visitas, cuotas a 90 días, renovaciones) | Preparado | `#/mantenimientos` (cifras, por plan, requieren atención, próximas visitas, renovaciones a 2 meses, garantías ≤ 30 d) | Corte. |
-| Locales: tabla maestra (`mant-ficha.js`) y ficha `fm-` | Preparado | `#/mantenimientos/locales` (certificado, copia y control horario editables en la fila; filtros de ficha) y `#/mantenimientos/ficha/<id>` (teléfonos con rol, código); disparadores del código y del certificado en `20261024_mantenimiento.sql` | Corte del área `clientes`. |
+| Locales: tabla maestra (`mant-ficha.js`) y ficha `fm-` | Preparado | `#/mantenimientos/locales` (certificado, copia y control horario editables en la fila; filtros de ficha; columna AnyDesk con filtro «Sin / Con» y búsqueda por ID, y sin las viviendas, como la app desde `850a0ec`) y `#/mantenimientos/ficha/<id>` (teléfonos con rol, código); disparadores del código y del certificado en `20261024_mantenimiento.sql` | Corte del área `clientes`. |
 | «+ Contrato» (`openNewMant`, `saveMantenimiento`) | Preparado | `#/mantenimientos/alta[/<id>]` (`alta.ts`): plan, cuota neta, frecuencia y próxima revisión; a una sede en Stripe no se le toca la cuota | Corte de `mantenimiento` y `clientes`. |
 | Cobros con Stripe (`mant-cobros.js`, `stripe-suscripcion`) | Preparado | `#/mantenimientos/cobros` (solo admin: cifras, sedes con sus botones, filtros, buscador, enlace de pago, cambiar plan, pausar, baja, desvincular de Zoho, ajustes) + función `stripe-suscripcion` (409 hasta el corte) | Corte de `mantenimiento` y las claves de Stripe (PENDIENTE_FRAN §8 bis). |
 | Libro de cuotas, «Emitir en Zoho», abonos | Preparado | Libro en Cobros y en la sede (`/cobros/sede/<id>`), abonar (`/cobros/abonar/<id>`); espejos `mant_facturas`, `mant_abonos` y los contadores de serie | Corte (y los permisos nuevos de Zoho, PENDIENTE_FRAN §5). |

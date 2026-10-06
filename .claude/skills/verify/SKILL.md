@@ -205,7 +205,8 @@ rechaza cualquier migración que nombre `public.` o un rol de Breeze.
   añadir a un borrador, presupuesto desde trabajos, sede sin cliente); Zoho
   SIMULADO; el mundo sin corte.
 - `verify-mantenimientos-escritura.mjs`: con las áreas cortadas, la fila de la
-  tabla maestra, la ficha de mantenimiento con teléfonos (9 cifras), el
+  tabla maestra (con AnyDesk: sin repetir, «Sin AnyDesk», «No aplica», filtro,
+  búsqueda y clic; y sin viviendas), la ficha de mantenimiento con teléfonos (9 cifras), el
   checklist del plan por periodo, el seguimiento (alta y arrastre), planes solo
   admin con sus tareas, checklists de visita, «+ Contrato» (a una sede en
   Stripe no se le toca la cuota) y el checklist de la visita en el trabajo (el
