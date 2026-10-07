@@ -144,7 +144,7 @@ try {
     }
   }
   ok(huellaPublic() === antes, 'public (Breeze) queda igual');
-  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '12', 'doce tareas de pg_cron (con la copia del control de equipos), sin duplicar');
+  ok(psql(`select count(*) from cron.job where jobname like 'hub-%'`) === '13', 'trece tareas de pg_cron (con la copia del control de equipos y el sync de Zoho), sin duplicar');
 
   // ── Permisos y RLS ─────────────────────────────────────────────────────
   ok(!psql(como('anon', null, 'select count(*) from hub.clientes;'), { esperaError: true }).ok, 'anon no entra en hub');

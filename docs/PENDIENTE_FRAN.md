@@ -326,12 +326,13 @@ presupuestos en PDF del portal de clientes, y lo que ve la gestoría.
    cuando se corten sus áreas, igual que la app: dar de alta y quitar
    contactos, mandar presupuestos y crear facturas de trabajos o añadirles
    trabajos a un borrador):
-   `ZohoBooks.invoices.READ,ZohoBooks.customerpayments.READ,ZohoBooks.contacts.READ,ZohoBooks.settings.READ,ZohoBooks.estimates.READ,ZohoBooks.contacts.CREATE,ZohoBooks.contacts.DELETE,ZohoBooks.estimates.CREATE,ZohoBooks.estimates.UPDATE,ZohoBooks.invoices.CREATE,ZohoBooks.invoices.UPDATE,ZohoBooks.creditnotes.CREATE,ZohoBooks.creditnotes.UPDATE,ZohoBooks.customerpayments.CREATE,ZohoBooks.accountants.READ,ZohoSubscriptions.subscriptions.READ,ZohoSubscriptions.invoices.READ`
+   `ZohoBooks.invoices.READ,ZohoBooks.customerpayments.READ,ZohoBooks.contacts.READ,ZohoBooks.settings.READ,ZohoBooks.estimates.READ,ZohoBooks.items.READ,ZohoBooks.contacts.CREATE,ZohoBooks.contacts.DELETE,ZohoBooks.estimates.CREATE,ZohoBooks.estimates.UPDATE,ZohoBooks.invoices.CREATE,ZohoBooks.invoices.UPDATE,ZohoBooks.creditnotes.CREATE,ZohoBooks.creditnotes.UPDATE,ZohoBooks.customerpayments.CREATE,ZohoBooks.accountants.READ,ZohoSubscriptions.subscriptions.READ,ZohoSubscriptions.invoices.READ`
    (Desde el 2026-10-04 lleva también los del cobro del mantenimiento: la
    factura MANT- con su cobro, los abonos ABONO- y la lista de cuentas
    bancarias, que solo se usan después del cambio; y los dos de Zoho Billing
    —`ZohoSubscriptions…`—, para «Comprobar en Zoho» la cartera vieja, que
-   vale ya.)
+   vale ya. Desde el 2026-10-07 también `ZohoBooks.items.READ`, para traer los
+   artículos de Zoho al catálogo tras el cambio, como el botón de la app.)
    (Si ya lo conectaste con la lista de antes, genera otro código con esta y
    vuelve a pegarlo en el paso 4: el nuevo sustituye al viejo.)
    → **Time Duration** 10 minutes → descripción `Hub` → **CREATE** →

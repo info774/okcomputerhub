@@ -10,6 +10,7 @@
 import { API } from '../../core/api';
 import { esAdmin } from '../../core/estado';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
+import { botonZoho } from '../../ui/zoho-sync';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esc, toast, pl } from '../../ui/dom';
@@ -56,7 +57,7 @@ async function pintarLista(el: HTMLElement) {
       <input id="cat-q" type="search" placeholder="Buscar nombre o referencia…" value="${esc(_q)}" data-on-input="catBuscar:$value" aria-label="Buscar en el catálogo">
       <span class="nota">${activos} productos activos</span>
       ${edita ? `<a class="btn" href="#/inventario/catalogo/nuevo">${ico('mas')} Nuevo producto</a>
-        <button class="btn secundario" data-action="catSeleccionar">${_seleccionando ? 'Cancelar' : 'Seleccionar'}</button>` : ''}</div>
+        <button class="btn secundario" data-action="catSeleccionar">${_seleccionando ? 'Cancelar' : 'Seleccionar'}</button>${botonZoho('articulos')}` : ''}</div>
     ${_seleccionando && edita ? `<div class="acciones pr-barra" id="cat-bloque"><span class="nota" id="cat-cuenta">${_sel.size} seleccionados</span>
       <select id="cat-bloque-cat" aria-label="Nueva categoría"><option value="">Cambiar categoría…</option>${CATEGORIAS.map(c => `<option>${c}</option>`).join('')}</select>
       <button class="btn secundario" data-action="catCambiarCategoria">Cambiar</button><button class="btn peligro" data-action="catEliminarSel">Eliminar</button></div>` : ''}

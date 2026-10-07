@@ -17,6 +17,7 @@ import { esc, toast, hace, fechaHora, fecha } from '../../ui/dom';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
 import { llamarFuncion } from '../../core/funciones';
 import { descargarCsv } from '../../ui/csv';
+import { botonZoho } from '../../ui/zoho-sync';
 import { esqueleto } from '../../ui/esqueleto';
 import {
   type Cliente, type Crm, type Evento, type Oportunidad,
@@ -96,6 +97,7 @@ function barraLista(escribe: boolean): string {
       <input id="cl-filtro" type="search" placeholder="Buscar por nombre, NIF, teléfono o email…" value="${esc(_filtro)}" data-on-input="clFiltrar:$value" aria-label="Buscar cliente">
       <button class="chip-boton ${_bajas ? 'activo' : ''}" data-action="clBajas" aria-pressed="${_bajas}">De baja</button>
       <button class="btn secundario" data-action="clExcel">${ico('descargar')} Excel</button>
+      ${escribe ? botonZoho('clientes') : ''}
       ${escribe ? `<a class="btn" href="#/clientes/nuevo">${ico('mas')} Nuevo cliente</a>` : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener">${ico('mas')} Nuevo cliente en la app ${ico('externo')}</a>`}
     </div>`;
 }
