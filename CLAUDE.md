@@ -614,6 +614,15 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   Zoho» en Cobros (vale ya) y «Zoho Billing» en la pestaña Sedes del cliente
   (`mantenimientos/zoho-billing.ts`, `czb-`). El enlace a una suscripción sale
   de `urlZohoBilling()` de `datos.ts`.
+- **Sync desde Zoho** (paridad, 2026-10-07, PREPARADO para el corte):
+  función `zoho-sync` (SIN_JWT: token del cron o persona del hub) = las
+  `sync-zoho`, `sync-zoho-estimates` y `sync-zoho-items` de la app con sus
+  reglas (nunca `.single()` por id de Zoho, el corte en `hub.sync_estado`
+  `zoho_clientes`/`zoho_presupuestos` se apunta ANTES y solo avanza si la
+  pasada fue bien, el presupuesto con el TOTAL de Zoho). Con el área de la app
+  contesta `omitido` sin hablar con Zoho; cron `hub-zoho-sync` cada 2 h y
+  «Traer de Zoho» (`botonZoho` de `src/ui/zoho-sync.ts`) en Clientes,
+  Presupuestos y Catálogo, solo con el área del hub. Arnés `verify-zoho-sync.mjs`.
 - **Inventario** (`src/modulos/inventario/`, `#/inventario`, 2026-10-02): el
   stock POR UBICACIÓN (furgonetas, tienda) y «Todas» sumando el mismo producto
   por `catalogo_id` o por nombre (la regla de «Total» de `furgonetas.js`), el

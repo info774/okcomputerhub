@@ -111,6 +111,9 @@ try {
   await toastCon(page, 'Enviada a marta@x.test');
   const resp = base.db.ticket_comentarios.find(c => c.texto === 'Hola Marta, recibido el #50.');
   ok(resp?.tipo === 'respuesta' && fn.some(f => f.nombre === 'desk-correo' && f.accion === 'enviar' && f.comentario_id === resp.id), 'ficha: la respuesta se manda por correo (desk-correo)');
+  // El aviso «Enviada» sale ANTES del PATCH del estado (que lleva su GET del
+  // deshacer): se espera a la escritura en vez de mirar al momento.
+  for (let i = 0; i < 40 && base.db.tickets.find(t => t.id === T1).estado !== 'En curso'; i++) await page.waitForTimeout(100);
   ok(base.db.tickets.find(t => t.id === T1).estado === 'En curso', 'ficha: al contestar pasa a En curso');
   await page.waitForSelector('.tk-responder');
   await page.check('input[name="tk-tipo"][value="nota"]');

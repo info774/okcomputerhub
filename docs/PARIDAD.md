@@ -134,8 +134,10 @@ Fran, 2026-10-03).
    (2026-10-05): tonos y avisos del chat, backup propio (falta el secret) y
    filas puestas al día. **Bloque 8 HECHO**. **Asistente de voz HECHO**
    (2026-10-05, tres tandas: consultas, órdenes directas y altas; se enciende
-   con la clave de Groq). Lo que sigue en «Falta» es el sync de Zoho (con el
-   corte de clientes) y lo que espera al corte final (APK, dominio antiguo).
+   con la clave de Groq). El sync de Zoho quedó PREPARADO el 2026-10-07
+   (`zoho-sync`). Lo único en «Falta» es lo que espera al corte final y se
+   hace en la app con el OK de Fran (APK y redirección de sus dominios,
+   pasos 6 y 7 de `docs/FASE_FINAL.md`).
 
 ## El mapa
 
@@ -149,7 +151,7 @@ Fran, 2026-10-03).
 | Dar de baja y reactivar cliente o sede | Preparado | Ficha → «Dar de baja» / «Reactivar»; «De baja» en la lista (clientes y sitios) | Corte del área `clientes`. |
 | Empresa por NIF y NIF duplicado (`lookup-nif`) | Hecho | «🔎 Buscar el nombre» del formulario (función `clientes`, acción `nif`); con NIF repetido no se crea | — |
 | Cliente o sede desde Google Maps (`google-places.js`) | Preparado | «🔎 Buscar en Google Maps» (`src/ui/maps.ts`, solo Tenerife) en el alta/edición de sede y en la sede rápida del trabajo; aviso de sede de nombre parecido (≥ 80 %) | Que Fran añada el hub a las webs de la clave (PENDIENTE_FRAN §2 bis). Corte. |
-| Sync de clientes y presupuestos desde Zoho (`sync-zoho*`, `sync-auto.js`) | Falta | — | Hoy entra por la app y el hub copia. Va con el corte de `clientes`/`presupuestos` y necesita los permisos del Self Client de Zoho (PENDIENTE_FRAN §5). |
+| Sync de clientes, presupuestos y artículos desde Zoho (`sync-zoho`, `sync-zoho-estimates`, `sync-zoho-items`, `sync-auto.js`) | Preparado | función `zoho-sync` (cron `hub-zoho-sync` cada 2 h) y «Traer de Zoho» en Clientes, Presupuestos y Catálogo | Contesta «omitido» mientras el área sea de la app (comprobado el 2026-10-07); empieza a traer con el corte de `clientes`/`presupuestos`/`inventario`. Necesita la conexión de Zoho del hub (PENDIENTE_FRAN §5, con `ZohoBooks.items.READ`). |
 | Ficha del cliente (General, Locales, Contactos, Historial) | Preparado | `#/clientes` (ficha 360), editar en `#/clientes/<id>/editar`, «Historial de cambios» | Corte del área `clientes` (bloque 2). |
 | Suscripción de Zoho Billing a una sede (`list-zoho-subscriptions`) | Hecho / Preparado | Función `zoho-cartera` (`listar`, `comprobar`; `vincular` admin) y «Zoho Billing» en la pestaña Sedes del cliente (bloque 4, tanda 4) | Escribir en la sede: corte de `mantenimiento`. |
 | Lista de sitios, etiqueta RMM, Excel, AnyDesk/RustDesk (`modules/locales.js`) | Preparado | `#/sitios` (Excel con AnyDesk, «+ Nuevo sitio», enlace de AnyDesk en la fila); alta y edición en `#/sitios/nuevo[/<cliente>]`, `#/sitios/<id>/editar` (`sitios/formulario.ts`); ficha → «🖥 Remoto» (AnyDesk de hardware + software y RustDesk de Breeze con la contraseña de la sede de `rmm_despliegues`) | Corte del área `clientes`. Importar sitios desde Excel (`importSitiosExcel`). |

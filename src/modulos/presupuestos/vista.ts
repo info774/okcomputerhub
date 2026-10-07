@@ -5,6 +5,7 @@ import { API } from '../../core/api';
 import { registrarAcciones } from '../../core/dispatcher';
 import { ir, resolver } from '../../core/router';
 import { esDelHub, avisoSoloLectura } from '../../core/areas';
+import { botonZoho } from '../../ui/zoho-sync';
 import { esc, hace, toast } from '../../ui/dom';
 import { esAdmin } from '../../core/estado';
 import { llamarFuncion } from '../../core/funciones';
@@ -118,7 +119,7 @@ async function pintarLista(el: HTMLElement) {
     <div class="pp-cabeza">${cifras()}${reparto()}</div>
     <div class="acciones mo-barra">
       <input id="pp-filtro" type="search" placeholder="Buscar por número, título, cliente o persona…" value="${esc(_q)}" data-on-input="ppFiltrar:$value" aria-label="Buscar presupuesto">
-      ${delHub ? `<a class="btn" href="#/presupuestos/nuevo">${ico('mas')} Nuevo presupuesto</a>` : ''}
+      ${delHub ? `<a class="btn" href="#/presupuestos/nuevo">${ico('mas')} Nuevo presupuesto</a>${botonZoho('presupuestos')}` : ''}
       <a class="btn secundario" href="#/presupuestos/plantillas">Plantillas</a>
       <select id="pp-persona" data-on-change="ppPersona:$value" aria-label="Persona">
         <option value="">Todo el equipo</option><option value="__mios" ${_persona === '__mios' ? 'selected' : ''}>Los míos</option>
