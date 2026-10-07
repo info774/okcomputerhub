@@ -497,6 +497,19 @@
 .wa-plantilla { margin: .6rem .6rem 0; display: flex; flex-direction: column; gap: .4rem; }
 .wa-plantilla .wa-nota { margin: 0; }
 @media (max-width: 600px) { .wa { right: 12px; bottom: 12px; } .wa.cerrado { width: 230px; } }
+/* En el móvil, abierta, a pantalla completa (el alto y el top los pone
+   ajustarAlto() de shell/whatsapp.ts según el teclado), por encima de los chips
+   flotantes de abajo, con la letra del cuadro a 16 px (por debajo iOS hace
+   zoom) y lo que se toca a 44 px. */
+@media (max-width: 600px) {
+  .wa.abierto { left: 0; right: 0; bottom: auto; top: 0; width: 100%; max-width: none; height: 100dvh; border-radius: 0; border: 0; z-index: 1000; }
+  .wa.abierto .wa-campo textarea { font-size: 16px; }
+  .wa.abierto .wa-volver { width: 44px; height: 44px; }
+  .wa.abierto .wa-atajos { scrollbar-width: none; }
+  .wa.abierto .wa-atajos::-webkit-scrollbar { display: none; }
+  .wa.abierto .wa-atajos .chip-boton { min-height: 40px; flex-shrink: 0; }
+  .wa-pie { padding-bottom: calc(.6rem + env(safe-area-inset-bottom, 0px)); }
+}
 /* En el modo escritorio el dock va abajo: el chat sube por encima y, plegado,
    es solo el botón con el número (para no tapar las ventanas). */
 body.os-modo .wa { bottom: 108px; }

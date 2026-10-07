@@ -252,6 +252,38 @@ try {
   await page.screenshot({ path: `${CAPTURAS}/whatsapp-desde.png`, fullPage: true });
 
   ok(!errores.length, `sin errores JS${errores.length ? ': ' + errores.join(' | ') : ''}`);
+
+  // ── En el móvil: a pantalla completa y «Enviar» siempre a la vista ─────
+  // (paridad con el arreglo de la bandeja de la app del 2026-10-07)
+  const ctxM = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true });
+  await preparar(ctxM, { email: 'ana@ok.test', base });
+  await ctxM.route(`${SB}/functions/v1/whatsapp`, waFalso);
+  const pm = await ctxM.newPage();
+  const erroresM = [];
+  pm.on('pageerror', e => erroresM.push(String(e.stack ?? e)));
+  await pm.goto(`${srv.base}/#/tickets`);
+  await pm.waitForSelector('#wa-cab');
+  await pm.click('#wa-cab');
+  await pm.waitForSelector('.wa-fila');
+  await pm.click('.wa-fila >> nth=0');
+  await pm.waitForSelector('#wa-env', { state: 'visible' });
+  await pm.waitForTimeout(600);
+  const caja = await pm.locator('#wa').boundingBox();
+  ok(caja && Math.round(caja.x) === 0 && Math.round(caja.y) === 0 && Math.round(caja.width) === 390 && Math.round(caja.height) === 760, `móvil: la ventana abierta ocupa la pantalla (${JSON.stringify(caja)})`);
+  const envM = await pm.locator('#wa-env').boundingBox();
+  ok(envM && envM.y + envM.height <= 760 && envM.height >= 44, 'móvil: «Enviar» dentro de la pantalla y de 44 px');
+  ok(await pm.$eval('#wa-in', el => getComputedStyle(el).fontSize) === '16px', 'móvil: el cuadro a 16 px (sin zoom de iOS)');
+  const cabAlto = await pm.$eval('#wa-convcab', el => el.getBoundingClientRect().height) + await pm.$eval('#wa-atajos', el => el.getBoundingClientRect().height);
+  ok(cabAlto < 140, `móvil: cabecera y atajos no se comen la pantalla (${Math.round(cabAlto)} px)`);
+  // Teclado abierto: la pantalla visible encoge y «Enviar» sigue a la vista.
+  await pm.setViewportSize({ width: 390, height: 420 });
+  await pm.waitForTimeout(600);
+  const env2 = await pm.locator('#wa-env').boundingBox();
+  ok(env2 && env2.y + env2.height <= 420, `móvil: con menos alto (teclado), «Enviar» sigue a la vista (${env2 && Math.round(env2.y + env2.height)})`);
+  await pm.screenshot({ path: `${CAPTURAS}/whatsapp-movil.png` });
+  await pm.click('#wa-cab');
+  ok(await pm.$eval('#wa', el => el.style.height === '' && el.classList.contains('cerrado')), 'móvil: al plegarla vuelve a la barra');
+  ok(!erroresM.length, `móvil: sin errores JS${erroresM.length ? ': ' + erroresM.join(' | ') : ''}`);
 } finally {
   await browser.close();
   srv.parar();

@@ -343,6 +343,7 @@ async function alternar() {
   caja.classList.toggle('abierto', abierto);
   caja.classList.toggle('cerrado', !abierto);
   $id('wa-cab')!.setAttribute('aria-expanded', String(abierto));
+  ajustarAlto();
   if (abierto) {
     void llamarFuncion<{ envio: boolean; claude: boolean; plantilla?: boolean }>('whatsapp', { accion: 'estado' }).then(({ data }) => {
       if (!data) return;
@@ -355,6 +356,26 @@ async function alternar() {
     clearTimeout(tHilo);
     programarLista();
   }
+}
+
+// En el móvil, abierta, la ventana ocupa lo que se VE de la pantalla: con el
+// teclado abierto `visualViewport` encoge y, con un alto fijo, el teclado tapaba
+// el cuadro de escribir y «Enviar» (el mismo arreglo que `ajustarAlto()` de la
+// bandeja de la app, 2026-10-07). En el ordenador manda el CSS.
+const MOVIL_WA = 600;
+function ajustarAlto() {
+  const caja = $id('wa');
+  if (!caja) return;
+  if (!abierto || window.innerWidth > MOVIL_WA) { caja.style.height = ''; caja.style.top = ''; return; }
+  const vv = window.visualViewport;
+  caja.style.height = `${Math.round(vv ? vv.height : window.innerHeight)}px`;
+  caja.style.top = `${Math.round(vv ? vv.offsetTop : 0)}px`;
+}
+if (!(window as unknown as { __waAlto?: boolean }).__waAlto) {
+  (window as unknown as { __waAlto?: boolean }).__waAlto = true;
+  window.addEventListener('resize', ajustarAlto);
+  window.visualViewport?.addEventListener('resize', ajustarAlto);
+  window.visualViewport?.addEventListener('scroll', ajustarAlto);
 }
 
 function iniciales(n: string) {
