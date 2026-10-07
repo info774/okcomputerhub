@@ -6,7 +6,7 @@ en que la sustituya. Mientras tanto las dos avanzan en paralelo y la app sigue
 siendo la de uso diario: el hub no la interrumpe ni la molesta (decisión de
 Fran, 2026-10-03).
 
-**Revisado hasta**: `2d57b29` (2026-10-06) — «Backup diario: hacer checkout antes de los scripts». Revisado el 2026-10-06: `850a0ec` (columna AnyDesk y fuera las viviendas en Mantenimientos → Locales) PORTADO; `2d57b29` (checkout en el backup de la app) no aplica: el `backup.yml` del hub no usa scripts del repo.
+**Revisado hasta**: `7045103` (2026-10-07) — «WhatsApp: la bandeja no cargaba («more than one relationship» con locales)». Revisado el 2026-10-07: `2206608` (contestar desde la bandeja en el móvil y en el ordenador) PORTADO a la ventana fija de WhatsApp: en el móvil, abierta, ocupa la pantalla visible y se encoge con el teclado (`ajustarAlto()` sobre `visualViewport`), cuadro a 16 px y botones de 44 px, por encima de los chips flotantes (la cabecera en dos filas, los atajos en tira con scroll y el texto fuera de 24 h ya estaban); `7045103` (embed ambiguo `wa_conversaciones` → `locales` por `verificado_local_id`) ya estaba resuelto en el hub (`locales!local_id`, comprobado en lectura contra la app).
 
 ## Cómo se usa
 

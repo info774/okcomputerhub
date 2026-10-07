@@ -772,7 +772,8 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   (`tipo = respuesta`, canal whatsapp). Regla de Meta: texto libre solo dentro
   de las 24 h desde el último mensaje del CLIENTE (la caja se bloquea fuera).
   Oki PROPONE (`proponer`, Claude) y una
-  persona manda. Si cambian las tablas `wa_*` de la app, cambiar la función.
+  persona manda. En el móvil (≤ 600 px), abierta, va a pantalla completa con el
+  alto de `visualViewport` (`ajustarAlto()`: el teclado no tapa «Enviar»). Si cambian las tablas `wa_*` de la app, cambiar la función.
   Fuera de las 24 h, «📨 Mandar plantilla» manda `WHATSAPP_PLANTILLA_TEXTO`
   (plantilla de Meta con UNA variable, `{{1}}` = nombre) y se apunta como
   `tipo = template`, igual que las de la app.
