@@ -149,6 +149,39 @@ async function leerAction1(): Promise<{ ok: boolean; error?: string; base?: stri
   return { ok: true, base, porClave }
 }
 
+// `accion: 'probar_action1'`: ¿valen las claves? Pide el token y cuenta
+// organizaciones y equipos. No lee programas ni escribe nada, así que vale
+// también con el área `equipos` de la app.
+async function probarAction1() {
+  const id = Deno.env.get('ACTION1_CLIENT_ID') ?? '', secret = Deno.env.get('ACTION1_CLIENT_SECRET') ?? ''
+  if (!id || !secret) return { ok: false, error: 'Action1 sin configurar' }
+  const region = (Deno.env.get('ACTION1_REGION') ?? 'eu').toLowerCase()
+  const base = ACTION1_BASE[region] ?? ACTION1_BASE.eu
+  const t = await fetch(`${base}/oauth2/token`, {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'client_credentials', client_id: id, client_secret: secret }).toString(),
+    signal: AbortSignal.timeout(20000),
+  })
+  if (!t.ok) return { ok: false, region, error: `token de Action1 → ${t.status}` }
+  const token = (await t.json())?.access_token
+  if (!token) return { ok: false, region, error: 'Action1 sin access_token' }
+  const get = async (path: string) => {
+    const r = await fetch(`${base}${path}`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }, signal: AbortSignal.timeout(30000) })
+    if (!r.ok) throw new Error(`Action1 GET ${path} → ${r.status}`)
+    const j = await r.json()
+    return Array.isArray(j) ? j : (j?.items ?? [])
+  }
+  const orgs = await get('/organizations?limit=100')
+  const organizaciones = []
+  for (const o of orgs) {
+    try {
+      const eps = await get(`/endpoints/managed/${o.id}?limit=1000`)
+      organizaciones.push({ nombre: String(o.name ?? o.id), equipos: eps.length })
+    } catch (e) { organizaciones.push({ nombre: String(o.name ?? o.id), error: String(e) }) }
+  }
+  return { ok: true, region, organizaciones }
+}
+
 // ── La pasada ───────────────────────────────────────────────────────────────
 async function pasada(sb: SupabaseClient) {
   const ahora = new Date().toISOString()
@@ -281,6 +314,10 @@ Deno.serve(async req => {
     const user = await getAuthedUser(req)
     if (!user) return unauthorized(cors)
     if (!(await isAdminUser(user))) return forbidden(cors, 'Solo un administrador puede lanzar la comprobación.')
+  }
+  const cuerpo = await req.json().catch(() => ({}))
+  if (cuerpo?.accion === 'probar_action1') {
+    try { return json(await probarAction1(), 200, cors) } catch (e) { return json({ ok: false, error: String(e) }, 200, cors) }
   }
   if (!(await tablaDelHub(sb, 'equipos_control'))) {
     return json({ ok: true, omitido: 'El control de equipos lo hace todavía la app (cada mañana): aquí se ve su resultado.' }, 200, cors)

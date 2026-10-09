@@ -431,12 +431,10 @@ La redirección de la app al hub, la URL de la APK y apagar el sync esperan a
 tu OK. Los pasos están en `docs/FASE_FINAL.md`; el corte en sí está preparado
 y probado (`supabase/cortes/corte_final.sql`).
 
-El mismo día del cambio, para que el **control de equipos** lo haga el hub
-(hoy lo hace la app y el hub solo enseña su resultado): copia en las variables
-del entorno cloud (menú del entorno → Edit → variables) las mismas claves de
-Action1 que tiene la app, una por línea: `ACTION1_CLIENT_ID=…`,
-`ACTION1_CLIENT_SECRET=…` y `ACTION1_REGION=eu`. Claude las pasa a la función
-`control-equipos` del hub y programa su pasada diaria.
+Control de equipos: las claves de Action1 YA están (2026-10-09, en el entorno
+cloud y en los secrets de `control-equipos`; probadas con `probar_action1`: 1
+organización, 44 equipos). El mismo día del cambio Claude solo programa su
+pasada diaria.
 
 ## 10 · La copia diaria propia del hub (una vez, ~3 minutos)
 

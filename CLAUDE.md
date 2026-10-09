@@ -366,7 +366,9 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   llega en la nocturna y en `hub-equipos-control` a las 6:40 UTC, tras su
   comprobación de las 6:10). La función `control-equipos` del hub (SIN_JWT,
   token del cron o admin) está portada de la app pero lee Breeze por las
-  vistas `hub.rmm_*`; con el área de la app contesta `omitido`. Su cron se
+  vistas `hub.rmm_*`; con el área de la app contesta `omitido` (salvo
+  `accion: 'probar_action1'`, que solo cuenta organizaciones y equipos de
+  Action1 para ver si valen las claves, ya puestas). Su cron se
   pone con el corte. Arnés `verify-control-equipos.mjs`.
 - **Google** (paridad bloque 7, tanda 5): función `google` (con sesión) sobre la
   cuenta de servicio y la delegación de dominio (`_shared/google.ts`), nunca el
