@@ -1428,3 +1428,24 @@ body.os-modo .sis { bottom: 108px; }
 .vz-escribir { flex: 1; display: flex; gap: .4rem; }
 .vz-escribir input { flex: 1; min-width: 0; }
 .vz-opciones { padding: 0 1rem .8rem; flex-wrap: wrap; }
+
+/* ── Fichas duplicadas (src/modulos/duplicados/, prefijo du-) ─────────────── */
+.du-pestanas .du-n { font-size: .8em; opacity: .75; }
+.du-grupo .acciones { justify-content: flex-start; }
+.du-grupo .du-noson { margin-left: auto; }
+.du-fichas td:first-child, .du-fichas th:first-child { width: 4.5rem; text-align: center; }
+.du-fichas td:last-child { text-align: right; }
+.du-fichas td { white-space: normal; overflow-wrap: anywhere; }
+.du-lados { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-bottom: 1rem; }
+.du-lados .du-lado { flex: 1 1 260px; margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.du-lados .du-queda { border-left: 3px solid var(--accion); }
+.du-lados .du-sale { border-left: 3px solid var(--linea); opacity: .85; }
+.du-lados .du-cambiar { flex: 0 0 auto; }
+.du-campos td { vertical-align: top; overflow-wrap: anywhere; white-space: normal; }
+.du-zoho { padding-left: 1.2rem; }
+.du-zoho li { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .4rem; }
+.du-como { margin-top: .6rem; }
+@media (max-width: 600px) {
+  .du-fichas td:last-child .btn { white-space: normal; }
+  .du-lados .du-cambiar { order: 3; }
+}

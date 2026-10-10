@@ -44,6 +44,13 @@ function desde(since: unknown): Record<string, string> {
   return isNaN(d.getTime()) ? {} : { last_modified_time: zohoDesde(d) }
 }
 
+// El cliente del hub en el que se fusionó el de este contacto de Zoho (o null).
+async function fusionadoEn(db: Sb, zohoId: string): Promise<string | null> {
+  const { data, error } = await db.rpc('cliente_por_zoho', { p_zoho: zohoId })
+  if (error) throw new Error(error.message)
+  return data ?? null
+}
+
 // ── Clientes (sync-zoho) ────────────────────────────────────────────────────
 async function clientes(pdb: ReturnType<typeof hubDb>, db: Sb, page: number, since: unknown, resumen: boolean): Promise<Pagina> {
   const j = await zohoGet(pdb, 'contacts', { page: String(page), filter_by: 'Status.Active', ...desde(since) })
@@ -66,6 +73,9 @@ async function clientes(pdb: ReturnType<typeof hubDb>, db: Sb, page: number, sin
     }
     const { data: hay, error } = await db.from('clientes').select('id').eq('zoho_id', c.contact_id).order('created_at', { ascending: true })
     if (error) throw new Error(error.message)
+    // Un contacto de Zoho cuyo cliente se fusionó en otro (hub.fusiones): ese
+    // otro ya lleva sus datos; ni se pisa ni se vuelve a crear la ficha borrada.
+    if (!hay?.length && await fusionadoEn(db, c.contact_id)) continue
     if (hay?.length) {
       const r = await db.from('clientes').update(fila).eq('id', hay[0].id)
       if (r.error) throw new Error(r.error.message)
@@ -89,7 +99,7 @@ async function presupuestos(pdb: ReturnType<typeof hubDb>, db: Sb, page: number,
     try { e = (await zohoGet(pdb, `estimates/${s.estimate_id}`)).estimate } catch (err) { console.error(`[zoho-sync] presupuesto ${s.estimate_id}:`, (err as Error).message); continue }
     if (!e) continue
     const { data: cli } = await db.from('clientes').select('id').eq('zoho_id', e.customer_id).limit(1).maybeSingle()
-    let clienteId: string | null = cli?.id ?? null
+    let clienteId: string | null = cli?.id ?? (e.customer_id ? await fusionadoEn(db, e.customer_id) : null)
     if (!clienteId && e.customer_id && creaClientes) {
       const r = await db.from('clientes').insert({ nombre: e.customer_name, zoho_id: e.customer_id, tipo: 'empresa', estado: 'activo' }).select('id').single()
       if (r.error) throw new Error(r.error.message)

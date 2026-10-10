@@ -9,6 +9,7 @@ import { esc, hace, fechaHora, toast, fecha } from '../../ui/dom';
 import { enApp, telWhatsApp } from '../ventas/datos';
 import { esqueleto } from '../../ui/esqueleto';
 import { ico, type IconoLinea } from '../../shell/linea';
+import { botonFusionar } from '../../ui/fusionar';
 
 interface Contacto {
   id: string; nombre: string; tipo: string | null; empresa: string | null; cargo: string | null;
@@ -131,7 +132,7 @@ async function pintarFicha(el: HTMLElement, id: string, pestana = 'datos') {
   const puede = escribe && (c.tipo !== 'empleado' || esAdmin());
   el.innerHTML = `<p><a href="#/contactos">← Contactos</a></p>
     <div class="tarjeta-cab"><h2>${c.favorito ? `${ico('estrella')} ` : ''}${esc(c.nombre)}${c.activo === false ? ' <span class="chip mal">De baja</span>' : ''}</h2>
-      <div class="acciones">${botones(c)}
+      <div class="acciones">${botones(c)}${botonFusionar('contacto', c.id)}
         ${puede ? `<a class="btn secundario" href="#/contactos/${esc(c.id)}/editar">${ico('editar')} Editar</a>
           ${c.activo === false ? `<button class="btn secundario" data-action="coReactivar" data-p0="${esc(c.id)}">Reactivar</button>` : '<button class="btn secundario" data-action="coDarBaja">Dar de baja</button>'}`
         : escribe ? '' : `<a class="btn secundario" href="${esc(enApp())}" target="_blank" rel="noopener" title="Los contactos se editan en la app actual">Editar en la app ${ico('externo')}</a>`}</div></div>

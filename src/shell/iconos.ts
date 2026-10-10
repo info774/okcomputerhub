@@ -44,6 +44,7 @@ export const DIBUJOS: Record<string, Dibujo> = {
   inventario: { r: 'M4 13h7v7H4z M13 13h7v7h-7z M8.5 4h7v7h-7z', l: '' },
   datos: { r: 'M5 5.5c0-1.4 3.1-2.5 7-2.5s7 1.1 7 2.5v13c0 1.4-3.1 2.5-7 2.5s-7-1.1-7-2.5z', l: 'M5 5.5c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5 M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5' },
   usuarios: { r: `${C(12, 8, 4)} M4 21c0-4.4 3.6-7.5 8-7.5s8 3.1 8 7.5z`, l: 'M16.5 17.5l1.5 1.5 3-3' },
+  duplicados: { r: 'M3.5 4.5h9v7h-9z M11.5 12.5h9v7h-9z', l: 'M12.5 8h3a2 2 0 0 1 2 2v2.5 M15.5 10.5l2 2 2-2' },
   registro: { r: C(12, 12, 8.5), l: 'M12 7.5V12l3 2 M3.5 12H2 M3.5 12l-1.8-1.8 M3.5 12l1.8-1.8' },
   configuracion: { r: 'M4 5h16v3H4z M4 16h16v3H4z', l: 'M4 12h16 M8 3.5v6 M16 10v4 M10 14.5v6' },
   conector: { r: 'M7 8h10v5a5 5 0 0 1-10 0z', l: 'M9.5 8V3 M14.5 8V3 M12 18v4' },

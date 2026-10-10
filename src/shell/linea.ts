@@ -124,6 +124,7 @@ const ICONOS = {
   volver: '<path d="M6 3.8 2.8 7 6 10.2M2.8 7H10a3.2 3.2 0 0 1 0 6.4H8"/>',
   chincheta: '<path d="M6 2.2h4M6.8 2.2v4L4.5 9h7L9.2 6.2v-4M8 9v5"/>',
   casilla: '<rect x="2.8" y="2.8" width="10.4" height="10.4" rx="2"/>',
+  fusionar: '<path d="M3.5 2.5v2A3.5 3.5 0 0 0 7 8h2a3.5 3.5 0 0 0 3.5-3.5v-2M8 8v5.5M6 11.5l2 2 2-2"/>',
   casillaHecha: '<rect x="2.8" y="2.8" width="10.4" height="10.4" rx="2"/><path d="m5.5 8.2 1.8 1.8 3.3-3.6"/>',
 } as const satisfies Record<string, string>;
 
