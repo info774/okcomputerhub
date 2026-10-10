@@ -926,6 +926,46 @@ commit;`);
   ok(!psql(como('authenticated', 'tito@ok.test', `insert into hub.push_suscripciones (usuario_id, endpoint, p256dh, auth) values (gen_random_uuid(), 'https://x', 'a', 'b');`), { esperaError: true }).ok,
     'push: las suscripciones solo las registra la función');
 
+  // Fusionar duplicados (20261107): detectar vale ya; fusionar, solo con las áreas del hub.
+  psql(`update hub.areas set dueno = 'app' where area in ('clientes', 'trabajos')`);
+  const fa = psql(`insert into hub.clientes (nombre, nif, email, telefono, notas, zoho_id) values ('Bar Fusión, S.L.', 'B-1234 5678', 'bar@f.test', '922 111 222', 'Nota A', 'ZA') returning id`);
+  const fb = psql(`insert into hub.clientes (nombre, nif, email, telefono, notas, zoho_id, programa_tpv) values ('BAR FUSION SL', 'b12345678', 'otro@f.test', '+34922111222', 'Nota B', 'ZB', 'Glop') returning id`);
+  psql(`insert into hub.contactos (nombre, cliente_id) values ('Pepe', '${fb}');
+        insert into hub.trabajos (titulo, cliente_id) values ('Del duplicado', '${fb}');
+        insert into hub.clientes_crm (cliente_id) values ('${fa}'), ('${fb}');`);
+  const grupos = JSON.parse(una('tito@ok.test', `select hub.duplicados('cliente')`));
+  const g = grupos.find(x => x.ids.includes(fa) && x.ids.includes(fb));
+  ok(!!g && ['nif', 'nombre', 'teléfono'].every(m => g.motivos.includes(m)) && !g.motivos.includes('correo'),
+    'fusionar: detecta el duplicado por NIF, nombre sin «S.L.» y teléfono (no por el correo distinto)');
+  const prev = JSON.parse(una('ana@ok.test', `select hub.fusionar('cliente', '${fa}', '${fb}')`));
+  ok(prev.probar && prev.movidas.contactos === 1 && prev.movidas.trabajos === 1 && prev.descartadas.clientes_crm === 1
+    && prev.bloqueos.length >= 2 && prev.zoho?.sale === 'ZB' && prev.campos.programa_tpv?.[1] === 'Glop',
+    'fusionar: la vista previa cuenta lo que se mueve, lo que choca, rellena huecos y dice qué lo impide');
+  ok(!psql(como('authenticated', 'ana@ok.test', `select hub.fusionar('cliente', '${fa}', '${fb}', false)`), { esperaError: true }).ok
+    && psql(`select count(*) from hub.clientes where id = '${fb}'`) === '1', 'fusionar: con áreas de la app no escribe nada');
+  ok(!psql(como('authenticated', 'tito@ok.test', `select hub.fusionar('cliente', '${fa}', '${fb}')`), { esperaError: true }).ok, 'fusionar: solo un admin');
+  psql(`update hub.areas set dueno = 'hub' where area in ('clientes', 'trabajos')`);
+  una('ana@ok.test', `select hub.fusionar('cliente', '${fa}', '${fb}', false)`);
+  ok(psql(`select count(*) from hub.clientes where id = '${fb}'`) === '0'
+    && psql(`select count(*) from hub.contactos where cliente_id = '${fa}'`) === '1'
+    && psql(`select count(*) from hub.trabajos where cliente_id = '${fa}'`) === '1'
+    && psql(`select count(*) from hub.clientes_crm where cliente_id in ('${fa}', '${fb}')`) === '1',
+    'fusionar: todo pasa a la que queda, el choque se descarta y la que sale se borra');
+  ok(psql(`select programa_tpv || '|' || zoho_id || '|' || (notas = E'Nota A\n\n— De «BAR FUSION SL»:\nNota B\nOtro correo: otro@f.test')::text from hub.clientes where id = '${fa}'`) === 'Glop|ZA|true',
+    'fusionar: rellena huecos, conserva lo suyo y junta las notas');
+  ok(psql(`select hub.cliente_por_zoho('ZB')`) === fa && psql(`select count(*) from hub.fusiones where sale_id = '${fb}' and autor_nombre = 'Ana Admin'`) === '1'
+    && psql(`select count(*) from hub.auditoria where tabla = 'clientes' and registro_id = '${fb}' and accion = 'DELETE'`) === '1',
+    'fusionar: queda apuntada (Zoho de la que salió → la que queda) y auditada');
+  ok(!una('ana@ok.test', `select hub.duplicados('cliente')`).includes(fb), 'fusionar: ya no sale como duplicado');
+  const [sa, sb] = [psql(`insert into hub.locales (nombre, cliente_id, direccion) values ('Terraza Mar', '${fa}', 'Calle Mayor 12, La Laguna') returning id`),
+    psql(`insert into hub.locales (nombre, cliente_id, stripe_subscription_id) values ('Terraza  Mar', '${fa}', 'sub_1') returning id`)];
+  ok(JSON.parse(una('ana@ok.test', `select hub.fusionar('sede', '${sa}', '${sb}')`)).bloqueos.some(b => b.includes('Stripe'))
+    && JSON.parse(una('ana@ok.test', `select hub.fusionar('sede', '${sb}', '${sa}')`)).bloqueos.length === 0,
+    'fusionar: una sede que cobra por Stripe solo puede ser la que se queda');
+  psql(`insert into hub.no_duplicados (tipo, a, b) select 'sede', least('${sa}'::uuid, '${sb}'::uuid), greatest('${sa}'::uuid, '${sb}'::uuid)`);
+  ok(!una('ana@ok.test', `select hub.duplicados('sede')`).includes(sa), 'fusionar: «no son la misma» la quita de la lista');
+  psql(`update hub.areas set dueno = 'app' where area in ('clientes', 'trabajos')`);
+
   const sinRls = psql(`select string_agg(relname, ',') from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'hub' and c.relkind = 'r' and not c.relrowsecurity`);
   ok(!sinRls, `todas las tablas de hub con RLS${sinRls ? ' (faltan: ' + sinRls + ')' : ''}`);

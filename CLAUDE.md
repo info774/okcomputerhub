@@ -1014,6 +1014,24 @@ entorno en la barra de título de la sesión → Edit → variables, una por lí
   desde Google Maps (`buscarLugares`/`detalleLugar` de `ui/maps.ts`; la tarjeta
   de un lugar tocada en la ventana da el alta con `altaDesdeLugar`, que
   pregunta con `confirm` lo que solo espera un sí). Arnés `verify-voz-altas.mjs`.
+- **Fichas duplicadas** (2026-10-10, idea de `merge_contacts` de Atomic CRM,
+  `20261107_fusionar.sql`, `#/duplicados`, `duplicados/`, `du-`, solo admin):
+  `hub.duplicados(tipo)` agrupa clientes, contactos o sedes que PARECEN la misma
+  (NIF, correo, últimos 9 dígitos del teléfono, nombre sin «S.L.», dirección;
+  grupos de 2 a 8) y vale ya; «No son la misma» va a `hub.no_duplicados`
+  (pareja con `a < b`). `hub.fusionar(tipo, queda, sale, probar)`: con `probar`
+  (el defecto) solo cuenta; sin él mueve TODA columna `cliente_id`/`contacto_id`/
+  `local_id` de `hub` (una tabla nueva entra sola; si un índice único choca, se
+  descarta la fila de la que sale), BORRA la que sale y rellena los huecos de la
+  que queda (notas juntas; teléfono, correo, NIF o dirección distintos, a las
+  notas). Exige admin y que cada tabla con algo que mover sea del hub
+  (PREPARADO para el corte). Una sede que cobra por Stripe solo puede quedarse;
+  dos clientes de Stripe distintos o dos suscripciones de Zoho Billing, no se
+  fusionan. ZOHO BOOKS no fusiona por API: queda en `hub.fusiones.zoho_sale`,
+  se hace a mano allí («Hecho en Zoho») y mientras tanto `zoho-sync` usa
+  `hub.cliente_por_zoho()` para no resucitar la ficha borrada. «Fusionar con…»
+  en las fichas: `botonFusionar` de `src/ui/fusionar.ts`. Arnés
+  `verify-duplicados.mjs`.
 - **Paleta Ctrl+K** (`src/shell/buscador.ts`): cuatro modos con Tab
   (Pantallas · Datos · Preguntar · Pedir a Claude). «Preguntar» va a
   `#/buscar/<pregunta>`; «Pedir a Claude» abre la pestaña Claude del proyecto
